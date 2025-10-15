@@ -13,25 +13,35 @@
 # you will see them accessed via {{ site.title }}, {{ site.email }}, and so on.
 # You can create any custom variable you would like, and they will be accessible
 # in the templates via {{ site.myvariable }}.
-title: MM
-email:
-description: >- # this means to ignore newlines until "baseurl:"
-  Write an awesome description for your new site here. You can edit this
-  line in _config.yml. It will appear in your document head meta (for
-  Google search results) and in your feed.xml site description.
-twitter_username: username
-github_username: username
-minimal_mistakes_skin: default
-search: true
 
-# Build settings
+# --- Basic Information ---
+title: "BFMH's Tech Log"
+email: "bfmhno3@gmail.com"
+description: >- # this means to ignore newlines until "baseurl:"
+  A blog about mathematics, algorithms, and embeded systems.
+url: "https://bfmhno3.github.io"
+repository: "bfmhno3/bfmhno3.github.io"
+# ---
+
+# --- Theme & Interface ---
+minimal_mistakes_skin: "dark"
+locale: "en-US"
+search: true
+# ---
+
+twitter_username: username
+github_username: bfmhno3
+
+# --- Build settings ---
 markdown: kramdown
 remote_theme: mmistakes/minimal-mistakes
-# Outputting
+timezone: "Asia/Shanghai"
+# ---
+
+# --- Outputting ---
 permalink: /:categories/:title/
 paginate: 5 # amount of posts to show
 paginate_path: /page:num/
-timezone: # https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
 
 include:
   - _pages
@@ -39,14 +49,14 @@ include:
 # Exclude from processing.
 # The following items will not be processed, by default. Create a custom list
 # to override the default setting.
-# exclude:
-#   - Gemfile
-#   - Gemfile.lock
-#   - node_modules
-#   - vendor/bundle/
-#   - vendor/cache/
-#   - vendor/gems/
-#   - vendor/ruby/
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor/bundle/
+  - vendor/cache/
+  - vendor/gems/
+  - vendor/ruby/
 
 # Plugins (previously gems:)
 plugins:
@@ -57,35 +67,21 @@ plugins:
   - jemoji
   - jekyll-include-cache
 
+# --- Author & Footer ---
 author:
-  name   : "First Lastname"
-  avatar : "/assets/images/bio-photo.jpg"
-  bio    : "My awesome biography constrained to a sentence or two goes here."
+  name   : "bfmhno3"
+  avatar : "/assets/images/avatar.svg"
+  bio    : "Third-year university student majoring in energy engineering. Exploring the world of code and mathematics."
   links:
-    - label: "Website"
-      icon: "fas fa-fw fa-link"
-      url: "https://"
-    - label: "Twitter"
-      icon: "fab fa-fw fa-twitter-square"
-      url: "https://twitter.com/"
     - label: "GitHub"
       icon: "fab fa-fw fa-github"
-      url: "https://github.com/"
-    - label: "Instagram"
-      icon: "fab fa-fw fa-instagram"
-      url: "https://instagram.com/"
+      url: "https://github.com/bfmhno3"
 
 footer:
   links:
-    - label: "Twitter"
-      icon: "fab fa-fw fa-twitter-square"
-      url: "https://twitter.com/"
     - label: "GitHub"
       icon: "fab fa-fw fa-github"
-      url: "https://github.com/"
-    - label: "Instagram"
-      icon: "fab fa-fw fa-instagram"
-      url: "https://instagram.com/"
+      url: "https://github.com/bfmhno3"
 
 defaults:
   # _posts
