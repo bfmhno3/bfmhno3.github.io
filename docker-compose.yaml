@@ -1,0 +1,19 @@
+services:
+  jekyll:
+    image: jekyll/jekyll:latest
+    container_name:  bfmhno3.github.io
+
+    # 容器启动后要执行的命令
+    # jekyll serve: 启动服务
+    # --watch: 监听文件变动并自动重新构建
+    # --force_polling: 强制轮轮询文件变动（在 Docker for Windows/Mac 中，文件系统事件可能无法很好地传递到容器内）
+    # --livereload: (可选) 文件变动后自动刷新浏览器，非常方便
+    command: jekyll serve --watch --force_polling --livereload
+    ports:
+      - "4000:4000"
+      # - "35729:35729"  # livereload 端口
+    volumes:
+      - .:/srv/jekyll  # 将当前目录挂载到容器内的 /srv/jekyll
+      - ./vendor/bundle:/usr/local/bundle  # 持久化 Ruby gems，避免每次启动都重新安装
+    environment:
+      - BUNDLE_PATH=/usr/local/bundle  # 指定 gems 安装路径
