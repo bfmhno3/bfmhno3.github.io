@@ -1,6 +1,6 @@
 ---
 title: "在 Windows 上使用 Docker、Git Bash 和 overleaf-toolkit 部署 Overleaf 社区版"
-date: 2025-10-18 22:30:00
+date: 2025-10-18 22:30:00 +08:00
 categories:
   - Tutorial
 tags:
