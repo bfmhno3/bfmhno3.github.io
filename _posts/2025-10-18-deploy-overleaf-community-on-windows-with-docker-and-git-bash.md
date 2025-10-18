@@ -65,7 +65,7 @@ cd ./overleaf-toolkit
  Windows 上的路径格式，导致 Docker 无法找到数据卷。
 
 我已就此问题向官方提交了 [Issue #379](https://github.com/overleaf/toolkit/issues/379)，并提交了修
-修复方案 [PR #380](https://github.com/overleaf/toolkit/pull/380)。
+复方案 [PR #380](https://github.com/overleaf/toolkit/pull/380)。
 
 鉴于此 PR 还并未被合并到主分支，需要用户自行进行修改。
 
