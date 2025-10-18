@@ -1,6 +1,11 @@
 ---
 title: "在 Windows 上使用 Docker、Git Bash 和 overleaf-toolkit 部署 Overleaf 社区版"
 date: 2025-10-18 22:30:00 +08:00
+excerpt: >-
+  本教程提供了一份详尽的指南，旨在帮助用户在 Windows 10/11 系统上，通过 Docker Desktop 和 Git Bash 
+  成功部署 Overleaf 社区版。文章重点解决了官方 overleaf-toolkit 脚本在 Windows 环境下因路径不兼容而
+  导致的部署失败问题，并提供了简单有效的脚本修复方案。跟随本教程，您可以轻松搭建一个属于自己的私有 
+  Overleaf 实例，确保数据安全与访问稳定。
 categories:
   - Tutorial
 tags:
