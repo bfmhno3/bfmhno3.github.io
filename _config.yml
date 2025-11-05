@@ -77,12 +77,31 @@ author:
     - label: "GitHub"
       icon: "fab fa-fw fa-github"
       url: "https://github.com/bfmhno3"
+    - label: "Gitee"
+      icon: "fa-solid fa-g"
+      url: "https://gitee.com/bfmhno3"
+    - label: "cnblogs"
+      icon: "fa-solid fa-blog"
+      url: "https://www.cnblogs.com/bfmhno3"
+    - label: "CSDN"
+      icon: "fa-solid fa-monkey"
+      url: "https://blog.csdn.net/B33336"
+
 
 footer:
   links:
     - label: "GitHub"
       icon: "fab fa-fw fa-github"
       url: "https://github.com/bfmhno3"
+    - label: "Gitee"
+      icon: "fa-solid fa-g"
+      url: "https://gitee.com/bfmhno3"
+    - label: "cnblogs"
+      icon: "fa-solid fa-blog"
+      url: "https://www.cnblogs.com/bfmhno3"
+    - label: "CSDN"
+      icon: "fa-solid fa-monkey"
+      url: "https://blog.csdn.net/B33336"
 
 defaults:
   # _posts
