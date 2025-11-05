@@ -2,6 +2,50 @@
 # You don't need to edit this file, it's empty on purpose.
 # Edit theme's home layout instead if you wanna make some changes
 # See: https://jekyllrb.com/docs/themes/#overriding-theme-defaults
-layout: home
+layout: splash
 author_profile: true
+excerpt: >
+    A tale etched in starlight,<br />
+    Whispered in a fleeting dream.<br />
+    I seek a name lost to memory,<br />
+    Holding on to a feeling that never fades.
+
+header:
+    overlay_image: /assets/images/homepage-image.png
+    overlay_color: "#5e616c"
+    overlay_filter: "0.4"
+    caption: "A name, still whispered no the wind."
+    title: "Where Our Paths May cross"
+    actions:
+        - label: "Recall the Moments"
+          url: "/posts/"
+        - label: "Glimpse the Future"
+          url: "/about/"
+        - label: "Follow my GITHUB"
+          url: "https://github.com/bfmhno3"
+
+feature_row:
+    - image_path: /assets/images/homepage-feature-row-tutorial.png
+      alt: "Tutorials"
+      title: "Tutorials:<br />The Path Unfolded"
+      excerpt: "Here lie the maps and methods I've pieced together-clear steps through the static, finding solutions that I once searched for."
+      url: "/categories/tutorials/"
+      btn_label: "View the Guides"
+      btn_class: "btn--primary"
+    - image_path: /assets/images/homepage-feature-row-notes.png
+      alt: "Notes"
+      title: "Notes:<br />Fragments of Knowing"
+      excerpt: "Scattered memories and technical blueprints. These are the fragments I've gathered, the fleeting details I knew I must not forget."
+      url: "/categories/notes/"
+      btn_label: "Review the Notes"
+      btn_class: "btn--primary"
+    - image_path: /assets/images/homepage-feature-row-musing.png
+      alt: "Musings"
+      title: "Musings:<br />Echoes of the Heart"
+      excerpt: "Beyong the code, beyond the logic. These are the whispers of the heart, the profound sense of connection to a world half-remembered."
+      url: "/categories/musings/"
+      btn_label: "Read the Musings"
+      btn_class: "btn--primary"
 ---
+
+{% include feature_row %}
