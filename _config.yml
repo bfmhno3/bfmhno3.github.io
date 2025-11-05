@@ -66,6 +66,7 @@ plugins:
   - jekyll-feed
   - jemoji
   - jekyll-include-cache
+  - jekyll-spaceship
 
 # --- Author & Footer ---
 author:
