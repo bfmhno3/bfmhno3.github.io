@@ -84,7 +84,7 @@ author:
       icon: "fa-solid fa-blog"
       url: "https://www.cnblogs.com/bfmhno3"
     - label: "CSDN"
-      icon: "fa-solid fa-monkey"
+      icon: "fa-solid fa-blog"
       url: "https://blog.csdn.net/B33336"
 
 
@@ -100,7 +100,7 @@ footer:
       icon: "fa-solid fa-blog"
       url: "https://www.cnblogs.com/bfmhno3"
     - label: "CSDN"
-      icon: "fa-solid fa-monkey"
+      icon: "fa-solid fa-blog"
       url: "https://blog.csdn.net/B33336"
 
 defaults:
