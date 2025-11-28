@@ -1,14 +1,20 @@
 services:
   jekyll:
     image: jekyll/jekyll:latest
-    container_name:  bfmhno3.github.io
+    container_name: bfmhno3.github.io
 
     # 容器启动后要执行的命令
+    # bundle config mirror.https://rubygems.org https://gems.ruby-china.com: 使用国内服务器加速安装
     # jekyll serve: 启动服务
     # --watch: 监听文件变动并自动重新构建
     # --force_polling: 强制轮轮询文件变动（在 Docker for Windows/Mac 中，文件系统事件可能无法很好地传递到容器内）
     # --livereload: (可选) 文件变动后自动刷新浏览器，非常方便
-    command: jekyll serve --watch --force_polling --livereload --future
+    command: >
+      sh -c "
+      bundle config mirror.https://rubygems.org https://gems.ruby-china.com &&
+      bundle check || bundle install &&
+      jekyll serve --watch --force_polling --livereload --future
+      "
     ports:
       - "4000:4000"
       # - "35729:35729"  # livereload 端口
