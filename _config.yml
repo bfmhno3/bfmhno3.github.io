@@ -175,7 +175,7 @@ keep_files:
   - .git
   - .svn
 encoding: "utf-8"
-# markdown_ext: "markdown, mkdown, mkdn, mkd, md" # 不要使用，导致未知问题
+markdown_ext: "markdown,mkdown,mkdn,mkd,md"
 
 # Convension
 markdown: kramdown
