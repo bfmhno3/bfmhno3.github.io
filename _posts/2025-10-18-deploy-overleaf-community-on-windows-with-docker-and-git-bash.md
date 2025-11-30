@@ -10,7 +10,6 @@ tags:
   - Overleaf
   - Git Bash
   - Windows
-classes: wide
 toc: true
 ---
 

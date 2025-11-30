@@ -11,7 +11,6 @@ tags:
   - MIUI
   - Android
   - ADB
-classes: wide
 toc: true
 toc_label: "目录"
 toc_icon: "cog"
@@ -145,5 +144,3 @@ UAD 是一个跨平台的图形界面软件，能自动识别小米手机的臃�
 ---
 
 *免责声明：本文提供的操作涉及系统层面的修改。虽然通过 `pm uninstall --user 0` 卸载应用通常是安全的且可逆的，但操作不当仍可能导致系统不稳定。
-
-$\LaTeX$

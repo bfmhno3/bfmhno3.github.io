@@ -9,7 +9,6 @@ tags:
   - NVIDIA
   - CS2
   - Steam
-classes: wide
 toc: true
 toc_label: "目录"
 toc_icon: "cog"
