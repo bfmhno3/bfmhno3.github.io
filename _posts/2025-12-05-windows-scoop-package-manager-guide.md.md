@@ -54,7 +54,7 @@ $env:SCOOP_GLOBAL = 'D:\ProgramData\scoop'
 >
 > - ❌ 错误示例：`D:\Program Files\Scoop` 或 `D:\我的软件\Scoop`
 > - ✅ 正确示例：`D:\Users\abc\scoop` 或 `D:\Scoop`
-> {: .notice--danger}
+
 
 #### 备选方案：通过图形界面设置
 
@@ -74,11 +74,12 @@ $env:SCOOP_GLOBAL = 'D:\ProgramData\scoop'
    - 删除指向旧目录的条目（如 `C:\Users\...\scoop\shims`）。
    - 添加新目录的 shim 路径（如 `D:\Scoop\shims`）。
 3. **关键步骤**：打开新的 PowerShell 终端，执行以下命令重置所有软件的链接：
+
     ```powershell
     scoop reset *
     ```
 
-## 2\. 安装 Scoop
+## 2. 安装 Scoop
 
 环境变量配置完成后，在 PowerShell 中执行以下命令进行安装：
 
