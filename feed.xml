@@ -1,0 +1,2053 @@
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.10.0">Jekyll</generator><link href="https://bfmhno3.github.io/feed.xml" rel="self" type="application/atom+xml" /><link href="https://bfmhno3.github.io/" rel="alternate" type="text/html" /><updated>2025-12-05T14:36:17+00:00</updated><id>https://bfmhno3.github.io/feed.xml</id><title type="html">Better Mistakes</title><subtitle>Ever tried. Ever failed. No matter. Try Again. Fail again. Fail better.</subtitle><author><name>bfmhno3</name></author><entry><title type="html">Windows 包管理神器 Scoop：从入门到自定义安装配置</title><link href="https://bfmhno3.github.io/tutorial/windows-scoop-package-manager-guide.md/" rel="alternate" type="text/html" title="Windows 包管理神器 Scoop：从入门到自定义安装配置" /><published>2025-12-05T13:00:00+00:00</published><updated>2025-12-05T13:00:00+00:00</updated><id>https://bfmhno3.github.io/tutorial/windows-scoop-package-manager-guide.md</id><content type="html" xml:base="https://bfmhno3.github.io/tutorial/windows-scoop-package-manager-guide.md/"><![CDATA[<p>如果你习惯了 Linux 下 <code class="language-plaintext highlighter-rouge">apt</code>、<code class="language-plaintext highlighter-rouge">pacman</code> 或 macOS 下 <code class="language-plaintext highlighter-rouge">brew</code> 的爽快体验，那么回到 Windows 面对满屏的安装包和 “下一步” 肯定会感到繁琐。</p>
+
+<p><strong>Scoop</strong> 是 Windows 下的一款轻量级包管理工具。与 Chocolatey 或 Winget 不同，Scoop 的设计哲学是 <strong>“非侵入式”</strong>：</p>
+
+<ul>
+  <li><strong>权限洁癖</strong>：默认安装在用户目录，无需 UAC 提权（除非安装全局软件）。</li>
+  <li><strong>绿色环保</strong>：自动处理环境变量（Shim 机制），卸载时瞬间清除，不残留注册表垃圾。</li>
+  <li><strong>版本控制</strong>：利用 Git 管理软件仓库（Bucket），方便版本回退。</li>
+</ul>
+
+<p>本文将带你从零开始配置一个完美的 Scoop 环境。</p>
+
+<h2 id="1-调整-scoop-安装位置">1. 调整 Scoop 安装位置</h2>
+
+<p>Scoop 默认将软件安装在 C 盘。作为开发者，我们通常希望将工具链与系统盘分离。在运行安装脚本前，我们需要先设置环境变量。</p>
+
+<h3 id="还没有安装-scoop推荐">还没有安装 Scoop（推荐）</h3>
+
+<p>打开 <strong>PowerShell</strong>（无需管理员权限），依次执行以下命令。假设我们要安装到 <code class="language-plaintext highlighter-rouge">D:\Users\abc\scoop</code>（请根据你的实际情况修改路径）。</p>
+
+<h4 id="第一步设置用户安装目录">第一步：设置用户安装目录</h4>
+
+<p>这是普通软件（Chrome, VSCode 等）的安装位置。</p>
+
+<div class="language-powershell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$</span><span class="nn">env</span><span class="p">:</span><span class="nv">SCOOP</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'D:\Users\abc\scoop'</span><span class="w">
+</span><span class="p">[</span><span class="n">Environment</span><span class="p">]::</span><span class="n">SetEnvironmentVariable</span><span class="p">(</span><span class="s1">'SCOOP'</span><span class="p">,</span><span class="w"> </span><span class="nv">$env</span><span class="p">::</span><span class="n">SCOOP</span><span class="p">,</span><span class="w"> </span><span class="s1">'User'</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<h4 id="第二步设置全局安装目录可选">第二步：设置全局安装目录（可选）</h4>
+
+<p>这是需要管理员权限（如驱动、系统级工具）的软件安装位置。</p>
+
+<div class="language-powershell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$</span><span class="nn">env</span><span class="p">:</span><span class="nv">SCOOP_GLOBAL</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'D:\ProgramData\scoop'</span><span class="w">
+</span><span class="p">[</span><span class="n">Environment</span><span class="p">]::</span><span class="n">SetEnvironmentVariable</span><span class="p">(</span><span class="s1">'SCOOP_GLOBAL'</span><span class="p">,</span><span class="w"> </span><span class="nv">$env</span><span class="p">::</span><span class="n">SCOOP_GLOBAL</span><span class="p">,</span><span class="w"> </span><span class="s1">'Machine'</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<blockquote>
+  <p class="notice--info"><strong>注意</strong>：修改 <code class="language-plaintext highlighter-rouge">Machine</code> 级别的变量通常需要<strong>管理员权限</strong>的 PowerShell。</p>
+</blockquote>
+
+<blockquote>
+  <p><strong>警告：路径规范</strong>
+Scoop 的安装路径中<strong>严禁包含空格和中文字符</strong>！</p>
+
+  <ul>
+    <li>❌ 错误示例：<code class="language-plaintext highlighter-rouge">D:\Program Files\Scoop</code> 或 <code class="language-plaintext highlighter-rouge">D:\我的软件\Scoop</code></li>
+    <li>✅ 正确示例：<code class="language-plaintext highlighter-rouge">D:\Users\abc\scoop</code> 或 <code class="language-plaintext highlighter-rouge">D:\Scoop</code></li>
+  </ul>
+</blockquote>
+
+<h4 id="备选方案通过图形界面设置">备选方案：通过图形界面设置</h4>
+
+<p>如果你不习惯命令行，也可以通过 Windows 设置：</p>
+
+<ol>
+  <li>搜索 <strong>“编辑系统环境变量”</strong>。</li>
+  <li>点击 <strong>“环境变量(N)…”</strong>。</li>
+  <li>在 <strong>“用户变量”</strong> 中新建 <code class="language-plaintext highlighter-rouge">SCOOP</code>，值为你的自定义路径。</li>
+  <li>在 <strong>“系统变量”</strong> 中新建 <code class="language-plaintext highlighter-rouge">SCOOP_GLOBAL</code>，值为你的全局路径。</li>
+</ol>
+
+<h3 id="已经安装了-scoop迁移">已经安装了 Scoop（迁移）</h3>
+
+<p>如果你已经安装了 Scoop 但想迁移目录，操作稍微繁琐一些，因为 Scoop 不写注册表，它是“绿色”的。</p>
+
+<ol>
+  <li>将原目录（默认 <code class="language-plaintext highlighter-rouge">C:\Users\&lt;user_name&gt;\scoop</code>）<strong>剪切</strong>并<strong>粘贴</strong>到新目录（例如 <code class="language-plaintext highlighter-rouge">D:\Scoop</code>）。</li>
+  <li>修改系统环境变量 <code class="language-plaintext highlighter-rouge">Path</code>：
+    <ul>
+      <li>删除指向旧目录的条目（如 <code class="language-plaintext highlighter-rouge">C:\Users\...\scoop\shims</code>）。</li>
+      <li>添加新目录的 shim 路径（如 <code class="language-plaintext highlighter-rouge">D:\Scoop\shims</code>）。</li>
+    </ul>
+  </li>
+  <li>
+    <p><strong>关键步骤</strong>：打开新的 PowerShell 终端，执行以下命令重置所有软件的链接：</p>
+
+    <div class="language-powershell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="w"> </span><span class="n">scoop</span><span class="w"> </span><span class="nx">reset</span><span class="w"> </span><span class="o">*</span><span class="w">
+</span></code></pre></div>    </div>
+  </li>
+</ol>
+
+<h2 id="2-安装-scoop">2. 安装 Scoop</h2>
+
+<p>环境变量配置完成后，在 PowerShell 中执行以下命令进行安装：</p>
+
+<div class="language-powershell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">Set-ExecutionPolicy</span><span class="w"> </span><span class="nt">-ExecutionPolicy</span><span class="w"> </span><span class="nx">RemoteSigned</span><span class="w"> </span><span class="nt">-Scope</span><span class="w"> </span><span class="nx">CurrentUser</span><span class="w">
+</span><span class="n">Invoke-RestMethod</span><span class="w"> </span><span class="nt">-Uri</span><span class="w"> </span><span class="p">[</span><span class="n">https</span><span class="p">:</span><span class="n">//get.scoop.sh</span><span class="p">](</span><span class="n">https</span><span class="p">:</span><span class="n">//get.scoop.sh</span><span class="p">)</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="n">Invoke</span><span class="nt">-Expression</span><span class="w">
+</span></code></pre></div></div>
+
+<ul>
+  <li>第一行：允许当前用户运行本地脚本。</li>
+  <li>第二行：下载并执行 Scoop 官方安装脚本。</li>
+</ul>
+
+<p>安装完成后，输入 <code class="language-plaintext highlighter-rouge">scoop help</code>，如果有输出，说明安装成功。</p>
+
+<p>如果在新开启一个终端后执行 <code class="language-plaintext highlighter-rouge">scoop</code> 报错，则需要配置系统 <code class="language-plaintext highlighter-rouge">PATH</code> 变量，添加例如：<code class="language-plaintext highlighter-rouge">D:\Users\abc\scoop\shims</code>。</p>
+
+<h2 id="3-初始化配置">3. 初始化配置</h2>
+
+<h3 id="安装必备组件">安装必备组件</h3>
+
+<p>Scoop 依赖 Git 来管理仓库，同时强烈建议安装 Aria2 来进行多线程下载加速。</p>
+
+<div class="language-powershell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">scoop</span><span class="w"> </span><span class="nx">install</span><span class="w"> </span><span class="nx">git</span><span class="w"> </span><span class="nx">aria2</span><span class="w">
+</span></code></pre></div></div>
+
+<p>安装完成后，建议对 Aria2 进行调优，关闭警告并开启多线程：</p>
+
+<div class="language-powershell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">scoop</span><span class="w"> </span><span class="nx">config</span><span class="w"> </span><span class="nx">aria2-warning-enabled</span><span class="w"> </span><span class="nx">false</span><span class="w">
+</span><span class="n">scoop</span><span class="w"> </span><span class="nx">config</span><span class="w"> </span><span class="nx">aria2-retry-wait</span><span class="w"> </span><span class="nx">4</span><span class="w">
+</span><span class="n">scoop</span><span class="w"> </span><span class="nx">config</span><span class="w"> </span><span class="nx">aria2-max-connection-per-server</span><span class="w"> </span><span class="nx">16</span><span class="w">
+</span><span class="n">scoop</span><span class="w"> </span><span class="nx">config</span><span class="w"> </span><span class="nx">aria2-split</span><span class="w"> </span><span class="nx">16</span><span class="w">
+</span><span class="n">scoop</span><span class="w"> </span><span class="nx">config</span><span class="w"> </span><span class="nx">aria2-min-split-size</span><span class="w"> </span><span class="nx">1M</span><span class="w">
+</span></code></pre></div></div>
+
+<h3 id="添加常用软件仓库-buckets">添加常用软件仓库 (Buckets)</h3>
+
+<p>Scoop 默认的 <code class="language-plaintext highlighter-rouge">main</code> 仓库软件较少且由于标准严格，通常只包含 CLI 工具。我们需要添加社区仓库来扩展生态。</p>
+
+<div class="language-powershell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">scoop</span><span class="w"> </span><span class="nx">bucket</span><span class="w"> </span><span class="nx">add</span><span class="w"> </span><span class="nx">extras</span><span class="w">      </span><span class="c"># 包含大量 GUI 软件 (Chrome, VSCode 等)</span><span class="w">
+</span><span class="n">scoop</span><span class="w"> </span><span class="nx">bucket</span><span class="w"> </span><span class="nx">add</span><span class="w"> </span><span class="nx">versions</span><span class="w">    </span><span class="c"># 包含旧版本软件</span><span class="w">
+</span><span class="n">scoop</span><span class="w"> </span><span class="nx">bucket</span><span class="w"> </span><span class="nx">add</span><span class="w"> </span><span class="nx">java</span><span class="w">        </span><span class="c"># Java 开发相关</span><span class="w">
+</span><span class="n">scoop</span><span class="w"> </span><span class="nx">bucket</span><span class="w"> </span><span class="nx">add</span><span class="w"> </span><span class="nx">nerd-fonts</span><span class="w">  </span><span class="c"># 编程字体 (FiraCode NF, JetBrainsMono NF)</span><span class="w">
+</span></code></pre></div></div>
+
+<h2 id="4-装机必备软件清单">4. 装机必备软件清单</h2>
+
+<p>这里列出了一份高频使用的软件清单，涵盖了开发、系统增强和效率工具。</p>
+
+<p>你可以一次性复制执行：</p>
+
+<div class="language-powershell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 系统工具与命令行增强</span><span class="w">
+</span><span class="n">scoop</span><span class="w"> </span><span class="nx">install</span><span class="w"> </span><span class="nx">gsudo</span><span class="w"> </span><span class="nx">everything</span><span class="w"> </span><span class="nx">scoop-search</span><span class="w"> </span><span class="nx">starship</span><span class="w"> </span><span class="nx">fzf</span><span class="w"> </span><span class="nx">ripgrep</span><span class="w"> </span><span class="nx">bat</span><span class="w"> </span><span class="nx">powertoys</span><span class="w"> </span><span class="nx">everything-powertoys</span><span class="w">
+
+</span><span class="c"># 开发工具</span><span class="w">
+</span><span class="n">scoop</span><span class="w"> </span><span class="nx">install</span><span class="w"> </span><span class="nx">uv</span><span class="w"> </span><span class="nx">neovim</span><span class="w"> </span><span class="nx">vscode</span><span class="w"> </span><span class="nx">jetbrains-toolbox</span><span class="w">
+</span></code></pre></div></div>
+
+<p><strong>软件清单详解：</strong></p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">gsudo</code>: Windows 下的 <code class="language-plaintext highlighter-rouge">sudo</code>，比官方的更强，体验与 Linux 一致。</li>
+  <li><code class="language-plaintext highlighter-rouge">scoop-search</code>: 秒级搜索 Scoop 仓库软件（比原生 <code class="language-plaintext highlighter-rouge">scoop search</code> 快几十倍）。</li>
+  <li><code class="language-plaintext highlighter-rouge">everything</code>: Windows 文件搜索神器。</li>
+  <li><code class="language-plaintext highlighter-rouge">powertoys</code>: 微软官方出品的系统增强工具集。</li>
+  <li><code class="language-plaintext highlighter-rouge">everything-powertoys</code>: 让 PowerToys 的启动器调用 Everything 的索引。</li>
+  <li><code class="language-plaintext highlighter-rouge">starship</code>: 极速、高颜值的终端提示符（Prompt），支持显示 Git 状态、Python 版本等。</li>
+  <li><code class="language-plaintext highlighter-rouge">fzf</code>: 命令行模糊查找工具。</li>
+  <li><code class="language-plaintext highlighter-rouge">ripgrep</code> (<code class="language-plaintext highlighter-rouge">rg</code>): 速度极快的 <code class="language-plaintext highlighter-rouge">grep</code> 替代品。</li>
+  <li><code class="language-plaintext highlighter-rouge">bat</code>: 带语法高亮和 Git 集成的 <code class="language-plaintext highlighter-rouge">cat</code> 替代品。</li>
+  <li><code class="language-plaintext highlighter-rouge">uv</code>: Rust 编写的 Python 包版本管理器，速度飞快。</li>
+  <li><code class="language-plaintext highlighter-rouge">neovim</code>: 现代化 Vim 编辑器。</li>
+  <li><code class="language-plaintext highlighter-rouge">vscode</code>: 最流行的代码编辑器。</li>
+  <li><code class="language-plaintext highlighter-rouge">jetbrains-toolbox</code>: 管理 IDEA, PyCharm 等 JetBrains 全家桶。</li>
+</ul>
+
+<h2 id="5-日常维护与进阶">5. 日常维护与进阶</h2>
+
+<h3 id="更新软件">更新软件</h3>
+
+<p>Scoop 的更新分为两步：先更新仓库列表，再更新软件。</p>
+
+<div class="language-powershell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">scoop</span><span class="w"> </span><span class="nx">update</span><span class="w">           </span><span class="c"># 更新 scoop 本身和 bucket</span><span class="w">
+</span><span class="n">scoop</span><span class="w"> </span><span class="nx">update</span><span class="w"> </span><span class="o">*</span><span class="w">         </span><span class="c"># 更新所有已安装的软件</span><span class="w">
+</span></code></pre></div></div>
+
+<h3 id="清理旧版本">清理旧版本</h3>
+
+<p>Scoop 默认会保留软件的旧版本（为了方便回退）。如果你的磁盘空间紧张，可以清理旧包：</p>
+
+<div class="language-powershell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">scoop</span><span class="w"> </span><span class="nx">cleanup</span><span class="w"> </span><span class="o">*</span><span class="w">        </span><span class="c"># 清理所有软件的旧版本</span><span class="w">
+</span></code></pre></div></div>
+
+<h3 id="软件备份与迁移">软件备份与迁移</h3>
+
+<p>这是我最喜欢 Scoop 的一点：你可以导出一份列表，在另一台电脑上瞬间还原你的工作环境。</p>
+
+<p><strong>导出列表：</strong></p>
+
+<div class="language-powershell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">scoop</span><span class="w"> </span><span class="nx">export</span><span class="w"> </span><span class="err">&gt;</span><span class="w"> </span><span class="nx">scoop-apps.json</span><span class="w">
+</span></code></pre></div></div>
+
+<p><strong>在另一台电脑恢复：</strong></p>
+
+<div class="language-powershell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">scoop</span><span class="w"> </span><span class="nx">import</span><span class="w"> </span><span class="nx">scoop-apps.json</span><span class="w">
+</span></code></pre></div></div>
+
+<h2 id="6-常见问题解决">6. 常见问题解决</h2>
+
+<h3 id="windows-搜索找不到安装的软件">Windows 搜索找不到安装的软件</h3>
+
+<p><strong>现象</strong>：安装了 Chrome 或 VS Code，但按 Win 键搜索不到。</p>
+
+<p><strong>原因</strong>：Windows 索引默认只覆盖特定的开始菜单目录，具体路径为：<code class="language-plaintext highlighter-rouge">C:\Users\&lt;user&gt;\AppData\Roaming\Microsoft\Windows\Start Menu\Programs</code>（在运行窗口中输入 <code class="language-plaintext highlighter-rouge">shell:programs</code> 后点击 <kbd>Enter</kbd> 也可直接打开）。</p>
+
+<p><strong>解决方法</strong>：
+Scoop 实际上会自动创建快捷方式到 <code class="language-plaintext highlighter-rouge">C:\Users\&lt;user&gt;\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Scoop Apps</code>。如果搜索不到，通常是因为索引未更新或快捷方式未正确生成。</p>
+
+<p>尝试执行以下命令重置：</p>
+
+<div class="language-powershell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 重置指定软件的快捷方式</span><span class="w">
+</span><span class="n">scoop</span><span class="w"> </span><span class="nx">reset</span><span class="w"> </span><span class="err">&lt;</span><span class="nx">package-name</span><span class="err">&gt;</span><span class="w">
+
+</span><span class="c"># 或者重置所有软件（推荐）</span><span class="w">
+</span><span class="n">scoop</span><span class="w"> </span><span class="nx">reset</span><span class="w"> </span><span class="o">*</span><span class="w">
+</span></code></pre></div></div>
+
+<p><code class="language-plaintext highlighter-rouge">reset</code> 命令会重新执行安装脚本中的 “链接” 步骤，重建 <code class="language-plaintext highlighter-rouge">.exe</code> 的 shim 和开始菜单快捷方式。</p>
+
+<p>此外，也可以使用 Scoop 自带的体检工具来发现路径或权限问题：</p>
+
+<div class="language-powershell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">scoop</span><span class="w"> </span><span class="nx">checkup</span><span class="w">
+</span></code></pre></div></div>]]></content><author><name>bfmhno3</name></author><category term="Tutorial" /><category term="Windows" /><category term="Scoop" /><category term="Efficiency" /><summary type="html"><![CDATA[如果你习惯了 Linux 下 apt、pacman 或 macOS 下 brew 的爽快体验，那么回到 Windows 面对满屏的安装包和 “下一步” 肯定会感到繁琐。 Scoop 是 Windows 下的一款轻量级包管理工具。与 Chocolatey 或 Winget 不同，Scoop 的设计哲学是 “非侵入式”： 权限洁癖：默认安装在用户目录，无需 UAC 提权（除非安装全局软件）。 绿色环保：自动处理环境变量（Shim 机制），卸载时瞬间清除，不残留注册表垃圾。 版本控制：利用 Git 管理软件仓库（Bucket），方便版本回退。 本文将带你从零开始配置一个完美的 Scoop 环境。 1. 调整 Scoop 安装位置 Scoop 默认将软件安装在 C 盘。作为开发者，我们通常希望将工具链与系统盘分离。在运行安装脚本前，我们需要先设置环境变量。 还没有安装 Scoop（推荐） 打开 PowerShell（无需管理员权限），依次执行以下命令。假设我们要安装到 D:\Users\abc\scoop（请根据你的实际情况修改路径）。 第一步：设置用户安装目录 这是普通软件（Chrome, VSCode 等）的安装位置。 $env:SCOOP = 'D:\Users\abc\scoop' [Environment]::SetEnvironmentVariable('SCOOP', $env::SCOOP, 'User') 第二步：设置全局安装目录（可选） 这是需要管理员权限（如驱动、系统级工具）的软件安装位置。 $env:SCOOP_GLOBAL = 'D:\ProgramData\scoop' [Environment]::SetEnvironmentVariable('SCOOP_GLOBAL', $env::SCOOP_GLOBAL, 'Machine') 注意：修改 Machine 级别的变量通常需要管理员权限的 PowerShell。 警告：路径规范 Scoop 的安装路径中严禁包含空格和中文字符！ ❌ 错误示例：D:\Program Files\Scoop 或 D:\我的软件\Scoop ✅ 正确示例：D:\Users\abc\scoop 或 D:\Scoop 备选方案：通过图形界面设置 如果你不习惯命令行，也可以通过 Windows 设置： 搜索 “编辑系统环境变量”。 点击 “环境变量(N)…”。 在 “用户变量” 中新建 SCOOP，值为你的自定义路径。 在 “系统变量” 中新建 SCOOP_GLOBAL，值为你的全局路径。 已经安装了 Scoop（迁移） 如果你已经安装了 Scoop 但想迁移目录，操作稍微繁琐一些，因为 Scoop 不写注册表，它是“绿色”的。 将原目录（默认 C:\Users\&lt;user_name&gt;\scoop）剪切并粘贴到新目录（例如 D:\Scoop）。 修改系统环境变量 Path： 删除指向旧目录的条目（如 C:\Users\...\scoop\shims）。 添加新目录的 shim 路径（如 D:\Scoop\shims）。 关键步骤：打开新的 PowerShell 终端，执行以下命令重置所有软件的链接： scoop reset * 2. 安装 Scoop 环境变量配置完成后，在 PowerShell 中执行以下命令进行安装： Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser Invoke-RestMethod -Uri [https://get.scoop.sh](https://get.scoop.sh) | Invoke-Expression 第一行：允许当前用户运行本地脚本。 第二行：下载并执行 Scoop 官方安装脚本。 安装完成后，输入 scoop help，如果有输出，说明安装成功。 如果在新开启一个终端后执行 scoop 报错，则需要配置系统 PATH 变量，添加例如：D:\Users\abc\scoop\shims。 3. 初始化配置 安装必备组件 Scoop 依赖 Git 来管理仓库，同时强烈建议安装 Aria2 来进行多线程下载加速。 scoop install git aria2 安装完成后，建议对 Aria2 进行调优，关闭警告并开启多线程： scoop config aria2-warning-enabled false scoop config aria2-retry-wait 4 scoop config aria2-max-connection-per-server 16 scoop config aria2-split 16 scoop config aria2-min-split-size 1M 添加常用软件仓库 (Buckets) Scoop 默认的 main 仓库软件较少且由于标准严格，通常只包含 CLI 工具。我们需要添加社区仓库来扩展生态。 scoop bucket add extras # 包含大量 GUI 软件 (Chrome, VSCode 等) scoop bucket add versions # 包含旧版本软件 scoop bucket add java # Java 开发相关 scoop bucket add nerd-fonts # 编程字体 (FiraCode NF, JetBrainsMono NF) 4. 装机必备软件清单 这里列出了一份高频使用的软件清单，涵盖了开发、系统增强和效率工具。 你可以一次性复制执行： # 系统工具与命令行增强 scoop install gsudo everything scoop-search starship fzf ripgrep bat powertoys everything-powertoys # 开发工具 scoop install uv neovim vscode jetbrains-toolbox 软件清单详解： gsudo: Windows 下的 sudo，比官方的更强，体验与 Linux 一致。 scoop-search: 秒级搜索 Scoop 仓库软件（比原生 scoop search 快几十倍）。 everything: Windows 文件搜索神器。 powertoys: 微软官方出品的系统增强工具集。 everything-powertoys: 让 PowerToys 的启动器调用 Everything 的索引。 starship: 极速、高颜值的终端提示符（Prompt），支持显示 Git 状态、Python 版本等。 fzf: 命令行模糊查找工具。 ripgrep (rg): 速度极快的 grep 替代品。 bat: 带语法高亮和 Git 集成的 cat 替代品。 uv: Rust 编写的 Python 包版本管理器，速度飞快。 neovim: 现代化 Vim 编辑器。 vscode: 最流行的代码编辑器。 jetbrains-toolbox: 管理 IDEA, PyCharm 等 JetBrains 全家桶。 5. 日常维护与进阶 更新软件 Scoop 的更新分为两步：先更新仓库列表，再更新软件。 scoop update # 更新 scoop 本身和 bucket scoop update * # 更新所有已安装的软件 清理旧版本 Scoop 默认会保留软件的旧版本（为了方便回退）。如果你的磁盘空间紧张，可以清理旧包： scoop cleanup * # 清理所有软件的旧版本 软件备份与迁移 这是我最喜欢 Scoop 的一点：你可以导出一份列表，在另一台电脑上瞬间还原你的工作环境。 导出列表： scoop export &gt; scoop-apps.json 在另一台电脑恢复： scoop import scoop-apps.json 6. 常见问题解决 Windows 搜索找不到安装的软件 现象：安装了 Chrome 或 VS Code，但按 Win 键搜索不到。 原因：Windows 索引默认只覆盖特定的开始菜单目录，具体路径为：C:\Users\&lt;user&gt;\AppData\Roaming\Microsoft\Windows\Start Menu\Programs（在运行窗口中输入 shell:programs 后点击 Enter 也可直接打开）。 解决方法： Scoop 实际上会自动创建快捷方式到 C:\Users\&lt;user&gt;\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Scoop Apps。如果搜索不到，通常是因为索引未更新或快捷方式未正确生成。 尝试执行以下命令重置： # 重置指定软件的快捷方式 scoop reset &lt;package-name&gt; # 或者重置所有软件（推荐） scoop reset * reset 命令会重新执行安装脚本中的 “链接” 步骤，重建 .exe 的 shim 和开始菜单快捷方式。 此外，也可以使用 Scoop 自带的体检工具来发现路径或权限问题： scoop checkup]]></summary></entry><entry><title type="html">英语翻译技巧</title><link href="https://bfmhno3.github.io/note/english-translation-techniques/" rel="alternate" type="text/html" title="英语翻译技巧" /><published>2025-12-02T01:35:00+00:00</published><updated>2025-12-02T01:35:00+00:00</updated><id>https://bfmhno3.github.io/note/english-translation-techniques</id><content type="html" xml:base="https://bfmhno3.github.io/note/english-translation-techniques/"><![CDATA[<p>在备考 CET-6 或雅思写作时，许多同学面临的最大障碍不是词汇量，而是<strong>思维模式（Mindset）</strong>。中英文在底层逻辑上存在巨大的鸿沟：中文重意合、动态、叙事；英文重形合、静态、结构。</p>
+
+<p>本文将拆解中英翻译的<strong>核心差异</strong>，并提供一套可操作的<strong>翻译三步法</strong>。</p>
+
+<h2 id="一-核心思维差异core-divergences">一、 核心思维差异（Core Divergences）</h2>
+
+<h3 id="1-动态-vs-静态nominalization">1. 动态 vs. 静态（Nominalization）</h3>
+
+<blockquote>
+  <p><strong>法则：</strong> 汉语多用<strong>动词</strong>（Verb-heavy）；学术英语多用<strong>名词</strong>（Noun-heavy）。</p>
+</blockquote>
+
+<p>在翻译时，要学会<strong>名词化（Nominalization）</strong>：将中文的动作或性质抽象为英语的名词短语。这能显著提升句子的“信息密度”。</p>
+
+<ul>
+  <li><strong>原文</strong>：这就解释了为什么我们需要从不同角度看问题。</li>
+  <li><strong>❌ Chinglish:</strong> This explains why we need to <strong>see</strong> the problem from different angles. (动词堆砌)</li>
+  <li><strong>✅ Academic:</strong> This is an <strong>illustration</strong> of the <strong>need</strong> for a different <strong>perspective</strong> on the issue. (名词主导)</li>
+</ul>
+
+<h3 id="2-主动-vs-被动objectivity">2. 主动 vs. 被动（Objectivity）</h3>
+
+<blockquote>
+  <p><strong>法则：</strong> 汉语习惯“人”做主语；英语习惯“物”做主语，强调客观事实。</p>
+</blockquote>
+
+<ul>
+  <li><strong>原文:</strong> 人们普遍认为，阅读能扩大词汇量。</li>
+  <li><strong>❌ Chinglish:</strong> People generally believe that reading can increase vocabulary. (语法正确，但太口语)</li>
+  <li><strong>✅ Academic:</strong> It is widely <strong>acknowledged</strong> that vocabulary can be <strong>expanded</strong> through reading. (被动结构，客观严谨)</li>
+</ul>
+
+<h3 id="3-意合-vs-形合explicit-logic">3. 意合 vs. 形合（Explicit Logic）</h3>
+
+<blockquote>
+  <p><strong>法则：</strong> 汉语逻辑往往隐含在语序中（隐性）；英语逻辑必须通过<strong>连接词</strong>显性表达（显性）。</p>
+</blockquote>
+
+<p>中文常用“流水句”，英语则必须用逻辑词像胶水一样把句子粘起来。</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>**逻辑关系**</th>
+      <th>**中文结构 (隐性)**</th>
+      <th>**英文连接词 (显性)**</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>**因果**</td>
+      <td>天气冷，电池坏了。</td>
+      <td>The battery failed **due to** the low temperature.</td>
+    </tr>
+    <tr>
+      <td>**转折**</td>
+      <td>代码跑通了，效率很低。</td>
+      <td>The code runs successfully; **however**, its efficiency is low.</td>
+    </tr>
+    <tr>
+      <td>**递进**</td>
+      <td>他修好了bug，优化了算法。</td>
+      <td>He fixed the bug; **furthermore**, he optimized the algorithm.</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr />
+
+<h2 id="二-句子的平衡学syntactic-balance">二、 句子的平衡学（Syntactic Balance）</h2>
+
+<h3 id="1-尾重原则end-weight">1. 尾重原则（End-Weight）</h3>
+
+<p>英语句法中，句子是有“物理重量”的。</p>
+
+<ul>
+  <li><strong>轻元素：</strong> 代词、系动词 (is/are)。</li>
+  <li><strong>重元素：</strong> 长从句、复杂修饰语。</li>
+</ul>
+
+<p>为了避免“头重脚轻”，英语倾向于<strong>快速给出主谓骨架</strong>，把复杂的修饰扔到后面。</p>
+
+<ul>
+  <li><strong>原文:</strong> 掌握一门外语对大学生来说是至关重要的。</li>
+  <li><strong>❌ Chinglish:</strong> <em>To master a foreign language</em> is crucial for college students. (主语太长)</li>
+  <li><strong>✅ Academic:</strong> <strong>It is</strong> crucial for college students <strong>to master a foreign language proficiently</strong>. (形式主语 It 占位)</li>
+</ul>
+
+<p><strong>尾重原则</strong>出现是因为<strong>人类的短期记忆是有限的</strong>。如果主语（Subject）太长，听者/读者要在大脑里面一直“悬着”这个主语，等很久才能等到谓语（Verb），这会造成认知负担（Cognitive Load）。</p>
+
+<h3 id="2-如何选择主句subject-selection">2. 如何选择主句（Subject Selection）</h3>
+
+<p>英语句子只能有一个核心（Main Clause），其他信息必须降级。</p>
+
+<ul>
+  <li><strong>结果（观点） &gt; 原因/方式：</strong> 英语看重 Result（新信息）。
+    <ul>
+      <li><em>原文:</em> 他每天努力学习，终于考上了北大。</li>
+      <li><em>译文:</em> He was admitted to Peking University (<strong>主句</strong>) by studying hard every day.</li>
+    </ul>
+  </li>
+  <li><strong>实意动作 &gt; 状态描述：</strong>
+    <ul>
+      <li><em>原文:</em> 他是个热心人，经常帮助邻居。</li>
+      <li><em>译文:</em> Being a warm-hearted man (<strong>降级为分词</strong>), he frequently helps his neighbors (<strong>主句</strong>).</li>
+    </ul>
+  </li>
+</ul>
+
+<hr />
+
+<h2 id="三-翻译三步法">三、 翻译三步法</h2>
+
+<h3 id="step-1-拆解与定位-analysis">Step 1: 拆解与定位 (Analysis)</h3>
+
+<p>不要一上来就翻。先找到中文里“谁”做了“什么”。如果句子过长（比如一段话只有一个句号的场景），需要根据句子表达的含义对句子进行划分层次，对每个层次分别进行翻译，再使用逻辑词联系上下文。</p>
+
+<ul>
+  <li><strong>注意：</strong> 中文常省略主语，翻译时必须补全（如补 <code class="language-plaintext highlighter-rouge">It</code> 或 <code class="language-plaintext highlighter-rouge">There be</code>）。</li>
+</ul>
+
+<h3 id="step-2-转换与降级-syntactic-demotion">Step 2: 转换与降级 (Syntactic Demotion)</h3>
+
+<p>确定主句后，对其余成分进行<strong>语法降级</strong>：</p>
+
+<ol>
+  <li><strong>V-ing / V-ed (分词):</strong> 表伴随、原因。 (<em>Standing at the window…</em>)</li>
+  <li><strong>Preposition (介词):</strong> 学术神器 <code class="language-plaintext highlighter-rouge">With</code>, <code class="language-plaintext highlighter-rouge">By</code>, <code class="language-plaintext highlighter-rouge">Due to</code>, <code class="language-plaintext highlighter-rouge">In terms of</code>. (<em>With the population increasing…</em>)</li>
+  <li><strong>Clause (从句):</strong> <code class="language-plaintext highlighter-rouge">Which</code>, <code class="language-plaintext highlighter-rouge">That</code>, <code class="language-plaintext highlighter-rouge">Although</code>.</li>
+</ol>
+
+<h3 id="step-3-润色与精准-polishing">Step 3: 润色与精准 (Polishing)</h3>
+
+<ul>
+  <li><strong>拒绝绝对化 (Hedging):</strong> 除非是定理，否则少用 <code class="language-plaintext highlighter-rouge">must/will</code>，多用 <code class="language-plaintext highlighter-rouge">may</code>, <code class="language-plaintext highlighter-rouge">likely</code>, <code class="language-plaintext highlighter-rouge">tend to</code>。体现学术严谨性。</li>
+  <li><strong>词汇升级 (Lexical Precision):</strong>
+    <ul>
+      <li><code class="language-plaintext highlighter-rouge">Change</code> $\rightarrow$ <code class="language-plaintext highlighter-rouge">Modify / Alter</code></li>
+      <li><code class="language-plaintext highlighter-rouge">Think</code> $\rightarrow$ <code class="language-plaintext highlighter-rouge">Argue / Contend</code></li>
+      <li><code class="language-plaintext highlighter-rouge">Make</code> $\rightarrow$ <code class="language-plaintext highlighter-rouge">Generate / Fabricate</code></li>
+    </ul>
+  </li>
+</ul>
+
+<hr />
+
+<h2 id="四-总结">四、 总结</h2>
+
+<p>翻译的本质不是 Words to Words，而是 <strong>Meaning to Meaning</strong>。</p>
+
+<ol>
+  <li><strong>多用名词</strong>代替动词。</li>
+  <li><strong>多用被动</strong>代替主动。</li>
+  <li><strong>多用连接词</strong>显化逻辑。</li>
+  <li><strong>长短结合</strong>，利用 <code class="language-plaintext highlighter-rouge">It</code> 句型平衡结构。</li>
+</ol>]]></content><author><name>bfmhno3</name></author><category term="Note" /><category term="English" /><summary type="html"><![CDATA[在备考 CET-6 或雅思写作时，许多同学面临的最大障碍不是词汇量，而是思维模式（Mindset）。中英文在底层逻辑上存在巨大的鸿沟：中文重意合、动态、叙事；英文重形合、静态、结构。 本文将拆解中英翻译的核心差异，并提供一套可操作的翻译三步法。 一、 核心思维差异（Core Divergences） 1. 动态 vs. 静态（Nominalization） 法则： 汉语多用动词（Verb-heavy）；学术英语多用名词（Noun-heavy）。 在翻译时，要学会名词化（Nominalization）：将中文的动作或性质抽象为英语的名词短语。这能显著提升句子的“信息密度”。 原文：这就解释了为什么我们需要从不同角度看问题。 ❌ Chinglish: This explains why we need to see the problem from different angles. (动词堆砌) ✅ Academic: This is an illustration of the need for a different perspective on the issue. (名词主导) 2. 主动 vs. 被动（Objectivity） 法则： 汉语习惯“人”做主语；英语习惯“物”做主语，强调客观事实。 原文: 人们普遍认为，阅读能扩大词汇量。 ❌ Chinglish: People generally believe that reading can increase vocabulary. (语法正确，但太口语) ✅ Academic: It is widely acknowledged that vocabulary can be expanded through reading. (被动结构，客观严谨) 3. 意合 vs. 形合（Explicit Logic） 法则： 汉语逻辑往往隐含在语序中（隐性）；英语逻辑必须通过连接词显性表达（显性）。 中文常用“流水句”，英语则必须用逻辑词像胶水一样把句子粘起来。 **逻辑关系** **中文结构 (隐性)** **英文连接词 (显性)** **因果** 天气冷，电池坏了。 The battery failed **due to** the low temperature. **转折** 代码跑通了，效率很低。 The code runs successfully; **however**, its efficiency is low. **递进** 他修好了bug，优化了算法。 He fixed the bug; **furthermore**, he optimized the algorithm. 二、 句子的平衡学（Syntactic Balance） 1. 尾重原则（End-Weight） 英语句法中，句子是有“物理重量”的。 轻元素： 代词、系动词 (is/are)。 重元素： 长从句、复杂修饰语。 为了避免“头重脚轻”，英语倾向于快速给出主谓骨架，把复杂的修饰扔到后面。 原文: 掌握一门外语对大学生来说是至关重要的。 ❌ Chinglish: To master a foreign language is crucial for college students. (主语太长) ✅ Academic: It is crucial for college students to master a foreign language proficiently. (形式主语 It 占位) 尾重原则出现是因为人类的短期记忆是有限的。如果主语（Subject）太长，听者/读者要在大脑里面一直“悬着”这个主语，等很久才能等到谓语（Verb），这会造成认知负担（Cognitive Load）。 2. 如何选择主句（Subject Selection） 英语句子只能有一个核心（Main Clause），其他信息必须降级。 结果（观点） &gt; 原因/方式： 英语看重 Result（新信息）。 原文: 他每天努力学习，终于考上了北大。 译文: He was admitted to Peking University (主句) by studying hard every day. 实意动作 &gt; 状态描述： 原文: 他是个热心人，经常帮助邻居。 译文: Being a warm-hearted man (降级为分词), he frequently helps his neighbors (主句). 三、 翻译三步法 Step 1: 拆解与定位 (Analysis) 不要一上来就翻。先找到中文里“谁”做了“什么”。如果句子过长（比如一段话只有一个句号的场景），需要根据句子表达的含义对句子进行划分层次，对每个层次分别进行翻译，再使用逻辑词联系上下文。 注意： 中文常省略主语，翻译时必须补全（如补 It 或 There be）。 Step 2: 转换与降级 (Syntactic Demotion) 确定主句后，对其余成分进行语法降级： V-ing / V-ed (分词): 表伴随、原因。 (Standing at the window…) Preposition (介词): 学术神器 With, By, Due to, In terms of. (With the population increasing…) Clause (从句): Which, That, Although. Step 3: 润色与精准 (Polishing) 拒绝绝对化 (Hedging): 除非是定理，否则少用 must/will，多用 may, likely, tend to。体现学术严谨性。 词汇升级 (Lexical Precision): Change $\rightarrow$ Modify / Alter Think $\rightarrow$ Argue / Contend Make $\rightarrow$ Generate / Fabricate 四、 总结 翻译的本质不是 Words to Words，而是 Meaning to Meaning。 多用名词代替动词。 多用被动代替主动。 多用连接词显化逻辑。 长短结合，利用 It 句型平衡结构。]]></summary></entry><entry><title type="html">深入理解逻辑与英语中的 “让步” (Concession)</title><link href="https://bfmhno3.github.io/note/understanding-logic-of-concession/" rel="alternate" type="text/html" title="深入理解逻辑与英语中的 “让步” (Concession)" /><published>2025-12-02T01:30:00+00:00</published><updated>2025-12-02T01:30:00+00:00</updated><id>https://bfmhno3.github.io/note/understanding-logic-of-concession</id><content type="html" xml:base="https://bfmhno3.github.io/note/understanding-logic-of-concession/"><![CDATA[<h2 id="什么是-让步-的逻辑内核">什么是 “让步” 的逻辑内核？</h2>
+
+<p>在正常的线性逻辑中，我们通常认为：</p>
+
+<ul>
+  <li>原因 A $\rightarrow$ 导致结果 B</li>
+  <li>例如：因为下雨了（A），所以我没出门（B）。$\leftarrow$ 顺理成章。</li>
+</ul>
+
+<p>但是，世界是复杂的。有时候，原因 A 发生了，它<strong>预期</strong>的结果 B 缺没有发生，<strong>反而</strong>发生了相反的结果 C。</p>
+
+<ul>
+  <li>事实 A（本来应该阻碍 C）$\rightarrow$ 依然发生了结果 C。</li>
+  <li>例如：虽然下雨了（A），但我还是出门了（C）。</li>
+</ul>
+
+<p>这就是 “让步” 的<strong>本质</strong>：</p>
+
+<blockquote class="notice--success">
+  <p>承认一个不利于你结论的事实（这就是 “让”，退一步），然后转折，通过强调你的结论依旧成立，来反衬结论的强大（这就是 “步”，进两步）。</p>
+</blockquote>
+
+<p>想象一个弹簧：你把它<strong>压下去（让步）</strong>，是为了让它<strong>弹得更高（主句）</strong>。</p>
+
+<h2 id="为什么英语中如此强调-让步">为什么英语中如此强调 “让步”？</h2>
+
+<p>在英语学习中经常看到 “<strong>让步状语从句</strong>”（Adverbial Clause of Concession），是因为英语非常注重<strong>逻辑连接词</strong>（Connectives）。</p>
+
+<p>在中文里，我们往往靠语境来表达：“下雨了，我还是去了。”（没有关联词，你也懂）。但在英语里，必须用<strong>逻辑连接词</strong>把这个逻辑关系标出来。</p>
+
+<h3 id="常见的表达-让步-的逻辑连接词">常见的表达 “让步” 的逻辑连接词</h3>
+
+<p>英语里的 <em>Although</em>, <em>Though</em>, <em>Even if</em>, <em>Despite</em>, <em>In spite of</em> 都在大声喊：“注意！下面我要说一个跟前面预期相反的结论了！”</p>
+
+<h3 id="经典的-虽然但是-陷阱">经典的 “虽然……但是……” 陷阱</h3>
+
+<p>这是中国学生最容易错的地方。</p>
+
+<p>中文逻辑： 因为有冲突，所以既要说“虽然”，又要说“但是”来强调冲突。例如：虽然他很穷，但是他很开心。 (双重标记)。</p>
+
+<p>而在英文逻辑中： 只要你用了 “虽然（Although）”，逻辑关系就已经确立了，再加“但是（But）”就是废话（Redundant）。例如：Although he is poor, he is happy. (正确)，而 Although he is poor, <del>but</del> he is happy. (错误)</p>
+
+<h2 id="为什么我们需要-让步">为什么我们需要 “让步”？</h2>
+
+<p>你可能会问：“为什么要这么麻烦？直接说结论不就行了吗？”。比如，为什么要说 “虽然我很忙，但我会帮你”？直接说 “我会帮你” 不行吗？运用“让步”逻辑，通常有三个高级目的：</p>
+
+<h3 id="增强论证的力度反衬法">增强论证的力度（反衬法）</h3>
+
+<p>普通说法： “这个电机性能很好。”（平铺直叙）让步说法： “虽然这个电机体积只有拳头大，但它能输出巨大的扭矩。”</p>
+
+<p>通过承认“体积小”这个通常的劣势，反衬出“扭矩大”这个技术指标的强悍。这就是工程思维中的 Trade-off（权衡）后的亮点。</p>
+
+<h3 id="展现思维的严谨性防守反击">展现思维的严谨性（防守反击）</h3>
+
+<p>在与他人进行辩论时，如果你只说自己对，别人会觉得你偏激。而如果采用让步策略： “我承认（Concede）你的观点 X 在某些情况下是有道理的（让一步），但是，在当前的核心场景下，我的方案 Y 更优。”</p>
+
+<p>以此达到的效果效果是你先封堵了对方的嘴，表明你考虑过反对意见，显得你客观、全面。</p>
+
+<h3 id="礼貌与情商缓冲地带">礼貌与情商（缓冲地带）</h3>
+
+<p>直接拒绝： “你是错的。”（太生硬），而如果采用让步拒绝： “尽管你的出发点是好的，但这个方案目前不可行。”，以此达到的效果： 先肯定对方的一部分（给面子），再否定核心内容。</p>
+
+<h2 id="总结">总结</h2>
+
+<p>回到最开始的问题，“让步”到底是什么意思？</p>
+
+<ul>
+  <li>字面上： 先退一步，承认障碍或对立面的存在。</li>
+  <li>逻辑上： 即使有 $X$ 这个干扰因素，结论 $Y$ 依然成立。</li>
+  <li>功能上： 它是一种<strong>“欲扬先抑”</strong>的思维工具。</li>
+</ul>
+
+<p>简而言之：让步，就是为了让你的结论看起来更不容易、更坚定、或者更客观，而故意先承认一些相反事实的逻辑手段。</p>]]></content><author><name>bfmhno3</name></author><category term="Note" /><category term="English" /><summary type="html"><![CDATA[什么是 “让步” 的逻辑内核？ 在正常的线性逻辑中，我们通常认为： 原因 A $\rightarrow$ 导致结果 B 例如：因为下雨了（A），所以我没出门（B）。$\leftarrow$ 顺理成章。 但是，世界是复杂的。有时候，原因 A 发生了，它预期的结果 B 缺没有发生，反而发生了相反的结果 C。 事实 A（本来应该阻碍 C）$\rightarrow$ 依然发生了结果 C。 例如：虽然下雨了（A），但我还是出门了（C）。 这就是 “让步” 的本质： 承认一个不利于你结论的事实（这就是 “让”，退一步），然后转折，通过强调你的结论依旧成立，来反衬结论的强大（这就是 “步”，进两步）。 想象一个弹簧：你把它压下去（让步），是为了让它弹得更高（主句）。 为什么英语中如此强调 “让步”？ 在英语学习中经常看到 “让步状语从句”（Adverbial Clause of Concession），是因为英语非常注重逻辑连接词（Connectives）。 在中文里，我们往往靠语境来表达：“下雨了，我还是去了。”（没有关联词，你也懂）。但在英语里，必须用逻辑连接词把这个逻辑关系标出来。 常见的表达 “让步” 的逻辑连接词 英语里的 Although, Though, Even if, Despite, In spite of 都在大声喊：“注意！下面我要说一个跟前面预期相反的结论了！” 经典的 “虽然……但是……” 陷阱 这是中国学生最容易错的地方。 中文逻辑： 因为有冲突，所以既要说“虽然”，又要说“但是”来强调冲突。例如：虽然他很穷，但是他很开心。 (双重标记)。 而在英文逻辑中： 只要你用了 “虽然（Although）”，逻辑关系就已经确立了，再加“但是（But）”就是废话（Redundant）。例如：Although he is poor, he is happy. (正确)，而 Although he is poor, but he is happy. (错误) 为什么我们需要 “让步”？ 你可能会问：“为什么要这么麻烦？直接说结论不就行了吗？”。比如，为什么要说 “虽然我很忙，但我会帮你”？直接说 “我会帮你” 不行吗？运用“让步”逻辑，通常有三个高级目的： 增强论证的力度（反衬法） 普通说法： “这个电机性能很好。”（平铺直叙）让步说法： “虽然这个电机体积只有拳头大，但它能输出巨大的扭矩。” 通过承认“体积小”这个通常的劣势，反衬出“扭矩大”这个技术指标的强悍。这就是工程思维中的 Trade-off（权衡）后的亮点。 展现思维的严谨性（防守反击） 在与他人进行辩论时，如果你只说自己对，别人会觉得你偏激。而如果采用让步策略： “我承认（Concede）你的观点 X 在某些情况下是有道理的（让一步），但是，在当前的核心场景下，我的方案 Y 更优。” 以此达到的效果效果是你先封堵了对方的嘴，表明你考虑过反对意见，显得你客观、全面。 礼貌与情商（缓冲地带） 直接拒绝： “你是错的。”（太生硬），而如果采用让步拒绝： “尽管你的出发点是好的，但这个方案目前不可行。”，以此达到的效果： 先肯定对方的一部分（给面子），再否定核心内容。 总结 回到最开始的问题，“让步”到底是什么意思？ 字面上： 先退一步，承认障碍或对立面的存在。 逻辑上： 即使有 $X$ 这个干扰因素，结论 $Y$ 依然成立。 功能上： 它是一种“欲扬先抑”的思维工具。 简而言之：让步，就是为了让你的结论看起来更不容易、更坚定、或者更客观，而故意先承认一些相反事实的逻辑手段。]]></summary></entry><entry><title type="html">CS2 游戏设置优化</title><link href="https://bfmhno3.github.io/tutorial/cs2-optimization-guide/" rel="alternate" type="text/html" title="CS2 游戏设置优化" /><published>2025-11-25T15:00:00+00:00</published><updated>2025-11-25T15:00:00+00:00</updated><id>https://bfmhno3.github.io/tutorial/cs2-optimization-guide</id><content type="html" xml:base="https://bfmhno3.github.io/tutorial/cs2-optimization-guide/"><![CDATA[<p>CS2（Counter-Strike 2）是 Valve 推出的经典第一人称射击游戏，继承了 CS:GO 的核心玩法并全面升级了 Source 2 引擎。</p>
+
+<p>游戏的默认设置通常并不适合竞技，我们需要做出一些更改。本文设置的核心逻辑是：<strong>流畅度（FPS） &gt; 画面清晰度（能看清敌人） &gt; 画面特效</strong>。</p>
+
+<h2 id="启动项设置launch-options">启动项设置（Launch Options）</h2>
+
+<p>在 Steam 库中右键 CS2 $\rightarrow$ 属性 $\rightarrow$ 通用 $\rightarrow$ 启动选项，输入以下代码：</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nt">-novid</span> <span class="nt">-nojoy</span> <span class="nt">-consold</span> <span class="nt">-high</span> +fps_max 0
+</code></pre></div></div>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">novid</code>：跳过开场动画，启动更快。</li>
+  <li><code class="language-plaintext highlighter-rouge">nojoy</code>：禁用手柄支持，释放少量系统资源。</li>
+  <li><code class="language-plaintext highlighter-rouge">-console</code>：开启控制台。</li>
+  <li><code class="language-plaintext highlighter-rouge">-high</code>：将 CS2 进程设置为高优先级，<strong>理论上</strong>能提升性能稳定性。</li>
+  <li><code class="language-plaintext highlighter-rouge">+fps_max 0</code>：解除游戏内帧率上限，让显卡全力运行。</li>
+</ul>
+
+<h2 id="视频设置video-settings">视频设置（Video Settings）</h2>
+
+<p>按 Esc $\rightarrow$ 设置 $\rightarrow$ 视频 $\rightarrow$ 高级视频</p>
+
+<ul>
+  <li><strong>增强角色对比度</strong>（Boost Player Contrast）：【启用】（必开！这能让你在暗处更容易看清敌人，非常重要）</li>
+  <li><strong>多重采样抗锯齿</strong>（MSAA）：【4X MSAA】（建议值。如电脑配置较低，可降至 2X。不建议关闭，否则物体边缘锯齿严重，难以看清远处的敌人）</li>
+  <li><strong>全局阴影效果</strong>（Global Shadow Quality）：【高】或【中】（尽量要开低，因为这决定了能否看到墙角的敌人影子）</li>
+  <li><strong>模型/贴图细节</strong>（Shader Detail）：【低】（为了提高 FPS，且画面更干净，减少干扰）</li>
+  <li><strong>着色器细节</strong>（Shader Detail）：【低】（CS2 的水面和燃烧瓶）</li>
+  <li><strong>粒子细节</strong>（Praticle Detail）：【低】（同上）</li>
+  <li><strong>环境光遮蔽</strong>（Ambient Occlusion）：【禁用】（一种增加画面深度的特效，但会显著降低 FPS，对竞技无益）</li>
+  <li><strong>高动态范围</strong>（HDR）：【性能】（Performance）</li>
+  <li><strong>NVIDIA Reflex 低延迟</strong>：【启用 + 增强】（减少鼠标延迟，手感更跟手）</li>
+</ul>
+
+<p>常规视频设置：</p>
+
+<ul>
+  <li>显示模式：【全屏】（必须全屏，窗口化会有输入延迟）</li>
+  <li>刷新率：选你显示器支持的最高数值（例如 144Hz，240Hz，这在 FPS 游戏中至关重要）</li>
+</ul>
+
+<h2 id="鼠标与感度mouse--sensitivity">鼠标与感度（Mouse &amp; Sensitivity）</h2>
+
+<p><strong>核心原则：千万不要用过高的灵敏度</strong>。低灵敏度能提供更强的稳定性和精准度。</p>
+
+<ul>
+  <li>鼠标 DPI（硬件）：建议设置为 400 或 800（大多数职业选手的选择）</li>
+  <li>游戏内灵敏度
+    <ul>
+      <li>如果你是 800 DPI，建议灵敏度在 0.8 - 1.2 之间。</li>
+      <li>如果你是 1600 DPI，建议灵敏度在 0.4 - 0.6 之间。</li>
+      <li>原则：你需要能够用一次从鼠标垫最左滑到最右的操作，在游戏中转身 180 度多一点点即可。太快了你根本瞄不准头。</li>
+    </ul>
+  </li>
+  <li>变焦灵敏度（狙击镜）：1.00（默认即可）。</li>
+</ul>
+
+<p><strong>特别提醒</strong>：请务必在 Windows 系统鼠标设置中，关闭“提高指针精确度”（Mouse Acceleration）。这对形成肌肉记忆非常有害。</p>
+
+<h2 id="游戏设置game-settings">游戏设置（Game Settings）</h2>
+
+<p>主要调整 HUD（界面）和雷达，让你对战局更加清晰。</p>
+
+<ul>
+  <li><strong>最大匹配延迟</strong>：100（防止匹配到太远的服务器，太卡没法玩）。</li>
+  <li><strong>启用开发者控制台（~）</strong>：【是】（以后你会用到很多指令）。</li>
+</ul>
+
+<p>雷达/平板（Radar）：非常重要，默认雷达太小了</p>
+
+<ul>
+  <li><strong>雷达地图定中玩家</strong>：【是】</li>
+  <li><strong>雷达旋转</strong>：【是】</li>
+  <li><strong>雷达缩放</strong>（Radar Scale）：0.40 - 0.50（建议调小一点，这样你能看到大半张地图的信息，防止队友报点你看不到）。</li>
+  <li><strong>HUD 比例</strong>：可以稍微调小（0.9），让视野更开阔。</li>
+</ul>
+
+<h2 id="音频设置audio">音频设置（Audio）</h2>
+
+<ul>
+  <li><strong>主音量</strong>：适中。</li>
+  <li><strong>音频均衡器</strong>：【清晰】（Crisp）（通常能让脚步声更明显）。</li>
+  <li><strong>L/R 隔离度</strong>：50% - 70% 之间。</li>
+  <li><strong>音乐</strong>：
+    <ul>
+      <li><strong>主菜单音量</strong>：随意。</li>
+      <li><strong>MVP 音量</strong>：建议调低，太吵。</li>
+      <li><strong>炸弹/人质音量</strong>（Ten Second Warning）：【10% - 15%】（这个必须开！当音乐响起时，说明炸弹还有 10 秒爆炸，此时如果没有拆弹器就赶紧跑保抢，不要去拆了）。</li>
+      <li>其他音乐：全部设为 0（避免干扰听脚步）。</li>
+    </ul>
+  </li>
+</ul>
+
+<h2 id="准星推荐crosshair">准星推荐（Crosshair）</h2>
+
+<p>新手不建议用动态准星（走路回扩散的那种），建议用<strong>静态准星</strong>。</p>
+
+<ul>
+  <li><strong>风格</strong>：经典（静态）</li>
+  <li><strong>颜色</strong>：绿色、青色或黄色（在地图中对比度高，容易看清）。</li>
+  <li><strong>中心点</strong>：不建议开</li>
+</ul>
+
+<p>推荐代码：按 Esc $\rightarrow$ 设置 $\rightarrow$ 游戏 $\rightarrow$ 准星 $\rightarrow$ 分享或导入，粘贴下面的代码：</p>
+
+<ul>
+  <li>ZywOo (世界顶级选手同款，小且精准): <code class="language-plaintext highlighter-rouge">CSGO-Qzpx5-BRLwA-xEljr-coqJp-hzrLq</code></li>
+  <li>简单易用的十字 (适合新手): <code class="language-plaintext highlighter-rouge">CSGO-7ANjy-XxRae-25YoE-7Bfnp-QQSFE</code></li>
+</ul>
+
+<h2 id="装备loadout">装备（Loadout）</h2>
+
+<p>CS2 采用 5-5-5 装备选择系统，你需要为每个栏位预设好枪械。</p>
+
+<h3 id="t-方配置恐怖分子">T 方配置（恐怖分子）</h3>
+
+<p>T 的枪械的特点是：<strong>便宜</strong>、<strong>威力大</strong>（AK 能一枪爆头）、**适合进攻。</p>
+
+<p><strong>手枪</strong>（Pistos）：</p>
+
+<ul>
+  <li><strong>Glock-18</strong>（格洛克，默认）：自带的。跑打精准度高，适合手枪局一群人冲锋。</li>
+  <li><strong>P250</strong>：只要 $300，没钱时买一把，近距离大头很痛。</li>
+  <li><strong>Tec-9</strong>：T 方跑打之王。一定要带！它的射速快、弹匣大、移动射击极其精准。非常适合新手冲锋破点。</li>
+  <li><strong>Desert Eagle</strong>（沙鹰）：$700 的“手炮”。虽然难用，但是还是带上吧，虽然也用不到。</li>
+  <li><strong>Dual Berettas</strong> (双持贝瑞塔或双枪): 备选，近距离火力压制强。</li>
+</ul>
+
+<p><strong>中级武器</strong>（Mid-Tier）：</p>
+
+<ul>
+  <li><strong>MAC-10</strong> (吹风机): 必带。T方经济局神器，跑得飞快，贴脸无敌，而且很便宜。</li>
+  <li><strong>MP7</strong>: 稍微贵一点，但比 MAC-10 更稳，适合稍微远一点的距离。</li>
+  <li><strong>XM1014</strong> (连喷): 全自动散弹枪，在特定地图（如办公室、炼狱小镇）用来无脑推土。</li>
+</ul>
+
+<p><strong>步枪</strong>（Rifles）：</p>
+
+<ul>
+  <li><strong>AK-47</strong>: 核心中的核心。CS2 的灵魂，一枪爆头必杀。必须练好。</li>
+  <li><strong>Galil AR</strong>（加利尔/咖喱）: 穷人救星。当你钱不够买 AK 时，$1800 的咖喱是性价比最高的选择，弹匣大（35发），容错率高。</li>
+  <li><strong>SG 553</strong>: 带瞄准镜的步枪。虽然射速慢，但架点稳，打远距离比 AK 容易。</li>
+  <li><strong>SSG 08</strong>（鸟狙）: 便宜的狙击枪，移动速度快。</li>
+  <li><strong>AWP</strong>（大狙）: 必须带，哪怕你不玩，也要帮队友买。</li>
+</ul>
+
+<h3 id="ct-方配置反恐精英">CT 方配置（反恐精英）</h3>
+
+<p>CT 的枪械特点是：<strong>精准</strong>、<strong>消音</strong>、<strong>适合架点防守</strong>，但普遍较贵，且主战步枪不能一枪爆头（有头盔时）。</p>
+
+<p><strong>手枪</strong>（Pistols）：</p>
+
+<ul>
+  <li><strong>USP-S</strong>（默认）: 推荐选 USP 而不是 P2000。USP 有消音器，且第一发非常准，适合远距离点名。</li>
+  <li><strong>P250</strong>: 经济局混起专用。</li>
+  <li><strong>Five-SeveN</strong>（57/FN57）: CT方近战神枪。一定要带（替换掉 CZ75）。它的穿甲能力极强，弹匣大，当 T rush 过来时，这把手枪经常能刷屏。</li>
+  <li><strong>Desert Eagle</strong>: 同上。</li>
+</ul>
+
+<p><strong>中级武器</strong>（Mid-Tier）：</p>
+
+<ul>
+  <li><strong>MP9</strong>（小蜜蜂）: CT方最强冲锋枪。射速极快，是反制 T Rush 的神器。跑着打、跳着打都很准。</li>
+  <li><strong>MAG-7</strong>（警喷）: 只有 5 发子弹，但它是唯一一把跳起来打依然精准的喷子，非常适合守门口。</li>
+</ul>
+
+<p><strong>步枪</strong>（Rifles）：</p>
+
+<ul>
+  <li><strong>M4A1-S</strong> (消音M4): 新手强烈推荐，<strong>后坐力极小</strong>，非常好压枪。</li>
+  <li><strong>FAMAS</strong> (法玛斯): CT 的经济步枪。当你钱不够买 M4 时只能买它，虽然手感一般，但还得带。</li>
+  <li><strong>AUG</strong>: 带镜子的 M4。当你守长距离点位（如 Dust2 A大）时，开镜很稳。</li>
+  <li><strong>AWP</strong>: 防守方的威慑力核心。</li>
+  <li><strong>SSG 08</strong>: 鸟狙。</li>
+</ul>
+
+<h3 id="其他">其他</h3>
+
+<ul>
+  <li><strong>PP-Bizon</strong>（野牛）：非常推荐，跑打真的很爽，建议多玩。只要第一局什么都不起（不买甲，不买道具），哪怕手枪局输了，后面也能把把起全甲 + 野牛。</li>
+  <li><strong>M249</strong>：价格昂贵（$5200），性能笨重，实战性价比极低。不建议新手购买，有这钱不如给大哥发把大狙，再给自己买把野牛冲前面给大哥拿信息。</li>
+</ul>]]></content><author><name>bfmhno3</name></author><category term="Tutorial" /><category term="Windows" /><category term="NVIDIA" /><category term="CS2" /><category term="Steam" /><summary type="html"><![CDATA[CS2（Counter-Strike 2）是 Valve 推出的经典第一人称射击游戏，继承了 CS:GO 的核心玩法并全面升级了 Source 2 引擎。 游戏的默认设置通常并不适合竞技，我们需要做出一些更改。本文设置的核心逻辑是：流畅度（FPS） &gt; 画面清晰度（能看清敌人） &gt; 画面特效。 启动项设置（Launch Options） 在 Steam 库中右键 CS2 $\rightarrow$ 属性 $\rightarrow$ 通用 $\rightarrow$ 启动选项，输入以下代码： -novid -nojoy -consold -high +fps_max 0 novid：跳过开场动画，启动更快。 nojoy：禁用手柄支持，释放少量系统资源。 -console：开启控制台。 -high：将 CS2 进程设置为高优先级，理论上能提升性能稳定性。 +fps_max 0：解除游戏内帧率上限，让显卡全力运行。 视频设置（Video Settings） 按 Esc $\rightarrow$ 设置 $\rightarrow$ 视频 $\rightarrow$ 高级视频 增强角色对比度（Boost Player Contrast）：【启用】（必开！这能让你在暗处更容易看清敌人，非常重要） 多重采样抗锯齿（MSAA）：【4X MSAA】（建议值。如电脑配置较低，可降至 2X。不建议关闭，否则物体边缘锯齿严重，难以看清远处的敌人） 全局阴影效果（Global Shadow Quality）：【高】或【中】（尽量要开低，因为这决定了能否看到墙角的敌人影子） 模型/贴图细节（Shader Detail）：【低】（为了提高 FPS，且画面更干净，减少干扰） 着色器细节（Shader Detail）：【低】（CS2 的水面和燃烧瓶） 粒子细节（Praticle Detail）：【低】（同上） 环境光遮蔽（Ambient Occlusion）：【禁用】（一种增加画面深度的特效，但会显著降低 FPS，对竞技无益） 高动态范围（HDR）：【性能】（Performance） NVIDIA Reflex 低延迟：【启用 + 增强】（减少鼠标延迟，手感更跟手） 常规视频设置： 显示模式：【全屏】（必须全屏，窗口化会有输入延迟） 刷新率：选你显示器支持的最高数值（例如 144Hz，240Hz，这在 FPS 游戏中至关重要） 鼠标与感度（Mouse &amp; Sensitivity） 核心原则：千万不要用过高的灵敏度。低灵敏度能提供更强的稳定性和精准度。 鼠标 DPI（硬件）：建议设置为 400 或 800（大多数职业选手的选择） 游戏内灵敏度 如果你是 800 DPI，建议灵敏度在 0.8 - 1.2 之间。 如果你是 1600 DPI，建议灵敏度在 0.4 - 0.6 之间。 原则：你需要能够用一次从鼠标垫最左滑到最右的操作，在游戏中转身 180 度多一点点即可。太快了你根本瞄不准头。 变焦灵敏度（狙击镜）：1.00（默认即可）。 特别提醒：请务必在 Windows 系统鼠标设置中，关闭“提高指针精确度”（Mouse Acceleration）。这对形成肌肉记忆非常有害。 游戏设置（Game Settings） 主要调整 HUD（界面）和雷达，让你对战局更加清晰。 最大匹配延迟：100（防止匹配到太远的服务器，太卡没法玩）。 启用开发者控制台（~）：【是】（以后你会用到很多指令）。 雷达/平板（Radar）：非常重要，默认雷达太小了 雷达地图定中玩家：【是】 雷达旋转：【是】 雷达缩放（Radar Scale）：0.40 - 0.50（建议调小一点，这样你能看到大半张地图的信息，防止队友报点你看不到）。 HUD 比例：可以稍微调小（0.9），让视野更开阔。 音频设置（Audio） 主音量：适中。 音频均衡器：【清晰】（Crisp）（通常能让脚步声更明显）。 L/R 隔离度：50% - 70% 之间。 音乐： 主菜单音量：随意。 MVP 音量：建议调低，太吵。 炸弹/人质音量（Ten Second Warning）：【10% - 15%】（这个必须开！当音乐响起时，说明炸弹还有 10 秒爆炸，此时如果没有拆弹器就赶紧跑保抢，不要去拆了）。 其他音乐：全部设为 0（避免干扰听脚步）。 准星推荐（Crosshair） 新手不建议用动态准星（走路回扩散的那种），建议用静态准星。 风格：经典（静态） 颜色：绿色、青色或黄色（在地图中对比度高，容易看清）。 中心点：不建议开 推荐代码：按 Esc $\rightarrow$ 设置 $\rightarrow$ 游戏 $\rightarrow$ 准星 $\rightarrow$ 分享或导入，粘贴下面的代码： ZywOo (世界顶级选手同款，小且精准): CSGO-Qzpx5-BRLwA-xEljr-coqJp-hzrLq 简单易用的十字 (适合新手): CSGO-7ANjy-XxRae-25YoE-7Bfnp-QQSFE 装备（Loadout） CS2 采用 5-5-5 装备选择系统，你需要为每个栏位预设好枪械。 T 方配置（恐怖分子） T 的枪械的特点是：便宜、威力大（AK 能一枪爆头）、**适合进攻。 手枪（Pistos）： Glock-18（格洛克，默认）：自带的。跑打精准度高，适合手枪局一群人冲锋。 P250：只要 $300，没钱时买一把，近距离大头很痛。 Tec-9：T 方跑打之王。一定要带！它的射速快、弹匣大、移动射击极其精准。非常适合新手冲锋破点。 Desert Eagle（沙鹰）：$700 的“手炮”。虽然难用，但是还是带上吧，虽然也用不到。 Dual Berettas (双持贝瑞塔或双枪): 备选，近距离火力压制强。 中级武器（Mid-Tier）： MAC-10 (吹风机): 必带。T方经济局神器，跑得飞快，贴脸无敌，而且很便宜。 MP7: 稍微贵一点，但比 MAC-10 更稳，适合稍微远一点的距离。 XM1014 (连喷): 全自动散弹枪，在特定地图（如办公室、炼狱小镇）用来无脑推土。 步枪（Rifles）： AK-47: 核心中的核心。CS2 的灵魂，一枪爆头必杀。必须练好。 Galil AR（加利尔/咖喱）: 穷人救星。当你钱不够买 AK 时，$1800 的咖喱是性价比最高的选择，弹匣大（35发），容错率高。 SG 553: 带瞄准镜的步枪。虽然射速慢，但架点稳，打远距离比 AK 容易。 SSG 08（鸟狙）: 便宜的狙击枪，移动速度快。 AWP（大狙）: 必须带，哪怕你不玩，也要帮队友买。 CT 方配置（反恐精英） CT 的枪械特点是：精准、消音、适合架点防守，但普遍较贵，且主战步枪不能一枪爆头（有头盔时）。 手枪（Pistols）： USP-S（默认）: 推荐选 USP 而不是 P2000。USP 有消音器，且第一发非常准，适合远距离点名。 P250: 经济局混起专用。 Five-SeveN（57/FN57）: CT方近战神枪。一定要带（替换掉 CZ75）。它的穿甲能力极强，弹匣大，当 T rush 过来时，这把手枪经常能刷屏。 Desert Eagle: 同上。 中级武器（Mid-Tier）： MP9（小蜜蜂）: CT方最强冲锋枪。射速极快，是反制 T Rush 的神器。跑着打、跳着打都很准。 MAG-7（警喷）: 只有 5 发子弹，但它是唯一一把跳起来打依然精准的喷子，非常适合守门口。 步枪（Rifles）： M4A1-S (消音M4): 新手强烈推荐，后坐力极小，非常好压枪。 FAMAS (法玛斯): CT 的经济步枪。当你钱不够买 M4 时只能买它，虽然手感一般，但还得带。 AUG: 带镜子的 M4。当你守长距离点位（如 Dust2 A大）时，开镜很稳。 AWP: 防守方的威慑力核心。 SSG 08: 鸟狙。 其他 PP-Bizon（野牛）：非常推荐，跑打真的很爽，建议多玩。只要第一局什么都不起（不买甲，不买道具），哪怕手枪局输了，后面也能把把起全甲 + 野牛。 M249：价格昂贵（$5200），性能笨重，实战性价比极低。不建议新手购买，有这钱不如给大哥发把大狙，再给自己买把野牛冲前面给大哥拿信息。]]></summary></entry><entry><title type="html">小米手机 (HyperOS/MIUI) 深度优化指南：移除 AI 组件与去广告</title><link href="https://bfmhno3.github.io/tutorial/xiaomi-debloat-guide/" rel="alternate" type="text/html" title="小米手机 (HyperOS/MIUI) 深度优化指南：移除 AI 组件与去广告" /><published>2025-11-25T14:00:00+00:00</published><updated>2025-11-25T14:00:00+00:00</updated><id>https://bfmhno3.github.io/tutorial/xiaomi-debloat-guide</id><content type="html" xml:base="https://bfmhno3.github.io/tutorial/xiaomi-debloat-guide/"><![CDATA[<p>随着 HyperOS 和 MIUI 的更新，系统集成了越来越多的 AI 功能和后台服务。虽然部分功能很实用，但对于追求极致流畅、隐私保护或老机型用户来说，这些组件可能意味着额外的耗电和卡顿。</p>
+
+<p>本文将介绍如何通过 ADB (Android Debug Bridge) 安全地移除这些组件，并进行系统级优化。</p>
+
+<h2 id="通过-adb-卸载-ai-及冗余组件">通过 ADB 卸载 AI 及冗余组件</h2>
+
+<p>此操作<strong>不需要 ROOT 权限</strong>，但需要一台电脑（Windows/Mac/Linux 均可）。</p>
+
+<h3 id="1-准备工作">1. 准备工作</h3>
+
+<ol>
+  <li>
+    <p><strong>开启开发者模式</strong>：</p>
+
+    <ul>
+      <li>进入<strong>设置</strong> $\rightarrow$ <strong>我的设备</strong> $\rightarrow$ <strong>全部参数</strong>。</li>
+      <li>连续点击“OS 版本号”约 5-7 次，直到提示“您已处于开发者模式”。</li>
+    </ul>
+  </li>
+  <li>
+    <p><strong>开启 USB 调试</strong>：</p>
+
+    <ul>
+      <li>进入<strong>设置</strong> $\rightarrow$ <strong>更多设置</strong> $\rightarrow$ <strong>开发者选项</strong>。</li>
+      <li>开启<strong>“USB 调试”</strong>。</li>
+      <li>开启 <strong>“USB 调试（安全设置）”</strong>（重要：如果不开启此项，部分系统应用无法被卸载，提示 <code class="language-plaintext highlighter-rouge">Permission denied</code>）。</li>
+    </ul>
+  </li>
+  <li>
+    <p><strong>连接电脑</strong>：</p>
+
+    <ul>
+      <li>使用数据线连接手机与电脑。</li>
+      <li>在电脑上下载并解压 <a href="https://developer.android.com/studio/releases/platform-tools">SDK Platform Tools</a> (ADB 工具包)。</li>
+    </ul>
+  </li>
+</ol>
+
+<h3 id="2-执行卸载命令">2. 执行卸载命令</h3>
+
+<p>在电脑终端（CMD 或 Powershell）进入 ADB 工具目录，输入以下命令确认连接：</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>adb devices
+</code></pre></div></div>
+
+<p>如果手机弹出授权窗口，请点击“允许”。看到设备序列号后，即可使用以下格式卸载应用：</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>adb shell pm uninstall <span class="nt">--user</span> 0 &lt;包名&gt;
+</code></pre></div></div>
+
+<blockquote>
+  <p><strong>注意</strong>：<code class="language-plaintext highlighter-rouge">--user 0</code> 表示仅针对当前用户卸载，不会破坏系统分区。如果出现问题，可以通过恢复出厂设置完全还原。</p>
+</blockquote>
+
+<h3 id="3-建议卸载的清单">3. 建议卸载的清单</h3>
+
+<p>以下是小米系统中常见的 AI 相关及“臃肿”组件的包名。请根据你的需求<strong>选择性</strong>执行：</p>
+
+<h4 id="-核心-ai-与语音组件">🤖 核心 AI 与语音组件</h4>
+
+<p>如果你不使用小爱同学，这些服务在后台占用大量资源。</p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left">组件名称</th>
+      <th style="text-align: left">包名</th>
+      <th style="text-align: left">说明</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left">**小爱同学**</td>
+      <td style="text-align: left"><code class="language-plaintext highlighter-rouge">com.miui.voiceassist</code></td>
+      <td style="text-align: left">语音助手主程序</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">**小米 AI 引擎**</td>
+      <td style="text-align: left"><code class="language-plaintext highlighter-rouge">com.xiaomi.aiasst.service</code></td>
+      <td style="text-align: left">场景识别、AI 调度</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">**AI 视觉/传送门**</td>
+      <td style="text-align: left"><code class="language-plaintext highlighter-rouge">com.miui.contentextension</code></td>
+      <td style="text-align: left">屏幕识别、选词搜索</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">**小爱建议/负一屏**</td>
+      <td style="text-align: left"><code class="language-plaintext highlighter-rouge">com.miui.personalassistant</code></td>
+      <td style="text-align: left">桌面左侧的负一屏</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">**小爱翻译**</td>
+      <td style="text-align: left"><code class="language-plaintext highlighter-rouge">com.xiaomi.scanner</code></td>
+      <td style="text-align: left">包含扫一扫和翻译功能</td>
+    </tr>
+  </tbody>
+</table>
+
+<h4 id="-广告与分析组件-推荐删除">📢 广告与分析组件 (推荐删除)</h4>
+
+<p>这些组件主要用于推送广告和收集数据，删除后系统更清爽。</p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left">组件名称</th>
+      <th style="text-align: left">包名</th>
+      <th style="text-align: left">说明</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left">**系统广告服务 (MSA)**</td>
+      <td style="text-align: left"><code class="language-plaintext highlighter-rouge">com.miui.systemAdSolution</code></td>
+      <td style="text-align: left">MIUI System Ads，广告核心</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">**小米分析**</td>
+      <td style="text-align: left"><code class="language-plaintext highlighter-rouge">com.miui.analytics</code></td>
+      <td style="text-align: left">数据采集与分析</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">**用户反馈**</td>
+      <td style="text-align: left"><code class="language-plaintext highlighter-rouge">com.miui.miservice</code></td>
+      <td style="text-align: left">反馈服务</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">**智能服务**</td>
+      <td style="text-align: left"><code class="language-plaintext highlighter-rouge">com.miui.hybrid</code></td>
+      <td style="text-align: left">混合推送服务</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">**快应用服务框架**</td>
+      <td style="text-align: left"><code class="language-plaintext highlighter-rouge">com.miui.hybrid.accessory</code></td>
+      <td style="text-align: left">经常误触打开快应用</td>
+    </tr>
+  </tbody>
+</table>
+
+<h4 id="-其他常见臃肿软件">📦 其他常见臃肿软件</h4>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left">组件名称</th>
+      <th style="text-align: left">包名</th>
+      <th style="text-align: left">说明</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left">**小米浏览器**</td>
+      <td style="text-align: left"><code class="language-plaintext highlighter-rouge">com.android.browser</code></td>
+      <td style="text-align: left">建议使用 Chrome 或 Edge 替代</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">**小米视频**</td>
+      <td style="text-align: left"><code class="language-plaintext highlighter-rouge">com.miui.video</code></td>
+      <td style="text-align: left">包含大量在线内容</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">**小米音乐**</td>
+      <td style="text-align: left"><code class="language-plaintext highlighter-rouge">com.miui.player</code></td>
+      <td style="text-align: left">QQ 音乐简化版，可以试一试</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">**小米钱包**</td>
+      <td style="text-align: left"><code class="language-plaintext highlighter-rouge">com.mipay.wallet</code></td>
+      <td style="text-align: left">如果不用 NFC 刷卡可删</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="4-如何恢复误删的应用">4. 如何恢复误删的应用？</h3>
+
+<p>如果你不小心删除了重要组件，可以通过以下命令恢复（无需重置手机）：</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>adb shell cmd package install-existing &lt;包名&gt;
+</code></pre></div></div>
+
+<p>例如恢复小爱同学：<code class="language-plaintext highlighter-rouge">adb shell cmd package install-existing com.miui.voiceassist</code></p>
+
+<h3 id="5-推荐工具uad">5. 推荐工具：UAD</h3>
+
+<p>如果你觉得敲命令太麻烦，可以使用开源图形化工具 <strong><a href="https://github.com/0x192/universal-android-debloater">UAD (Universal Android Debloater)</a></strong>。</p>
+
+<p>UAD 是一个跨平台的图形界面软件，能自动识别小米手机的臃肿软件，并标注“安全删除”、“谨慎删除”，非常适合新手。</p>
+
+<blockquote>
+  <p><strong>⚠️ 警告</strong>：绝对不要卸载 <code class="language-plaintext highlighter-rouge">com.miui.home</code>（系统桌面）或 <code class="language-plaintext highlighter-rouge">com.android.systemui</code>，否则手机会黑屏或无法进入系统。</p>
+</blockquote>
+
+<hr />
+
+<h2 id="系统设置优化">系统设置优化</h2>
+
+<p>除了卸载软件，正确的设置也能显著提升体验。</p>
+
+<h3 id="1-关闭内存扩展-memory-extension">1. 关闭内存扩展 (Memory Extension)</h3>
+
+<ul>
+  <li><strong>路径</strong>：<strong>设置</strong> $\rightarrow$ <strong>更多设置</strong> $\rightarrow$ <strong>内存扩展</strong></li>
+  <li><strong>建议</strong>：<strong>关闭</strong></li>
+  <li><strong>原因</strong>：这个功能使用闪存（Flash Storage）模拟内存（SWAP）。手机闪存的随机读写速度远低于物理内存（RAM）。开启后不仅不会让手机变快，反而会增加 I/O 负担，导致系统在切换应用时掉帧，并增加发热和耗电。对于 8GB 及以上内存的机型，此功能完全是副作用。</li>
+</ul>
+
+<h3 id="2-关闭系统广告开关">2. 关闭系统广告开关</h3>
+
+<p>虽然卸载了 MSA，但部分开关仍建议手动关闭以防漏网之鱼。</p>
+
+<ul>
+  <li><strong>系统工具广告</strong>：<strong>设置</strong> $\rightarrow$ <strong>账号</strong> $\rightarrow$ <strong>关于小米账号</strong> $\rightarrow$ <strong>系统广告</strong> $\rightarrow$ 关闭。</li>
+  <li><strong>应用内推荐</strong>：分别进入<strong>天气、日历、下载管理、应用商店、文件管理</strong>的设置中，找到并关闭“内容推荐”、“个性化服务”或“资讯”。</li>
+</ul>
+
+<h3 id="3-调整动画速度">3. 调整动画速度</h3>
+
+<ul>
+  <li><strong>路径</strong>：<strong>开发者选项</strong> $\rightarrow$ 向下滚动找到<strong>绘图</strong>栏目。</li>
+  <li><strong>设置</strong>：
+    <ul>
+      <li>窗口动画缩放 $\rightarrow$ <strong>0.5x</strong></li>
+      <li>过渡动画缩放 $\rightarrow$ <strong>0.5x</strong></li>
+      <li>Animator 时长缩放 $\rightarrow$ <strong>0.5x</strong></li>
+    </ul>
+  </li>
+  <li><strong>效果</strong>：这不会改变手机的实际处理速度，但会缩短 UI 动画的持续时间，让手机在体感上响应更加迅速干脆。</li>
+</ul>
+
+<hr />
+
+<p>*免责声明：本文提供的操作涉及系统层面的修改。虽然通过 <code class="language-plaintext highlighter-rouge">pm uninstall --user 0</code> 卸载应用通常是安全的且可逆的，但操作不当仍可能导致系统不稳定。</p>]]></content><author><name>bfmhno3</name></author><category term="Tutorial" /><category term="XiaoMi" /><category term="RedMi" /><category term="HyperOS" /><category term="MIUI" /><category term="Android" /><category term="ADB" /><summary type="html"><![CDATA[随着 HyperOS 和 MIUI 的更新，系统集成了越来越多的 AI 功能和后台服务。虽然部分功能很实用，但对于追求极致流畅、隐私保护或老机型用户来说，这些组件可能意味着额外的耗电和卡顿。 本文将介绍如何通过 ADB (Android Debug Bridge) 安全地移除这些组件，并进行系统级优化。 通过 ADB 卸载 AI 及冗余组件 此操作不需要 ROOT 权限，但需要一台电脑（Windows/Mac/Linux 均可）。 1. 准备工作 开启开发者模式： 进入设置 $\rightarrow$ 我的设备 $\rightarrow$ 全部参数。 连续点击“OS 版本号”约 5-7 次，直到提示“您已处于开发者模式”。 开启 USB 调试： 进入设置 $\rightarrow$ 更多设置 $\rightarrow$ 开发者选项。 开启“USB 调试”。 开启 “USB 调试（安全设置）”（重要：如果不开启此项，部分系统应用无法被卸载，提示 Permission denied）。 连接电脑： 使用数据线连接手机与电脑。 在电脑上下载并解压 SDK Platform Tools (ADB 工具包)。 2. 执行卸载命令 在电脑终端（CMD 或 Powershell）进入 ADB 工具目录，输入以下命令确认连接： adb devices 如果手机弹出授权窗口，请点击“允许”。看到设备序列号后，即可使用以下格式卸载应用： adb shell pm uninstall --user 0 &lt;包名&gt; 注意：--user 0 表示仅针对当前用户卸载，不会破坏系统分区。如果出现问题，可以通过恢复出厂设置完全还原。 3. 建议卸载的清单 以下是小米系统中常见的 AI 相关及“臃肿”组件的包名。请根据你的需求选择性执行： 🤖 核心 AI 与语音组件 如果你不使用小爱同学，这些服务在后台占用大量资源。 组件名称 包名 说明 **小爱同学** com.miui.voiceassist 语音助手主程序 **小米 AI 引擎** com.xiaomi.aiasst.service 场景识别、AI 调度 **AI 视觉/传送门** com.miui.contentextension 屏幕识别、选词搜索 **小爱建议/负一屏** com.miui.personalassistant 桌面左侧的负一屏 **小爱翻译** com.xiaomi.scanner 包含扫一扫和翻译功能 📢 广告与分析组件 (推荐删除) 这些组件主要用于推送广告和收集数据，删除后系统更清爽。 组件名称 包名 说明 **系统广告服务 (MSA)** com.miui.systemAdSolution MIUI System Ads，广告核心 **小米分析** com.miui.analytics 数据采集与分析 **用户反馈** com.miui.miservice 反馈服务 **智能服务** com.miui.hybrid 混合推送服务 **快应用服务框架** com.miui.hybrid.accessory 经常误触打开快应用 📦 其他常见臃肿软件 组件名称 包名 说明 **小米浏览器** com.android.browser 建议使用 Chrome 或 Edge 替代 **小米视频** com.miui.video 包含大量在线内容 **小米音乐** com.miui.player QQ 音乐简化版，可以试一试 **小米钱包** com.mipay.wallet 如果不用 NFC 刷卡可删 4. 如何恢复误删的应用？ 如果你不小心删除了重要组件，可以通过以下命令恢复（无需重置手机）： adb shell cmd package install-existing &lt;包名&gt; 例如恢复小爱同学：adb shell cmd package install-existing com.miui.voiceassist 5. 推荐工具：UAD 如果你觉得敲命令太麻烦，可以使用开源图形化工具 UAD (Universal Android Debloater)。 UAD 是一个跨平台的图形界面软件，能自动识别小米手机的臃肿软件，并标注“安全删除”、“谨慎删除”，非常适合新手。 ⚠️ 警告：绝对不要卸载 com.miui.home（系统桌面）或 com.android.systemui，否则手机会黑屏或无法进入系统。 系统设置优化 除了卸载软件，正确的设置也能显著提升体验。 1. 关闭内存扩展 (Memory Extension) 路径：设置 $\rightarrow$ 更多设置 $\rightarrow$ 内存扩展 建议：关闭 原因：这个功能使用闪存（Flash Storage）模拟内存（SWAP）。手机闪存的随机读写速度远低于物理内存（RAM）。开启后不仅不会让手机变快，反而会增加 I/O 负担，导致系统在切换应用时掉帧，并增加发热和耗电。对于 8GB 及以上内存的机型，此功能完全是副作用。 2. 关闭系统广告开关 虽然卸载了 MSA，但部分开关仍建议手动关闭以防漏网之鱼。 系统工具广告：设置 $\rightarrow$ 账号 $\rightarrow$ 关于小米账号 $\rightarrow$ 系统广告 $\rightarrow$ 关闭。 应用内推荐：分别进入天气、日历、下载管理、应用商店、文件管理的设置中，找到并关闭“内容推荐”、“个性化服务”或“资讯”。 3. 调整动画速度 路径：开发者选项 $\rightarrow$ 向下滚动找到绘图栏目。 设置： 窗口动画缩放 $\rightarrow$ 0.5x 过渡动画缩放 $\rightarrow$ 0.5x Animator 时长缩放 $\rightarrow$ 0.5x 效果：这不会改变手机的实际处理速度，但会缩短 UI 动画的持续时间，让手机在体感上响应更加迅速干脆。 *免责声明：本文提供的操作涉及系统层面的修改。虽然通过 pm uninstall --user 0 卸载应用通常是安全的且可逆的，但操作不当仍可能导致系统不稳定。]]></summary></entry><entry><title type="html">在 Windows 上使用 Docker、Git Bash 和 overleaf-toolkit 部署 Overleaf 社区版</title><link href="https://bfmhno3.github.io/tutorial/deploy-overleaf-community-on-windows-with-docker-and-git-bash/" rel="alternate" type="text/html" title="在 Windows 上使用 Docker、Git Bash 和 overleaf-toolkit 部署 Overleaf 社区版" /><published>2025-10-18T14:30:00+00:00</published><updated>2025-10-18T14:30:00+00:00</updated><id>https://bfmhno3.github.io/tutorial/deploy-overleaf-community-on-windows-with-docker-and-git-bash</id><content type="html" xml:base="https://bfmhno3.github.io/tutorial/deploy-overleaf-community-on-windows-with-docker-and-git-bash/"><![CDATA[<h2 id="0-前言">0. 前言</h2>
+
+<p><a href="https://www.overleaf.com/">Overleaf</a> 是一个广受欢迎的在线 LaTeX 编辑器，它极大地简化了 LaTeX 的使用门槛。虽然官方提供了在线服务，但是处于数据隐私、网络稳定或自定义需求，我们常常希望搭建一个私有的 Overleaf 实例。Overleaf 官方提供了基于 Docker 的 <code class="language-plaintext highlighter-rouge">toolkit</code> 工具来简化社区版的部署流程。</p>
+
+<p>然而，官方的 <code class="language-plaintext highlighter-rouge">toolkit</code> 主要面向 Linux/macOS 环境，在 Windows 上通过 Git Bash 执行时会遇到一个棘手的路径问题。本教程将详细记录如何在 Windows 11/10 环境下，借助 Docker Desktop 和 Git Bash，成功部署 Overleaf 社区版，并提供关键的脚本修复方案。</p>
+
+<h2 id="1-环境准备">1. 环境准备</h2>
+
+<p>在开始之前，请确保你的系统已安装并正确配置了以下软件：</p>
+
+<ul>
+  <li>Windows 10/11：需开启 Hyper-V 或 WSL 2 功能</li>
+  <li><a href="https://www.docker.com/products/docker-desktop/">Docker Desktop for Windows</a>：建议使用 WSL 2 后端，性能更佳。安装后请确保 Docker 服务已正常启动。</li>
+  <li><a href="https://git-scm.com/downloads/win">Git for Windows</a>: 安装时请务必勾选 <code class="language-plaintext highlighter-rouge">Git Bash Here</code> 选项，我们将使用它来执行 shell 脚本。</li>
+</ul>
+
+<p><strong>笔者环境参考</strong>：</p>
+
+<ul>
+  <li>OS: Windows 11 Professional 24H2</li>
+  <li>Docker: 28.5.1</li>
+  <li>Git: 2.51.0.windows.2</li>
+</ul>
+
+<h2 id="2-部署步骤">2. 部署步骤</h2>
+
+<h3 id="第一步克隆-overleaf-toolkit-仓库">第一步：克隆 Overleaf Toolkit 仓库</h3>
+
+<p>首先，打开 Git Bash，选择一个你喜欢的工作目录（例如 <code class="language-plaintext highlighter-rouge">D:\</code>），然后执行以下命令克隆官方的 <code class="language-plaintext highlighter-rouge">toolkit</code> 仓库：</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 进入 D:\</span>
+<span class="nb">cd</span> /d
+
+<span class="c"># 克隆官方仓库</span>
+git clone https://github.com/overleaf/toolkit.git ./overleaf-toolkit
+<span class="nb">cd</span> ./overleaf-toolkit
+</code></pre></div></div>
+
+<h3 id="第二步修复-windows-路径兼容性问题">第二步：修复 Windows 路径兼容性问题</h3>
+
+<p>这是整个教程最核心的一步。官方的 <code class="language-plaintext highlighter-rouge">docker-compose</code> 脚本在生成容器挂载路径时，没有正确处理 Git Bash 在 Windows 上的路径格式，导致 Docker 无法找到数据卷。</p>
+
+<p>我已就此问题向官方提交了 <a href="https://github.com/overleaf/toolkit/issues/379">Issue #379</a>，并提交了修复方案 <a href="https://github.com/overleaf/toolkit/pull/380">PR #380</a>。</p>
+
+<p>鉴于此 PR 还并未被合并到主分支，需要用户自行进行修改。</p>
+
+<p>解决方案如下：</p>
+
+<p>使用你喜欢的代码编辑器（如 VS Code 或者记事本）打开 <code class="language-plaintext highlighter-rouge">bin/docker-compose</code> 文件。</p>
+
+<p>找到 <code class="language-plaintext highlighter-rouge">set_base_vars()</code> 函数，其中有两次对 <code class="language-plaintext highlighter-rouge">OVERLEAF_IN_CONTAINER_DATA_PATH</code> 变量的赋值。我们需要在路径的开头额外添加一个斜杠 <code class="language-plaintext highlighter-rouge">/</code>。</p>
+
+<p>修改前：</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">OVERLEAF_IN_CONTAINER_DATA_PATH</span><span class="o">=</span>/var/lib/overleaf
+</code></pre></div></div>
+
+<p>修改后：</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">OVERLEAF_IN_CONTAINER_DATA_PATH</span><span class="o">=</span>//var/lib/overleaf
+</code></pre></div></div>
+
+<p>注意：此函数有<strong>两处</strong> <code class="language-plaintext highlighter-rouge">OVERLEAF_IN_CONTAINER_DATA_PATH=/var/lib/overleaf</code>，请务必全部修改。这个修改的本质是帮助 Git Bash/MSYS2 正确地将 POSIX 风格的路径 <code class="language-plaintext highlighter-rouge">/var/lib/overleaf</code> 转换为 Docker 能理解的 Windows 路径。</p>
+
+<h3 id="第三步初始化并启动-overleaf-服务">第三步：初始化并启动 Overleaf 服务</h3>
+
+<p>修改脚本后，我们回到 Git Bash 终端，继续在 <code class="language-plaintext highlighter-rouge">overleaf-toolkit</code> 目录下执行命令。</p>
+
+<h4 id="初始化-overleaf-配置">初始化 Overleaf 配置</h4>
+
+<p>执行 <code class="language-plaintext highlighter-rouge">init</code> 命令，该命令会生成初始化配置文件，例如 <code class="language-plaintext highlighter-rouge">config/overleaf.rc</code>、<code class="language-plaintext highlighter-rouge">config/variables.env</code>、<code class="language-plaintext highlighter-rouge">config/version</code> 等。</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>./bin/init
+</code></pre></div></div>
+
+<h4 id="启动-overleaf-容器服务">启动 Overleaf 容器服务</h4>
+
+<p>初始化完成后，执行 <code class="language-plaintext highlighter-rouge">up</code> 命令来启动所有服务。</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>./bin/up
+</code></pre></div></div>
+
+<p>提示：首次执行时，由于需要下载多个 Docker 镜像，此过程可能会持续较长时间，具体取决于你的网络速度。请耐心等待，确保所有镜像都成功拉取。</p>
+
+<p>执行成功后，你将看到大量的服务日志输出。</p>
+
+<h3 id="第四步首次访问与管理员配置">第四步：首次访问与管理员配置</h3>
+
+<p>服务启动后，打开你的浏览器，访问 <code class="language-plaintext highlighter-rouge">http://127.0.0.1</code>。</p>
+
+<p>首次访问时，你会被引导至管理员账户创建页面。请根据提示设置你的第一个管理员用户的邮箱和密码。创建成功后，你就可以使用这个账户登录并开始使用你的私有 Overleaf 实例了！</p>
+
+<h2 id="3-日常管理">3. 日常管理</h2>
+
+<p>在日常使用中，你可能会需要启动或停止 Overleaf 服务。</p>
+
+<ul>
+  <li>停止服务：在 <code class="language-plaintext highlighter-rouge">overleaf-toolkit</code> 目录下打开 Git Bash，执行：</li>
+</ul>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>./bin/stop
+</code></pre></div></div>
+
+<ul>
+  <li>重新启动服务：同样，在 <code class="language-plaintext highlighter-rouge">overleaf-toolkit</code> 目录下执行：</li>
+</ul>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>./bin/up
+</code></pre></div></div>
+
+<h2 id="总结">总结</h2>
+
+<p>通过对 <code class="language-plaintext highlighter-rouge">bin/docker-compose</code> 脚本进行一个小小的修改，我们成功解决了 <code class="language-plaintext highlighter-rouge">overleaf-toolkit</code> 在 Windows + Git Bash 环境下的路径兼容性问题，顺利地部署了 Overleaf 社区版。自托管 Overleaf 不仅保障了数据安全，还提供了更自由的定制空间。</p>
+
+<p>希望这篇教程能帮助到同样遇到此问题的同学。</p>]]></content><author><name>bfmhno3</name></author><category term="Tutorial" /><category term="Docker" /><category term="Overleaf" /><category term="Git Bash" /><category term="Windows" /><summary type="html"><![CDATA[本教程提供了一份详尽的指南，旨在帮助用户在 Windows 10/11 系统上，通过 Docker Desktop 和 Git Bash 成功部署 Overleaf 社区版。文章重点解决了官方 overleaf-toolkit 脚本在 Windows 环境下因路径不兼容而导致的部署失败问题，并提供了简单有效的脚本修复方案。跟随本教程，您可以轻松搭建一个属于自己的私有 Overleaf 实例，确保数据安全与访问稳定。]]></summary></entry><entry><title type="html">Notes of Effective CMake</title><link href="https://bfmhno3.github.io/note/notes-of-effective-cmake/" rel="alternate" type="text/html" title="Notes of Effective CMake" /><published>2025-08-08T15:17:00+00:00</published><updated>2025-08-08T15:17:00+00:00</updated><id>https://bfmhno3.github.io/note/notes-of-effective-cmake</id><content type="html" xml:base="https://bfmhno3.github.io/note/notes-of-effective-cmake/"><![CDATA[<h2 id="1-the-philosophy-of-modern-cmake">1. The Philosophy of Modern CMake</h2>
+
+<h3 id="why-effective-cmake">Why “Effective CMake”?</h3>
+
+<p>Just like with C++, the way you write CMake code significantly impacts your project’s maintainability, ease of use for others, and scalability. Adopting modern practices is key.</p>
+
+<h3 id="cmake-is-code">CMake is Code</h3>
+
+<p>Treat your <code class="language-plaintext highlighter-rouge">CMakeLists.txt</code> files with the same care as your source code. Apply principles like Don’t Repeat Yourself (DRY), keep it clean, and write comments where necessary.</p>
+
+<h2 id="2-the-cmake-language-a-quick-tour">2. The CMake Language: A Quick Tour</h2>
+
+<h3 id="organization">Organization</h3>
+
+<p>CMake code can be organized in three ways:</p>
+
+<ul>
+  <li><strong>Directories (<code class="language-plaintext highlighter-rouge">CMakeLists.txt</code>)</strong>: The entry point for a project or sub-project. <code class="language-plaintext highlighter-rouge">add_subdirectory()</code> adds another directory (which must contain a <code class="language-plaintext highlighter-rouge">CMakeLists.txt</code>) to the build.</li>
+  <li><strong>Scripts (<code class="language-plaintext highlighter-rouge">&lt;name&gt;.cmake</code>)</strong>: Executed with <code class="language-plaintext highlighter-rouge">cmake -P &lt;script&gt;.cmake</code>. They are useful for automation but cannot define build targets like executables or libraries. In other words, <em>not all commands are supported</em>.</li>
+  <li><strong>Modules (<code class="language-plaintext highlighter-rouge">&lt;name&gt;.cmake</code>)</strong>: Reusable code included in your projects via <code class="language-plaintext highlighter-rouge">include()</code>. They are located in the <code class="language-plaintext highlighter-rouge">CMAKE_MODULE_PATH</code>.</li>
+</ul>
+
+<h3 id="commands">Commands</h3>
+
+<p>CMake commands are <strong>case-insensitive</strong>, but their arguments (including variable names) are <strong>case-sensitive</strong>.</p>
+
+<div class="language-cmake highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># command_name(ARGUMENT1 ARGUMENT2 ...)</span>
+<span class="nb">project</span><span class="p">(</span>MyProject VERSION 1.0<span class="p">)</span>
+</code></pre></div></div>
+
+<p class="notice--danger"><strong>Command invovations are not expressions</strong>, so you cannnot put a command invocation directly as an argument of another command or inside an if condition. They are not possible.</p>
+
+<h3 id="variables">Variables</h3>
+
+<div class="language-cmake highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Set a variable</span>
+<span class="nb">set</span><span class="p">(</span>MY_VARIABLE <span class="s2">"Hello"</span><span class="p">)</span>
+
+<span class="c1"># Reference a variable (dereference)</span>
+<span class="nb">message</span><span class="p">(</span>STATUS <span class="s2">"My variable is: </span><span class="si">${</span><span class="nv">MY_VARIABLE</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+<span class="c1"># Unset a variable</span>
+<span class="nb">unset</span><span class="p">(</span>MY_VARIABLE<span class="p">)</span>
+</code></pre></div></div>
+
+<blockquote class="notice--danger">
+  <p>:exclamation: <strong>IMPORTANT</strong></p>
+
+  <ul>
+    <li>In CMake, everything is a string. Lists are just strings separated by semicolons <code class="language-plaintext highlighter-rouge">;</code> (e.g., <code class="language-plaintext highlighter-rouge">"item1;item2;item3"</code>).</li>
+    <li><strong>An unset or undefined variable expands to an empty string</strong>. This can be a common source of bugs! Use <code class="language-plaintext highlighter-rouge">if(DEFINED VAR_NAME)</code> to check if a variable is set.</li>
+    <li>CMake variables are not environment variables (unlink <code class="language-plaintext highlighter-rouge">Makefile</code>).</li>
+  </ul>
+</blockquote>
+
+<blockquote class="notice--warning">
+  <p>:warning: <strong>WARNING</strong></p>
+
+  <p>Avoid custom variables in the arguments of project commands.</p>
+
+  <p>In modern CMake, what we need is targets and properties. See them later.</p>
+</blockquote>
+
+<h3 id="comments">Comments</h3>
+
+<div class="language-cmake highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># This is a single-line comment.</span>
+
+<span class="cm">#[=[
+This is a multi-line comment.
+It can contain other symbols and even # characters.
+#]=]</span>
+</code></pre></div></div>
+
+<h3 id="generator-expressions-the--syntax">Generator Expressions: The <code class="language-plaintext highlighter-rouge">$&lt;...&gt;</code> Syntax</h3>
+
+<p>Generator expressions, often called “genex,” are a powerful CMake feature that uses the <code class="language-plaintext highlighter-rouge">$&lt;...&gt;</code> syntax. They are <strong>not</strong> evaluated when CMake first reads your <code class="language-plaintext highlighter-rouge">CMakeLists.txt</code>. Instead, they are written into the native build files (like Makefiles or Visual Studio projects) and are evaluated <strong>during the build process</strong>.</p>
+
+<p>This delayed evaluation is crucial because it allows you to create build configurations that are aware of things that are only known at build time, such as the specific build type (<code class="language-plaintext highlighter-rouge">Debug</code>, <code class="language-plaintext highlighter-rouge">Release</code>), the compiler being used, or the language of a source file.</p>
+
+<blockquote class="notice--danger">
+  <p>:exclamation: <strong>IMPORTANT</strong></p>
+
+  <p>Think of generator expressions as placeholders that the final build tool (like Make, Ninja, or MSBuild) will fill in with the correct value at the right time. This is much more flexible than using <code class="language-plaintext highlighter-rouge">if()</code> statements in CMake, which are only evaluated once when you run <code class="language-plaintext highlighter-rouge">cmake</code>.</p>
+</blockquote>
+
+<h4 id="common-use-cases-and-examples">Common Use Cases and Examples</h4>
+
+<ol>
+  <li><strong>Conditional Compilation Definitions (<code class="language-plaintext highlighter-rouge">$&lt;CONFIG:...&gt;</code>)</strong></li>
+</ol>
+
+<p>This is the most common use case. You want to define a preprocessor macro differently for <code class="language-plaintext highlighter-rouge">Debug</code> and <code class="language-plaintext highlighter-rouge">Release</code> builds.</p>
+
+<div class="language-cmake highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># In Debug mode, VERBOSITY will be 2. In all other modes (e.g., Release), it will be 0.</span>
+<span class="nb">target_compile_definitions</span><span class="p">(</span>my_app PRIVATE
+    <span class="s2">"VERBOSITY=$&lt;IF:$&lt;CONFIG:Debug&gt;,2,0&gt;"</span>
+<span class="p">)</span>
+</code></pre></div></div>
+
+<p>The <code class="language-plaintext highlighter-rouge">$&lt;IF:condition,true_value,false_value&gt;</code> expression is evaluated at build time. If the configuration is <code class="language-plaintext highlighter-rouge">Debug</code>, it resolves to <code class="language-plaintext highlighter-rouge">VERBOSITY=2</code>; otherwise, it becomes <code class="language-plaintext highlighter-rouge">VERBOSITY=0</code>.</p>
+
+<ol>
+  <li><strong>Conditional Include Directories (<code class="language-plaintext highlighter-rouge">$&lt;BUILD_INTERFACE:...&gt;</code> and <code class="language-plaintext highlighter-rouge">$&lt;INSTALL_INTERFACE:...&gt;</code>)</strong></li>
+</ol>
+
+<p>A library often has different include paths when being built inside a project versus when it’s installed on a system.</p>
+
+<div class="language-cmake highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">target_include_directories</span><span class="p">(</span>my_lib PUBLIC
+    <span class="c1"># When my_lib is built as part of this project, use the source directory.</span>
+    $&lt;BUILD_INTERFACE:<span class="si">${</span><span class="nv">CMAKE_CURRENT_SOURCE_DIR</span><span class="si">}</span>/include&gt;
+
+    <span class="c1"># When an external project uses an installed version of my_lib, the path is just 'include'.</span>
+    $&lt;INSTALL_INTERFACE:include&gt;
+<span class="p">)</span>
+</code></pre></div></div>
+
+<p>This ensures your library is usable both during development and after deployment without any changes.</p>
+
+<ol>
+  <li><strong>Compiler-Specific Flags (<code class="language-plaintext highlighter-rouge">$&lt;CXX_COMPILER_ID:...&gt;</code>)</strong></li>
+</ol>
+
+<p>You can pass specific flags depending on the compiler being used (e.g., GCC, Clang, MSVC).</p>
+
+<div class="language-cmake highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Enable strong warnings, but use the correct flag for each compiler.</span>
+<span class="nb">set</span><span class="p">(</span>GCC_CLANG_WARNINGS <span class="s2">"-Wall -Wextra -Wpedantic"</span><span class="p">)</span>
+<span class="nb">set</span><span class="p">(</span>MSVC_WARNINGS <span class="s2">"/W4"</span><span class="p">)</span>
+
+<span class="nb">target_compile_options</span><span class="p">(</span>my_app PRIVATE
+    <span class="s2">"$&lt;IF:$&lt;CXX_COMPILER_ID:MSVC&gt;,</span><span class="si">${</span><span class="nv">MSVC_WARNINGS</span><span class="si">}</span><span class="s2">,</span><span class="si">${</span><span class="nv">GCC_CLANG_WARNINGS</span><span class="si">}</span><span class="s2">&gt;"</span>
+<span class="p">)</span>
+</code></pre></div></div>
+
+<ol>
+  <li><strong>Language-Specific Standards (<code class="language-plaintext highlighter-rouge">$&lt;COMPILE_LANGUAGE:...&gt;</code>)</strong></li>
+</ol>
+
+<p>If your target mixes C and C++ code, you can set standards for each language.</p>
+
+<div class="language-cmake highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">target_compile_features</span><span class="p">(</span>my_app PRIVATE
+    <span class="c1"># Set C++ standard to 17 for all C++ files.</span>
+    $&lt;COMPILE_LANGUAGE:CXX&gt;:cxx_std_17
+
+    <span class="c1"># Set C standard to 11 for all C files.</span>
+    $&lt;COMPILE_LANGUAGE:C&gt;:c_std_11
+<span class="p">)</span>
+</code></pre></div></div>
+
+<p>Generator expressions are a cornerstone of modern, robust, and portable CMake scripts. Mastering them allows you to write cleaner and more powerful <code class="language-plaintext highlighter-rouge">CMakeLists.txt</code> files.</p>
+
+<h3 id="custom-commands-function-vs-macro">Custom Commands: <code class="language-plaintext highlighter-rouge">function()</code> vs. <code class="language-plaintext highlighter-rouge">macro()</code></h3>
+
+<p>You can create your own commands to reduce code duplication.</p>
+
+<ul>
+  <li><strong><code class="language-plaintext highlighter-rouge">function()</code></strong>: Creates a new variable scope. To pass results back to the caller, you must use <code class="language-plaintext highlighter-rouge">set(... PARENT_SCOPE)</code>.</li>
+  <li><strong><code class="language-plaintext highlighter-rouge">macro()</code></strong>: Does not create a new scope. It performs simple text replacement, much like a C preprocessor macro.</li>
+</ul>
+
+<blockquote class="notice--success">
+  <p>:bulb: <strong>TIP</strong></p>
+
+  <p><strong>Rule of Thumb:</strong></p>
+
+  <ul>
+    <li>Use <code class="language-plaintext highlighter-rouge">function()</code> by default to avoid polluting the caller’s scope with side effects.</li>
+    <li>Use <code class="language-plaintext highlighter-rouge">macro()</code> only when you need to wrap a command that has an output parameter or when you explicitly want side effects in the caller’s scope.</li>
+  </ul>
+</blockquote>
+
+<h2 id="3-the-core-of-modern-cmake-targets-and-properties">3. The Core of Modern CMake: Targets and Properties</h2>
+
+<p>Modern CMake revolves around <strong>targets</strong> and their <strong>properties</strong>. A target can be an executable, a library, or a custom target.</p>
+
+<blockquote class="notice--warning">
+  <p>:warning: <strong>WARNING</strong></p>
+
+  <p>Avoid directory-level commands like <code class="language-plaintext highlighter-rouge">include_directories()</code>, <code class="language-plaintext highlighter-rouge">link_libraries()</code>, and <code class="language-plaintext highlighter-rouge">add_compile_options()</code>. They use global state and make dependencies hard to reason about. Always prefer the <code class="language-plaintext highlighter-rouge">target_*</code> equivalents.</p>
+</blockquote>
+
+<blockquote class="notice--warning">
+  <p>:warning: <strong>WARNING</strong></p>
+
+  <p>Don’t use <code class="language-plaintext highlighter-rouge">file(GLOB)</code> in your <code class="language-plaintext highlighter-rouge">CMakeLists.txt</code> anymore.</p>
+</blockquote>
+
+<h3 id="thinking-in-targets">Thinking in Targets</h3>
+
+<p>Imagine targets as objects in an OOP language.</p>
+
+<ul>
+  <li><strong>Constructor</strong>: <code class="language-plaintext highlighter-rouge">add_executable()</code>, <code class="language-plaintext highlighter-rouge">add_library()</code></li>
+  <li><strong>Member Functions</strong>: <code class="language-plaintext highlighter-rouge">target_sources()</code>, <code class="language-plaintext highlighter-rouge">target_include_directories()</code>, <code class="language-plaintext highlighter-rouge">target_link_libraries()</code>, etc.</li>
+  <li><strong>Member Variables</strong>: Properties like <code class="language-plaintext highlighter-rouge">VERSION</code>, <code class="language-plaintext highlighter-rouge">SOURCES</code>, <code class="language-plaintext highlighter-rouge">INTERFACE_INCLUDE_DIRECTORIES</code>.</li>
+</ul>
+
+<div class="language-cmake highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Create a library target</span>
+<span class="nb">add_library</span><span class="p">(</span>my_lib STATIC my_lib.cpp my_lib.h<span class="p">)</span>
+
+<span class="c1"># Add properties to the target</span>
+<span class="nb">target_include_directories</span><span class="p">(</span>my_lib PUBLIC include<span class="p">)</span>
+<span class="nb">target_compile_features</span><span class="p">(</span>my_lib PUBLIC cxx_std_17<span class="p">)</span>
+</code></pre></div></div>
+
+<h3 id="build-specifications-vs-usage-requirements">Build Specifications vs. Usage Requirements</h3>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">Non-INTERFACE_</code> properties define the build specification of a terget</li>
+  <li><code class="language-plaintext highlighter-rouge">INTERFACE_</code> properties define the usage requirements of a target.</li>
+</ul>
+
+<p>This is the most critical concept in modern CMake. When you link a library, the consumer needs to know its include directories, compile definitions, etc.</p>
+
+<ul>
+  <li><strong><code class="language-plaintext highlighter-rouge">PRIVATE</code></strong>: The property is only for building this target. It is not passed on to consumers (<code class="language-plaintext highlighter-rouge">Non-INTERFACE_</code>).</li>
+  <li><strong><code class="language-plaintext highlighter-rouge">INTERFACE</code></strong>: The property is <em>only</em> for consumers of this target. The target itself doesn’t use it for its own build. This is perfect for header-only libraries (<code class="language-plaintext highlighter-rouge">INTERFACE_</code>).</li>
+  <li><strong><code class="language-plaintext highlighter-rouge">PUBLIC</code></strong>: The property is for both the target’s build (<code class="language-plaintext highlighter-rouge">PRIVATE</code>) and for its consumers (<code class="language-plaintext highlighter-rouge">INTERFACE</code>).</li>
+</ul>
+
+<h4 id="example">Example</h4>
+
+<div class="language-cmake highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># A logging library that uses spdlog internally</span>
+<span class="nb">add_library</span><span class="p">(</span>my_logger my_logger.cpp<span class="p">)</span>
+
+<span class="c1"># my_logger needs the spdlog headers to compile.</span>
+<span class="c1"># Anyone who uses my_logger does NOT need spdlog headers directly.</span>
+<span class="nb">target_include_directories</span><span class="p">(</span>my_logger
+    PRIVATE
+        <span class="si">${</span><span class="nv">spdlog_SOURCE_DIR</span><span class="si">}</span>/include
+<span class="p">)</span>
+
+<span class="c1"># Anyone who uses my_logger needs my_logger's own headers.</span>
+<span class="nb">target_include_directories</span><span class="p">(</span>my_logger
+    PUBLIC
+        $&lt;BUILD_INTERFACE:<span class="si">${</span><span class="nv">CMAKE_CURRENT_SOURCE_DIR</span><span class="si">}</span>/include&gt;
+        $&lt;INSTALL_INTERFACE:include&gt; <span class="c1"># Different path after installation</span>
+<span class="p">)</span>
+</code></pre></div></div>
+
+<h3 id="header-only-libraries">Header-Only Libraries</h3>
+
+<p>For libraries that are headers-only, create an <code class="language-plaintext highlighter-rouge">INTERFACE</code> library. It has no sources and only defines usage requirements.</p>
+
+<div class="language-cmake highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">add_library</span><span class="p">(</span>my_header_lib INTERFACE<span class="p">)</span>
+
+<span class="nb">target_include_directories</span><span class="p">(</span>my_header_lib INTERFACE
+    $&lt;BUILD_INTERFACE:<span class="si">${</span><span class="nv">CMAKE_CURRENT_SOURCE_DIR</span><span class="si">}</span>/include&gt;
+    $&lt;INSTALL_INTERFACE:include&gt;
+<span class="p">)</span>
+</code></pre></div></div>
+
+<blockquote class="notice--warning">
+  <p>:warning: <strong>WARNING</strong></p>
+
+  <p>The library interface may change during installation. Use the <code class="language-plaintext highlighter-rouge">BUILD_INTERFACE</code> and <code class="language-plaintext highlighter-rouge">INSTALL_INTERFACE</code> generator expressions as filters</p>
+</blockquote>
+
+<h2 id="4-working-with-dependencies">4. Working with Dependencies</h2>
+
+<h3 id="finding-packages-with-find_package">Finding Packages with <code class="language-plaintext highlighter-rouge">find_package()</code></h3>
+
+<p>This is the standard way to find and use external libraries that have been installed on the system or are part of the project.</p>
+
+<div class="language-cmake highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Find the Boost library, version 1.71 or newer.</span>
+<span class="c1"># It is REQUIRED; CMake will fail if it's not found.</span>
+<span class="nb">find_package</span><span class="p">(</span>Boost 1.71 REQUIRED COMPONENTS system thread<span class="p">)</span>
+
+<span class="c1"># If found, use the imported target provided by Boost</span>
+<span class="nb">if</span><span class="p">(</span>Boost_FOUND<span class="p">)</span>
+    <span class="nb">target_link_libraries</span><span class="p">(</span>my_app PRIVATE Boost::system Boost::thread<span class="p">)</span>
+<span class="nb">endif</span><span class="p">()</span>
+</code></pre></div></div>
+
+<blockquote class="notice--info">
+  <p>:memo: <strong>Note</strong></p>
+
+  <p>Regardless of the mode/package used, a <code class="language-plaintext highlighter-rouge">&lt;PackageName&gt;_FOUND</code> variable will be set to indicate whether the package was found.</p>
+</blockquote>
+
+<blockquote class="notice--danger">
+  <p>:exclamation: <strong>IMPORTANT</strong></p>
+
+  <p>Always use the official, namespaced, imported targets (e.g., <code class="language-plaintext highlighter-rouge">Boost::system</code>, <code class="language-plaintext highlighter-rouge">Qt5::Core</code>, <code class="language-plaintext highlighter-rouge">GTest::GTest</code>). Never use the old-style <code class="language-plaintext highlighter-rouge">_LIBRARIES</code> and <code class="language-plaintext highlighter-rouge">_INCLUDE_DIRS</code> variables. Imported targets handle all dependency properties for you automatically.</p>
+</blockquote>
+
+<blockquote class="notice--danger">
+  <p>:exclamation: <strong>IMPORTANT</strong></p>
+
+  <p>Use a Find module for third party libraries <del>that are not built with CMake</del> that don’t support clients to use CMake. Also, report this as a bug to their authors.</p>
+</blockquote>
+
+<p>If you need to write a find module for a third-party library, report this as a bug to the authors. Because most people use CMake, it’s a problem that don’t support it.</p>
+
+<h3 id="fetching-dependencies-at-configure-time-with-fetchcontent">Fetching Dependencies at Configure Time with <code class="language-plaintext highlighter-rouge">FetchContent</code></h3>
+
+<p>For dependencies that you want to download and build alongside your project, <code class="language-plaintext highlighter-rouge">FetchContent</code> is the modern, preferred approach. It’s great for ensuring all developers use the exact same version of a dependency.</p>
+
+<div class="language-cmake highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">include</span><span class="p">(</span>FetchContent<span class="p">)</span>
+
+<span class="c1"># Declare the dependency</span>
+<span class="nf">FetchContent_Declare</span><span class="p">(</span>
+    googletest
+    GIT_REPOSITORY https://github.com/google/googletest.git
+    GIT_TAG        release-1.12.1
+<span class="p">)</span>
+
+<span class="c1"># Make it available (downloads and adds it as a sub-project)</span>
+<span class="nf">FetchContent_MakeAvailable</span><span class="p">(</span>googletest<span class="p">)</span>
+
+<span class="c1"># Now you can link to it just like any other target in your project</span>
+<span class="nb">target_link_libraries</span><span class="p">(</span>my_tests PRIVATE GTest::GTest GTest::Main<span class="p">)</span>
+</code></pre></div></div>
+
+<blockquote class="notice--info">
+  <p>:memo: <strong>Note</strong></p>
+
+  <p><code class="language-plaintext highlighter-rouge">FetchContent</code> is generally preferred over Git submodules because it gives the parent project more control and is easier to manage.</p>
+</blockquote>
+
+<h3 id="exporting-your-project-as-a-package">Exporting Your Project as a Package</h3>
+
+<p>When you want other projects to use your library with <code class="language-plaintext highlighter-rouge">find_package()</code>, you need to generate package configuration files.</p>
+
+<ol>
+  <li><strong>Install Targets</strong>: Use <code class="language-plaintext highlighter-rouge">install(TARGETS ...)</code> to specify where your library files (<code class="language-plaintext highlighter-rouge">.a</code>, <code class="language-plaintext highlighter-rouge">.so</code>, <code class="language-plaintext highlighter-rouge">.dll</code>) and headers should be installed. Use the <code class="language-plaintext highlighter-rouge">EXPORT</code> keyword to associate them with a target export set.</li>
+  <li><strong>Install Export Set</strong>: Use <code class="language-plaintext highlighter-rouge">install(EXPORT ...)</code> to create a <code class="language-plaintext highlighter-rouge">&lt;name&gt;Targets.cmake</code> file. This file contains the definitions of your imported targets (e.g., <code class="language-plaintext highlighter-rouge">MyLib::MyLib</code>).</li>
+  <li><strong>Create Version and Config Files</strong>: Use <code class="language-plaintext highlighter-rouge">CMakePackageConfigHelpers</code> to generate a version file (<code class="language-plaintext highlighter-rouge">&lt;name&gt;ConfigVersion.cmake</code>) and write a config file (<code class="language-plaintext highlighter-rouge">&lt;name&gt;Config.cmake</code>). The config file is the entry point that <code class="language-plaintext highlighter-rouge">find_package</code> looks for.</li>
+</ol>
+
+<p>This process tells other projects how to use your library by defining an imported target like <code class="language-plaintext highlighter-rouge">YourProject::YourLib</code>.</p>
+
+<p>For example:</p>
+
+<div class="language-cmake highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># standard steps to build the library</span>
+<span class="nb">find_package</span><span class="p">(</span>Bar 2.0 REQUIRED<span class="p">)</span>
+<span class="nb">add_library</span><span class="p">(</span>Foo ...<span class="p">)</span>
+<span class="nb">target_link_libraries</span><span class="p">(</span>Foo PRIVATE Bar::Bar<span class="p">)</span>
+
+<span class="c1"># 1. Install targets</span>
+<span class="nb">install</span><span class="p">(</span>TARGETS Foo EXPORT FooTargets
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+    RUNTIME DESTINATION bin
+    INCLUDES DESTINATION include<span class="p">)</span>
+
+<span class="c1"># 2. Install Export Set</span>
+<span class="nb">install</span><span class="p">(</span>EXPORT FooTargets
+    FILE FooTargets.cmake
+    NAMESPACE Foo::
+    DESTINATION lib/cmake/Foo<span class="p">)</span>
+
+<span class="c1"># 3. Create Version file</span>
+<span class="nb">include</span><span class="p">(</span>CMakePackageConfigHelpers<span class="p">)</span>
+<span class="nf">write_basic_package_version_file</span><span class="p">(</span><span class="s2">"FooConfigVersion.cmake"</span>
+    VERSION <span class="si">${</span><span class="nv">Foo_VERSION</span><span class="si">}</span>
+    COMPATIBILITY SameMajorVersion
+    <span class="p">)</span>
+<span class="nb">install</span><span class="p">(</span>FILES <span class="s2">"FooConfig.cmake"</span> <span class="s2">"FooConfigVersion.cmake"</span>
+    DESTINATION lib/cmake/Foo<span class="p">)</span>
+</code></pre></div></div>
+
+<p>Create and write config files <code class="language-plaintext highlighter-rouge">FooConfig.cmake</code>:</p>
+
+<div class="language-cmake highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">include</span><span class="p">(</span>CMakeFindDependencyMacro<span class="p">)</span>
+<span class="nf">find_dependency</span><span class="p">(</span>Bar 2.0<span class="p">)</span>
+<span class="nb">include</span><span class="p">(</span><span class="s2">"$</span><span class="si">${</span><span class="nv">CMAKE_CURRENT_LIST_DIR</span><span class="si">}</span><span class="s2">/FooTargets.cmake"</span><span class="p">)</span>
+</code></pre></div></div>
+
+<h2 id="5-testing-with-ctest">5. Testing with CTest</h2>
+
+<p>CTest is CMake’s testing framework. It acts as a test driver, running test executables and reporting results.</p>
+
+<h3 id="basic-setup">Basic Setup</h3>
+
+<ol>
+  <li><strong>Enable Testing</strong>: Add <code class="language-plaintext highlighter-rouge">enable_testing()</code> to your root <code class="language-plaintext highlighter-rouge">CMakeLists.txt</code>. This command should be called only once in the top-level project.</li>
+  <li><strong>Add Tests</strong>: Use <code class="language-plaintext highlighter-rouge">add_test()</code> to define a test case. A test is typically an executable that returns 0 for success and non-zero for failure.</li>
+</ol>
+
+<div class="language-cmake highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># In your tests/CMakeLists.txt</span>
+<span class="nb">add_executable</span><span class="p">(</span>run_all_tests tests.cpp<span class="p">)</span>
+<span class="nb">target_link_libraries</span><span class="p">(</span>run_all_tests PRIVATE my_lib GTest::GTest GTest::Main<span class="p">)</span>
+
+<span class="c1"># Define a test named "MyLib.UnitTests" that runs the "run_all_tests" executable.</span>
+<span class="nb">add_test</span><span class="p">(</span>NAME MyLib.UnitTests COMMAND run_all_tests<span class="p">)</span>
+</code></pre></div></div>
+
+<blockquote class="notice--info">
+  <p>:bulb: <strong>TIP</strong></p>
+
+  <p>It’s a good practice to adopt a naming convention for your tests, like <code class="language-plaintext highlighter-rouge">Project.Component.TestType</code>. This makes filtering much easier.</p>
+</blockquote>
+
+<h4 id="running-tests">Running Tests</h4>
+
+<p>You can then run all tests from your build directory:</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Run all tests, with 4 parallel jobs and verbose output on failure</span>
+ctest <span class="nt">-j4</span> <span class="nt">--output-on-failure</span>
+</code></pre></div></div>
+
+<h4 id="advanced-filtering-tests">Advanced: Filtering Tests</h4>
+
+<p>You can run a subset of your tests using a regular expression with the <code class="language-plaintext highlighter-rouge">-R</code> flag.</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Run only the tests whose names start with "MyLib."</span>
+ctest <span class="nt">-R</span> <span class="s2">"^MyLib</span><span class="se">\\</span><span class="s2">."</span>
+</code></pre></div></div>
+
+<h4 id="advanced-testing-for-compile-failure">Advanced: Testing for Compile Failure</h4>
+
+<p>Sometimes, you want to ensure that certain code <em>fails</em> to compile (e.g., when testing <code class="language-plaintext highlighter-rouge">static_assert</code>). You can create a test for this.</p>
+
+<div class="language-cmake highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Create a library that is expected to fail compilation.</span>
+<span class="c1"># EXCLUDE_FROM_ALL prevents it from being built during a normal build.</span>
+<span class="nb">add_library</span><span class="p">(</span>foo_fail STATIC EXCLUDE_FROM_ALL foo_fail.cpp<span class="p">)</span>
+
+<span class="c1"># Add a test that tries to build this specific target.</span>
+<span class="c1"># The test "passes" if the build command fails.</span>
+<span class="nb">add_test</span><span class="p">(</span>NAME Foo.CompileFail
+    COMMAND <span class="si">${</span><span class="nv">CMAKE_COMMAND</span><span class="si">}</span> --build <span class="si">${</span><span class="nv">CMAKE_BINARY_DIR</span><span class="si">}</span> --target foo_fail
+<span class="p">)</span>
+
+<span class="c1"># We can even check for a specific error message in the build output.</span>
+<span class="c1"># The test passes if the build fails AND the output contains this regex.</span>
+<span class="nb">set_tests_properties</span><span class="p">(</span>Foo.CompileFail PROPERTIES
+    PASS_REGULAR_EXPRESSION <span class="s2">"static assert message"</span>
+    WILL_FAIL TRUE <span class="c1"># Informs CTest that a non-zero return code is expected (success)</span>
+<span class="p">)</span>
+</code></pre></div></div>
+
+<h4 id="advanced-driving-ctest-with-a-script">Advanced: Driving CTest with a Script</h4>
+
+<p>For complex testing scenarios, especially in CI/CD environments, you can use a CMake script to drive CTest.</p>
+
+<p><strong><code class="language-plaintext highlighter-rouge">build_and_test.cmake</code></strong></p>
+
+<div class="language-cmake highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># This script automates the configure, build, test, and submit steps.</span>
+<span class="nb">set</span><span class="p">(</span>CTEST_SOURCE_DIRECTORY <span class="s2">"/path/to/source"</span><span class="p">)</span>
+<span class="nb">set</span><span class="p">(</span>CTEST_BINARY_DIRECTORY <span class="s2">"/path/to/build"</span><span class="p">)</span>
+
+<span class="nb">set</span><span class="p">(</span>CTEST_CMAKE_GENERATOR <span class="s2">"Ninja"</span><span class="p">)</span> <span class="c1"># Specify the generator</span>
+
+<span class="nf">ctest_start</span><span class="p">(</span><span class="s2">"Continuous"</span><span class="p">)</span> <span class="c1"># Start a new CTest run</span>
+<span class="nf">ctest_configure</span><span class="p">()</span>         <span class="c1"># Run cmake</span>
+<span class="nf">ctest_build</span><span class="p">()</span>             <span class="c1"># Run cmake --build</span>
+<span class="nf">ctest_test</span><span class="p">()</span>              <span class="c1"># Run ctest</span>
+<span class="nf">ctest_submit</span><span class="p">()</span>            <span class="c1"># Submit results to a dashboard like CDash</span>
+</code></pre></div></div>
+
+<p>You would run this script from the command line:</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ctest <span class="nt">-S</span> build_and_test.cmake
+</code></pre></div></div>
+
+<p>This keeps CI-specific logic out of your main <code class="language-plaintext highlighter-rouge">CMakeLists.txt</code>.</p>
+
+<h2 id="6-cross-compiling-with-toolchain-files">6. Cross-Compiling with Toolchain Files</h2>
+
+<p>Cross-compiling is the process of building code on one machine (the <em>host</em>) that is intended to run on a different machine (the <em>target</em>), which may have a different architecture (e.g., building for ARM on an x86-64 host).</p>
+
+<p>CMake handles this through <strong>Toolchain Files</strong>. A toolchain file tells CMake how to find the correct compilers, linkers, and libraries for the target system.</p>
+
+<h3 id="the-role-of-the-toolchain-file">The Role of the Toolchain File</h3>
+
+<p>You specify the toolchain file when you first configure your project with <code class="language-plaintext highlighter-rouge">cmake</code>.</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Configure the project using the my-arm-toolchain.cmake file</span>
+cmake <span class="nt">-S</span> <span class="nb">.</span> <span class="nt">-B</span> build <span class="nt">-DCMAKE_TOOLCHAIN_FILE</span><span class="o">=</span>/path/to/my-arm-toolchain.cmake
+</code></pre></div></div>
+
+<blockquote class="notice--warning">
+  <p>:warning: <strong>WARNING</strong></p>
+
+  <p>A toolchain file is for describing the <strong>environment</strong>, not for project logic. Avoid setting project options or variables in it. Its only job is to set up the compilers and search paths.</p>
+</blockquote>
+
+<h4 id="example-toolchain-file">Example Toolchain File</h4>
+
+<p>Here is an example of a toolchain file for cross-compiling to Windows from a Linux host using MinGW-w64.</p>
+
+<p><strong><code class="language-plaintext highlighter-rouge">mingw-toolchain.cmake</code></strong></p>
+
+<div class="language-cmake highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># The name of the target operating system</span>
+<span class="nb">set</span><span class="p">(</span>CMAKE_SYSTEM_NAME Windows<span class="p">)</span>
+
+<span class="c1"># Specify the cross-compilers</span>
+<span class="nb">set</span><span class="p">(</span>CMAKE_C_COMPILER   x86_64-w64-mingw32-gcc<span class="p">)</span>
+<span class="nb">set</span><span class="p">(</span>CMAKE_CXX_COMPILER x86_64-w64-mingw32-g++<span class="p">)</span>
+
+<span class="c1"># Where to find the target environment's headers and libraries</span>
+<span class="nb">set</span><span class="p">(</span>CMAKE_FIND_ROOT_PATH /usr/x86_64-w64-mingw32<span class="p">)</span>
+
+<span class="c1"># Adjust the search behavior for programs, libraries, and includes</span>
+<span class="nb">set</span><span class="p">(</span>CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER<span class="p">)</span>
+<span class="nb">set</span><span class="p">(</span>CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY<span class="p">)</span>
+<span class="nb">set</span><span class="p">(</span>CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY<span class="p">)</span>
+
+<span class="c1"># Set an emulator to run target executables on the host system</span>
+<span class="nb">set</span><span class="p">(</span>CMAKE_CROSSCOMPILING_EMULATOR <span class="s2">"wine64"</span><span class="p">)</span>
+</code></pre></div></div>
+
+<h4 id="running-cross-compiled-tests">Running Cross-Compiled Tests</h4>
+
+<p>You can’t directly run a target executable on the host machine. The <code class="language-plaintext highlighter-rouge">CMAKE_CROSSCOMPILING_EMULATOR</code> variable (set in the toolchain file) tells CTest how to run the tests. It specifies a program (like <code class="language-plaintext highlighter-rouge">wine</code> for Windows apps on Linux, or <code class="language-plaintext highlighter-rouge">qemu-arm</code> for ARM binaries) that can emulate the target environment.</p>
+
+<p>When you run <code class="language-plaintext highlighter-rouge">ctest</code>, it will automatically prefix test commands with the emulator:</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># CTest will effectively run:</span>
+wine64 my_test_executable.exe
+</code></pre></div></div>
+
+<p>This allows you to run your unit tests on the host machine even when cross-compiling.</p>
+
+<h2 id="7-packaging-with-cpack">7. Packaging with CPack</h2>
+
+<p>CPack is CMake’s packaging tool. It can create installers (NSIS, WiX), archives (<code class="language-plaintext highlighter-rouge">.zip</code>, <code class="language-plaintext highlighter-rouge">.tar.gz</code>), and Linux packages (<code class="language-plaintext highlighter-rouge">.deb</code>, <code class="language-plaintext highlighter-rouge">.rpm</code>).</p>
+
+<ol>
+  <li><strong>Include CPack</strong>: Add <code class="language-plaintext highlighter-rouge">include(CPack)</code> to your root <code class="language-plaintext highlighter-rouge">CMakeLists.txt</code>.</li>
+  <li><strong>Set CPack Variables</strong>: Configure package metadata by setting <code class="language-plaintext highlighter-rouge">CPACK_*</code> variables.</li>
+</ol>
+
+<div class="language-cmake highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">set</span><span class="p">(</span>CPACK_PACKAGE_NAME <span class="s2">"MyAwesomeApp"</span><span class="p">)</span>
+<span class="nb">set</span><span class="p">(</span>CPACK_PACKAGE_VERSION <span class="s2">"1.0.0"</span><span class="p">)</span>
+<span class="nb">set</span><span class="p">(</span>CPACK_GENERATOR <span class="s2">"ZIP;TGZ"</span><span class="p">)</span> <span class="c1"># Create a .zip and a .tar.gz</span>
+<span class="c1"># ... other variables</span>
+</code></pre></div></div>
+
+<p>Run CPack from your build directory to create the packages:</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>cpack
+</code></pre></div></div>
+
+<h2 id="8-static-analysis-integration">8. Static Analysis Integration</h2>
+
+<p>Integrating static analysis into the build process is a powerful way to enforce code quality and catch bugs early.</p>
+
+<h3 id="the-philosophy-of-handling-warnings">The Philosophy of Handling Warnings</h3>
+
+<p>A common piece of advice is to “treat warnings as errors,” typically by passing the <code class="language-plaintext highlighter-rouge">-Werror</code> flag to the compiler. However, this approach can be counterproductive and painful.</p>
+
+<p><strong>Why <code class="language-plaintext highlighter-rouge">-Werror</code> Causes Pain:</strong></p>
+
+<ul>
+  <li><strong>Blocks Progress</strong>: You cannot enable <code class="language-plaintext highlighter-rouge">-Werror</code> until you have fixed every single existing warning in the codebase.</li>
+  <li><strong>Hinders Upgrades</strong>: You cannot upgrade your compiler or increase the warning level (e.g., from <code class="language-plaintext highlighter-rouge">-Wall</code> to <code class="language-plaintext highlighter-rouge">-Wextra</code>) until you have fixed all the new warings that appear. This creates a significant barrier to modernization.</li>
+  <li><strong>Makes Deprecation Difficult</strong>: You cannot mark your own internal APIs as <code class="language-plaintext highlighter-rouge">[[deprecated]]</code> as long as they are still in use, because this would generate a warning and fail the build. But once they are no longer used, you might as well just remove them.</li>
+</ul>
+
+<h3 id="a-better-approach-treat-new-warnings-as-errors">A Better Approach: Treat <em>New</em> Warnings as Errors</h3>
+
+<p>A more practical and agile strategy is to manage warnings in development cycles:</p>
+
+<ol>
+  <li><strong>Allow New Warnings Temporarily</strong>: At the beginning of a development cycle (e.g., a new sprint), allow new warnings to be introduced. This is the time to upgrade compilers, update dependencies, or enable more aggressive warning flags.</li>
+  <li><strong>Burn Down Warnings</strong>: During the cycle, the team’s goal is to fix all existing warnings and drive the count back down to zero.</li>
+  <li><strong>Repeat</strong>: This iterative process allows for continuous improvement without bringing development to a halt.</li>
+</ol>
+
+<h3 id="pull-out-all-the-stops-powerful-analysis-tools">Pull Out All the Stops: Powerful Analysis Tools</h3>
+
+<p>Modern C++ has a rich ecosystem of static analysis tools that go far beyond compiler warnings. You should integrate them into your build.</p>
+
+<ul>
+  <li><strong>clang-tidy</strong>: A Clang-based linter framework to diagnose and fix typical programming errors, style violations, and interface misuse.
+<strong>cpplint</strong>: An automated checker to ensure code adheres to Google’s C++ style guide.</li>
+  <li><strong>include-what-you-use (IWYU)</strong>: A tool for analyzing <code class="language-plaintext highlighter-rouge">#include</code>s to ensure you include exactly what you use, which can improve compile times and code clarity.</li>
+  <li><strong>clazy</strong>: A Clang plugin that finds Qt-specific antipatterns and performance issues.</li>
+</ul>
+
+<h3 id="modern-cmake-integration-via-target-properties">Modern CMake Integration via Target Properties</h3>
+
+<p>Modern CMake provides dedicated target properties to run these tools alongside the compiler.</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">&lt;LANG&gt;_CLANG_TIDY</code></li>
+  <li><code class="language-plaintext highlighter-rouge">&lt;LANG&gt;_CPPLINT</code></li>
+  <li><code class="language-plaintext highlighter-rouge">&lt;LANG&gt;_INCLUDE_WHAT_YOU_USE</code></li>
+  <li><code class="language-plaintext highlighter-rouge">LINK_WHAT_YOU_USE</code> (Checks for unused library links)</li>
+</ul>
+
+<p>Where <code class="language-plaintext highlighter-rouge">&lt;LANG&gt;</code> is <code class="language-plaintext highlighter-rouge">C</code> or <code class="language-plaintext highlighter-rouge">CXX</code>. These properties are initialized by their corresponding <code class="language-plaintext highlighter-rouge">CMAKE_...</code> variables.</p>
+
+<div class="language-cmake highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Example of enabling clang-tidy and include-what-you-use</span>
+<span class="nb">set_target_properties</span><span class="p">(</span>my_app PROPERTIES
+    CXX_CLANG_TIDY <span class="s2">"clang-tidy;-checks=-*,readability-*,modernize-*"</span>
+    CXX_INCLUDE_WHAT_YOU_USE <span class="s2">"include-what-you-use;-Xiwyu;--mapping_file=/iwyu.imp"</span>
+<span class="p">)</span>
+</code></pre></div></div>
+
+<blockquote class="notice--danger">
+  <p>:exclamation: <strong>IMPORTANT</strong></p>
+
+  <p>The major advantage of this approach is that diagnostics from these tools are seamlessly integrated into your build output and appear directly in your IDE, just like regular compiler errors and warnings.</p>
+</blockquote>
+
+<h3 id="best-practice-analyzing-header-files">Best Practice: Analyzing Header Files</h3>
+
+<p>A common pitfall is that header files without an associated source file (.cpp) will not be analyzed.</p>
+
+<blockquote class="notice--info">
+  <p>:bulb: <strong>TIP</strong></p>
+
+  <p>For each header file, ensure there is an associated source file that <code class="language-plaintext highlighter-rouge">#include</code> it, preferably as the very first line. This source file can even be empty otherwise.</p>
+</blockquote>
+
+<p>You can use a simple script to create these missing source files:</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">#!/usr/bin/env bash</span>
+<span class="c"># Create an empty .cpp file for every .h file that doesn't have one.</span>
+<span class="k">for </span>fn <span class="k">in</span> <span class="sb">`</span><span class="nb">comm</span> <span class="nt">-23</span> <span class="se">\</span>
+            &lt;<span class="o">(</span><span class="nb">ls</span> <span class="k">*</span>.h | <span class="nb">cut</span> <span class="nt">-d</span> <span class="s1">'.'</span> <span class="nt">-f</span> 1 | <span class="nb">sort</span><span class="o">)</span> <span class="se">\</span>
+            &lt;<span class="o">(</span><span class="nb">ls</span> <span class="k">*</span>.c <span class="k">*</span>.cpp | <span class="nb">cut</span> <span class="nt">-d</span> <span class="s1">'.'</span> <span class="nt">-f</span> 1 | <span class="nb">sort</span><span class="o">)</span><span class="sb">`</span>
+<span class="k">do
+    </span><span class="nb">echo</span> <span class="s2">"#include </span><span class="se">\"</span><span class="nv">$fn</span><span class="s2">.h</span><span class="se">\"</span><span class="s2">"</span> <span class="o">&gt;&gt;</span> <span class="nv">$fn</span>.cpp
+<span class="k">done</span>
+</code></pre></div></div>
+
+<p>Enabling Analysis from Outside the Project</p>
+
+<p>To keep your <code class="language-plaintext highlighter-rouge">CMakeLists.txt</code> clean, you can enable and configure these tools from the command line during the configure step. This is ideal for CI/CD pipelines.</p>
+
+<h2 id="reference">Reference</h2>
+
+<ul>
+  <li><a href="https://www.youtube.com/watch?v=bsXLMQ6WgIk">Effective CMake: a random selectino of best practices</a></li>
+  <li><a href="https://cmake.org/documentation/">CMake Documentation and Community</a></li>
+</ul>]]></content><author><name>bfmhno3</name></author><category term="Note" /><category term="CMake" /><summary type="html"><![CDATA[1. The Philosophy of Modern CMake Why “Effective CMake”? Just like with C++, the way you write CMake code significantly impacts your project’s maintainability, ease of use for others, and scalability. Adopting modern practices is key. CMake is Code Treat your CMakeLists.txt files with the same care as your source code. Apply principles like Don’t Repeat Yourself (DRY), keep it clean, and write comments where necessary. 2. The CMake Language: A Quick Tour Organization CMake code can be organized in three ways: Directories (CMakeLists.txt): The entry point for a project or sub-project. add_subdirectory() adds another directory (which must contain a CMakeLists.txt) to the build. Scripts (&lt;name&gt;.cmake): Executed with cmake -P &lt;script&gt;.cmake. They are useful for automation but cannot define build targets like executables or libraries. In other words, not all commands are supported. Modules (&lt;name&gt;.cmake): Reusable code included in your projects via include(). They are located in the CMAKE_MODULE_PATH. Commands CMake commands are case-insensitive, but their arguments (including variable names) are case-sensitive. # command_name(ARGUMENT1 ARGUMENT2 ...) project(MyProject VERSION 1.0) Command invovations are not expressions, so you cannnot put a command invocation directly as an argument of another command or inside an if condition. They are not possible. Variables # Set a variable set(MY_VARIABLE "Hello") # Reference a variable (dereference) message(STATUS "My variable is: ${MY_VARIABLE}") # Unset a variable unset(MY_VARIABLE) :exclamation: IMPORTANT In CMake, everything is a string. Lists are just strings separated by semicolons ; (e.g., "item1;item2;item3"). An unset or undefined variable expands to an empty string. This can be a common source of bugs! Use if(DEFINED VAR_NAME) to check if a variable is set. CMake variables are not environment variables (unlink Makefile). :warning: WARNING Avoid custom variables in the arguments of project commands. In modern CMake, what we need is targets and properties. See them later. Comments # This is a single-line comment. #[=[ This is a multi-line comment. It can contain other symbols and even # characters. #]=] Generator Expressions: The $&lt;...&gt; Syntax Generator expressions, often called “genex,” are a powerful CMake feature that uses the $&lt;...&gt; syntax. They are not evaluated when CMake first reads your CMakeLists.txt. Instead, they are written into the native build files (like Makefiles or Visual Studio projects) and are evaluated during the build process. This delayed evaluation is crucial because it allows you to create build configurations that are aware of things that are only known at build time, such as the specific build type (Debug, Release), the compiler being used, or the language of a source file. :exclamation: IMPORTANT Think of generator expressions as placeholders that the final build tool (like Make, Ninja, or MSBuild) will fill in with the correct value at the right time. This is much more flexible than using if() statements in CMake, which are only evaluated once when you run cmake. Common Use Cases and Examples Conditional Compilation Definitions ($&lt;CONFIG:...&gt;) This is the most common use case. You want to define a preprocessor macro differently for Debug and Release builds. # In Debug mode, VERBOSITY will be 2. In all other modes (e.g., Release), it will be 0. target_compile_definitions(my_app PRIVATE "VERBOSITY=$&lt;IF:$&lt;CONFIG:Debug&gt;,2,0&gt;" ) The $&lt;IF:condition,true_value,false_value&gt; expression is evaluated at build time. If the configuration is Debug, it resolves to VERBOSITY=2; otherwise, it becomes VERBOSITY=0. Conditional Include Directories ($&lt;BUILD_INTERFACE:...&gt; and $&lt;INSTALL_INTERFACE:...&gt;) A library often has different include paths when being built inside a project versus when it’s installed on a system. target_include_directories(my_lib PUBLIC # When my_lib is built as part of this project, use the source directory. $&lt;BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include&gt; # When an external project uses an installed version of my_lib, the path is just 'include'. $&lt;INSTALL_INTERFACE:include&gt; ) This ensures your library is usable both during development and after deployment without any changes. Compiler-Specific Flags ($&lt;CXX_COMPILER_ID:...&gt;) You can pass specific flags depending on the compiler being used (e.g., GCC, Clang, MSVC). # Enable strong warnings, but use the correct flag for each compiler. set(GCC_CLANG_WARNINGS "-Wall -Wextra -Wpedantic") set(MSVC_WARNINGS "/W4") target_compile_options(my_app PRIVATE "$&lt;IF:$&lt;CXX_COMPILER_ID:MSVC&gt;,${MSVC_WARNINGS},${GCC_CLANG_WARNINGS}&gt;" ) Language-Specific Standards ($&lt;COMPILE_LANGUAGE:...&gt;) If your target mixes C and C++ code, you can set standards for each language. target_compile_features(my_app PRIVATE # Set C++ standard to 17 for all C++ files. $&lt;COMPILE_LANGUAGE:CXX&gt;:cxx_std_17 # Set C standard to 11 for all C files. $&lt;COMPILE_LANGUAGE:C&gt;:c_std_11 ) Generator expressions are a cornerstone of modern, robust, and portable CMake scripts. Mastering them allows you to write cleaner and more powerful CMakeLists.txt files. Custom Commands: function() vs. macro() You can create your own commands to reduce code duplication. function(): Creates a new variable scope. To pass results back to the caller, you must use set(... PARENT_SCOPE). macro(): Does not create a new scope. It performs simple text replacement, much like a C preprocessor macro. :bulb: TIP Rule of Thumb: Use function() by default to avoid polluting the caller’s scope with side effects. Use macro() only when you need to wrap a command that has an output parameter or when you explicitly want side effects in the caller’s scope. 3. The Core of Modern CMake: Targets and Properties Modern CMake revolves around targets and their properties. A target can be an executable, a library, or a custom target. :warning: WARNING Avoid directory-level commands like include_directories(), link_libraries(), and add_compile_options(). They use global state and make dependencies hard to reason about. Always prefer the target_* equivalents. :warning: WARNING Don’t use file(GLOB) in your CMakeLists.txt anymore. Thinking in Targets Imagine targets as objects in an OOP language. Constructor: add_executable(), add_library() Member Functions: target_sources(), target_include_directories(), target_link_libraries(), etc. Member Variables: Properties like VERSION, SOURCES, INTERFACE_INCLUDE_DIRECTORIES. # Create a library target add_library(my_lib STATIC my_lib.cpp my_lib.h) # Add properties to the target target_include_directories(my_lib PUBLIC include) target_compile_features(my_lib PUBLIC cxx_std_17) Build Specifications vs. Usage Requirements Non-INTERFACE_ properties define the build specification of a terget INTERFACE_ properties define the usage requirements of a target. This is the most critical concept in modern CMake. When you link a library, the consumer needs to know its include directories, compile definitions, etc. PRIVATE: The property is only for building this target. It is not passed on to consumers (Non-INTERFACE_). INTERFACE: The property is only for consumers of this target. The target itself doesn’t use it for its own build. This is perfect for header-only libraries (INTERFACE_). PUBLIC: The property is for both the target’s build (PRIVATE) and for its consumers (INTERFACE). Example # A logging library that uses spdlog internally add_library(my_logger my_logger.cpp) # my_logger needs the spdlog headers to compile. # Anyone who uses my_logger does NOT need spdlog headers directly. target_include_directories(my_logger PRIVATE ${spdlog_SOURCE_DIR}/include ) # Anyone who uses my_logger needs my_logger's own headers. target_include_directories(my_logger PUBLIC $&lt;BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include&gt; $&lt;INSTALL_INTERFACE:include&gt; # Different path after installation ) Header-Only Libraries For libraries that are headers-only, create an INTERFACE library. It has no sources and only defines usage requirements. add_library(my_header_lib INTERFACE) target_include_directories(my_header_lib INTERFACE $&lt;BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include&gt; $&lt;INSTALL_INTERFACE:include&gt; ) :warning: WARNING The library interface may change during installation. Use the BUILD_INTERFACE and INSTALL_INTERFACE generator expressions as filters 4. Working with Dependencies Finding Packages with find_package() This is the standard way to find and use external libraries that have been installed on the system or are part of the project. # Find the Boost library, version 1.71 or newer. # It is REQUIRED; CMake will fail if it's not found. find_package(Boost 1.71 REQUIRED COMPONENTS system thread) # If found, use the imported target provided by Boost if(Boost_FOUND) target_link_libraries(my_app PRIVATE Boost::system Boost::thread) endif() :memo: Note Regardless of the mode/package used, a &lt;PackageName&gt;_FOUND variable will be set to indicate whether the package was found. :exclamation: IMPORTANT Always use the official, namespaced, imported targets (e.g., Boost::system, Qt5::Core, GTest::GTest). Never use the old-style _LIBRARIES and _INCLUDE_DIRS variables. Imported targets handle all dependency properties for you automatically. :exclamation: IMPORTANT Use a Find module for third party libraries that are not built with CMake that don’t support clients to use CMake. Also, report this as a bug to their authors. If you need to write a find module for a third-party library, report this as a bug to the authors. Because most people use CMake, it’s a problem that don’t support it. Fetching Dependencies at Configure Time with FetchContent For dependencies that you want to download and build alongside your project, FetchContent is the modern, preferred approach. It’s great for ensuring all developers use the exact same version of a dependency. include(FetchContent) # Declare the dependency FetchContent_Declare( googletest GIT_REPOSITORY https://github.com/google/googletest.git GIT_TAG release-1.12.1 ) # Make it available (downloads and adds it as a sub-project) FetchContent_MakeAvailable(googletest) # Now you can link to it just like any other target in your project target_link_libraries(my_tests PRIVATE GTest::GTest GTest::Main) :memo: Note FetchContent is generally preferred over Git submodules because it gives the parent project more control and is easier to manage. Exporting Your Project as a Package When you want other projects to use your library with find_package(), you need to generate package configuration files. Install Targets: Use install(TARGETS ...) to specify where your library files (.a, .so, .dll) and headers should be installed. Use the EXPORT keyword to associate them with a target export set. Install Export Set: Use install(EXPORT ...) to create a &lt;name&gt;Targets.cmake file. This file contains the definitions of your imported targets (e.g., MyLib::MyLib). Create Version and Config Files: Use CMakePackageConfigHelpers to generate a version file (&lt;name&gt;ConfigVersion.cmake) and write a config file (&lt;name&gt;Config.cmake). The config file is the entry point that find_package looks for. This process tells other projects how to use your library by defining an imported target like YourProject::YourLib. For example: # standard steps to build the library find_package(Bar 2.0 REQUIRED) add_library(Foo ...) target_link_libraries(Foo PRIVATE Bar::Bar) # 1. Install targets install(TARGETS Foo EXPORT FooTargets LIBRARY DESTINATION lib ARCHIVE DESTINATION lib RUNTIME DESTINATION bin INCLUDES DESTINATION include) # 2. Install Export Set install(EXPORT FooTargets FILE FooTargets.cmake NAMESPACE Foo:: DESTINATION lib/cmake/Foo) # 3. Create Version file include(CMakePackageConfigHelpers) write_basic_package_version_file("FooConfigVersion.cmake" VERSION ${Foo_VERSION} COMPATIBILITY SameMajorVersion ) install(FILES "FooConfig.cmake" "FooConfigVersion.cmake" DESTINATION lib/cmake/Foo) Create and write config files FooConfig.cmake: include(CMakeFindDependencyMacro) find_dependency(Bar 2.0) include("$${CMAKE_CURRENT_LIST_DIR}/FooTargets.cmake") 5. Testing with CTest CTest is CMake’s testing framework. It acts as a test driver, running test executables and reporting results. Basic Setup Enable Testing: Add enable_testing() to your root CMakeLists.txt. This command should be called only once in the top-level project. Add Tests: Use add_test() to define a test case. A test is typically an executable that returns 0 for success and non-zero for failure. # In your tests/CMakeLists.txt add_executable(run_all_tests tests.cpp) target_link_libraries(run_all_tests PRIVATE my_lib GTest::GTest GTest::Main) # Define a test named "MyLib.UnitTests" that runs the "run_all_tests" executable. add_test(NAME MyLib.UnitTests COMMAND run_all_tests) :bulb: TIP It’s a good practice to adopt a naming convention for your tests, like Project.Component.TestType. This makes filtering much easier. Running Tests You can then run all tests from your build directory: # Run all tests, with 4 parallel jobs and verbose output on failure ctest -j4 --output-on-failure Advanced: Filtering Tests You can run a subset of your tests using a regular expression with the -R flag. # Run only the tests whose names start with "MyLib." ctest -R "^MyLib\\." Advanced: Testing for Compile Failure Sometimes, you want to ensure that certain code fails to compile (e.g., when testing static_assert). You can create a test for this. # Create a library that is expected to fail compilation. # EXCLUDE_FROM_ALL prevents it from being built during a normal build. add_library(foo_fail STATIC EXCLUDE_FROM_ALL foo_fail.cpp) # Add a test that tries to build this specific target. # The test "passes" if the build command fails. add_test(NAME Foo.CompileFail COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target foo_fail ) # We can even check for a specific error message in the build output. # The test passes if the build fails AND the output contains this regex. set_tests_properties(Foo.CompileFail PROPERTIES PASS_REGULAR_EXPRESSION "static assert message" WILL_FAIL TRUE # Informs CTest that a non-zero return code is expected (success) ) Advanced: Driving CTest with a Script For complex testing scenarios, especially in CI/CD environments, you can use a CMake script to drive CTest. build_and_test.cmake # This script automates the configure, build, test, and submit steps. set(CTEST_SOURCE_DIRECTORY "/path/to/source") set(CTEST_BINARY_DIRECTORY "/path/to/build") set(CTEST_CMAKE_GENERATOR "Ninja") # Specify the generator ctest_start("Continuous") # Start a new CTest run ctest_configure() # Run cmake ctest_build() # Run cmake --build ctest_test() # Run ctest ctest_submit() # Submit results to a dashboard like CDash You would run this script from the command line: ctest -S build_and_test.cmake This keeps CI-specific logic out of your main CMakeLists.txt. 6. Cross-Compiling with Toolchain Files Cross-compiling is the process of building code on one machine (the host) that is intended to run on a different machine (the target), which may have a different architecture (e.g., building for ARM on an x86-64 host). CMake handles this through Toolchain Files. A toolchain file tells CMake how to find the correct compilers, linkers, and libraries for the target system. The Role of the Toolchain File You specify the toolchain file when you first configure your project with cmake. # Configure the project using the my-arm-toolchain.cmake file cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE=/path/to/my-arm-toolchain.cmake :warning: WARNING A toolchain file is for describing the environment, not for project logic. Avoid setting project options or variables in it. Its only job is to set up the compilers and search paths. Example Toolchain File Here is an example of a toolchain file for cross-compiling to Windows from a Linux host using MinGW-w64. mingw-toolchain.cmake # The name of the target operating system set(CMAKE_SYSTEM_NAME Windows) # Specify the cross-compilers set(CMAKE_C_COMPILER x86_64-w64-mingw32-gcc) set(CMAKE_CXX_COMPILER x86_64-w64-mingw32-g++) # Where to find the target environment's headers and libraries set(CMAKE_FIND_ROOT_PATH /usr/x86_64-w64-mingw32) # Adjust the search behavior for programs, libraries, and includes set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER) set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY) set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY) # Set an emulator to run target executables on the host system set(CMAKE_CROSSCOMPILING_EMULATOR "wine64") Running Cross-Compiled Tests You can’t directly run a target executable on the host machine. The CMAKE_CROSSCOMPILING_EMULATOR variable (set in the toolchain file) tells CTest how to run the tests. It specifies a program (like wine for Windows apps on Linux, or qemu-arm for ARM binaries) that can emulate the target environment. When you run ctest, it will automatically prefix test commands with the emulator: # CTest will effectively run: wine64 my_test_executable.exe This allows you to run your unit tests on the host machine even when cross-compiling. 7. Packaging with CPack CPack is CMake’s packaging tool. It can create installers (NSIS, WiX), archives (.zip, .tar.gz), and Linux packages (.deb, .rpm). Include CPack: Add include(CPack) to your root CMakeLists.txt. Set CPack Variables: Configure package metadata by setting CPACK_* variables. set(CPACK_PACKAGE_NAME "MyAwesomeApp") set(CPACK_PACKAGE_VERSION "1.0.0") set(CPACK_GENERATOR "ZIP;TGZ") # Create a .zip and a .tar.gz # ... other variables Run CPack from your build directory to create the packages: cpack 8. Static Analysis Integration Integrating static analysis into the build process is a powerful way to enforce code quality and catch bugs early. The Philosophy of Handling Warnings A common piece of advice is to “treat warnings as errors,” typically by passing the -Werror flag to the compiler. However, this approach can be counterproductive and painful. Why -Werror Causes Pain: Blocks Progress: You cannot enable -Werror until you have fixed every single existing warning in the codebase. Hinders Upgrades: You cannot upgrade your compiler or increase the warning level (e.g., from -Wall to -Wextra) until you have fixed all the new warings that appear. This creates a significant barrier to modernization. Makes Deprecation Difficult: You cannot mark your own internal APIs as [[deprecated]] as long as they are still in use, because this would generate a warning and fail the build. But once they are no longer used, you might as well just remove them. A Better Approach: Treat New Warnings as Errors A more practical and agile strategy is to manage warnings in development cycles: Allow New Warnings Temporarily: At the beginning of a development cycle (e.g., a new sprint), allow new warnings to be introduced. This is the time to upgrade compilers, update dependencies, or enable more aggressive warning flags. Burn Down Warnings: During the cycle, the team’s goal is to fix all existing warnings and drive the count back down to zero. Repeat: This iterative process allows for continuous improvement without bringing development to a halt. Pull Out All the Stops: Powerful Analysis Tools Modern C++ has a rich ecosystem of static analysis tools that go far beyond compiler warnings. You should integrate them into your build. clang-tidy: A Clang-based linter framework to diagnose and fix typical programming errors, style violations, and interface misuse. cpplint: An automated checker to ensure code adheres to Google’s C++ style guide. include-what-you-use (IWYU): A tool for analyzing #includes to ensure you include exactly what you use, which can improve compile times and code clarity. clazy: A Clang plugin that finds Qt-specific antipatterns and performance issues. Modern CMake Integration via Target Properties Modern CMake provides dedicated target properties to run these tools alongside the compiler. &lt;LANG&gt;_CLANG_TIDY &lt;LANG&gt;_CPPLINT &lt;LANG&gt;_INCLUDE_WHAT_YOU_USE LINK_WHAT_YOU_USE (Checks for unused library links) Where &lt;LANG&gt; is C or CXX. These properties are initialized by their corresponding CMAKE_... variables. # Example of enabling clang-tidy and include-what-you-use set_target_properties(my_app PROPERTIES CXX_CLANG_TIDY "clang-tidy;-checks=-*,readability-*,modernize-*" CXX_INCLUDE_WHAT_YOU_USE "include-what-you-use;-Xiwyu;--mapping_file=/iwyu.imp" ) :exclamation: IMPORTANT The major advantage of this approach is that diagnostics from these tools are seamlessly integrated into your build output and appear directly in your IDE, just like regular compiler errors and warnings. Best Practice: Analyzing Header Files A common pitfall is that header files without an associated source file (.cpp) will not be analyzed. :bulb: TIP For each header file, ensure there is an associated source file that #include it, preferably as the very first line. This source file can even be empty otherwise. You can use a simple script to create these missing source files: #!/usr/bin/env bash # Create an empty .cpp file for every .h file that doesn't have one. for fn in `comm -23 \ &lt;(ls *.h | cut -d '.' -f 1 | sort) \ &lt;(ls *.c *.cpp | cut -d '.' -f 1 | sort)` do echo "#include \"$fn.h\"" &gt;&gt; $fn.cpp done Enabling Analysis from Outside the Project To keep your CMakeLists.txt clean, you can enable and configure these tools from the command line during the configure step. This is ideal for CI/CD pipelines. Reference Effective CMake: a random selectino of best practices CMake Documentation and Community]]></summary></entry><entry><title type="html">Visual Studio C++ 工程实践指南</title><link href="https://bfmhno3.github.io/note/visual-studio-project-management/" rel="alternate" type="text/html" title="Visual Studio C++ 工程实践指南" /><published>2025-07-29T17:50:00+00:00</published><updated>2025-07-29T17:50:00+00:00</updated><id>https://bfmhno3.github.io/note/visual-studio-project-management</id><content type="html" xml:base="https://bfmhno3.github.io/note/visual-studio-project-management/"><![CDATA[<h2 id="解决方案solution与项目project">解决方案（Solution）与项目（Project）</h2>
+
+<p>一个<strong>解决方案</strong>是用于组织和管理一个或多个相关联<strong>项目</strong>的容器。这套结构旨在将一个复杂的实际问题，分解成多个功能独立的<strong>模块</strong>（<strong>项目</strong>）来开发和管理。</p>
+
+<ul>
+  <li><strong>解决方案</strong>（<code class="language-plaintext highlighter-rouge">.sln</code> 文件）：这是最高层级的组织单位，它定义了所包含的项目以及它们之间的依赖关系和构建配置。当你打开一个 <code class="language-plaintext highlighter-rouge">.sln</code> 文件时，Visual Studio 会加载整个工作区。</li>
+  <li><strong>项目</strong>（<code class="language-plaintext highlighter-rouge">.vcxproj</code>、<code class="language-plaintext highlighter-rouge">csproj</code> 等文件）：每个项目对应一个独立的模块，最终会生成一个可执行文件（<code class="language-plaintext highlighter-rouge">.exe</code>）、一个静态库（<code class="language-plaintext highlighter-rouge">.lib</code>）或一个动态链接库（<code class="language-plaintext highlighter-rouge">.dll</code>）。</li>
+</ul>
+
+<p>需要注意的地方：</p>
+
+<ul>
+  <li><strong>单一启动项目</strong>：在一个解决方案中，通常只有一个项目被设置为<strong>启动项目</strong>。<strong>启动项目</strong>是点击 “开始调试”（<kbd>F5</kbd>）时，Visual Studio 将会编译和运行的项目。可以在<strong>解决方案资源管理器</strong>中右键点击不同的项目，选择 “<strong>设为启动项目</strong>“。</li>
+  <li>“<strong>将解决方案和项目放在同一目录中</strong>”：
+    <ul>
+      <li>勾选：解决方案文件（<code class="language-plaintext highlighter-rouge">.sln</code>）和项目文件（例如 <code class="language-plaintext highlighter-rouge">.vcxproj</code>）会存放在同一个文件夹中。这对于只有一个或少数几个项目的简单解决方案来说，目录结构更扁平、更清晰。</li>
+      <li>不勾选（默认）：Visual Studio 会创建一个顶层文件夹来存放解决方案文件（<code class="language-plaintext highlighter-rouge">.sln</code>），然后在该文件夹下为每一个项目再创建一个独立的子文件夹。当解决方案包含多个项目时，这种结构更加有条理，是<strong>更推荐的做法</strong>。</li>
+    </ul>
+  </li>
+</ul>
+
+<h2 id="过滤器filter">过滤器（Filter）</h2>
+
+<p><strong>过滤器</strong>（<em>Filter</em>）是 Visual Studio 解决方案资源管理器中的一个<strong>虚拟文件夹结构</strong>。它的主要作用是帮助开发者组织和分类源文件、头文件等，使项目看起来更整洁，所有的代码文件（源文件和头文件）都应该加入过滤器中。开发者可以自由地创建、重命名或删除过滤器，这<strong>不会</strong>影响磁盘上文件的实际位置。</p>
+
+<p>而对于编译器（例如 MSVC、GCC 等）在编译代码时，只关心真实的目录结构，而非<strong>过滤器</strong>中的配置。所以当编译器报错 “无法打开源文件” 或 “找不到头文件” 之类的错误时，问题几乎总是出在<strong>项目属性</strong>的路径配置上，而不是解决方案资源管理器的过滤器结构。</p>
+
+<h3 id="如何正确配置包含目录">如何正确配置包含目录？</h3>
+
+<p>当项目需要引入外部头文件（例如来自另一个项目货第三方库）时，必须明确告知编译器去哪里查找这些文件。</p>
+
+<ol>
+  <li>在<strong>解决方案资源管理器</strong>中右键点击项目，选择<strong>属性</strong>。</li>
+  <li>确保顶部的<strong>配置</strong>和<strong>平台</strong>设置正确。</li>
+  <li>导航到 <strong>C/C++</strong> $\rightarrow$ <strong>常规</strong>。</li>
+  <li>在<strong>附加包含目录</strong>字段中，添加所需头文件所在的<strong>真实目录路径</strong>。</li>
+</ol>
+
+<p>在 Visual Studio 中选择的目录会被设置为<strong>绝对路径</strong>，当<strong>解决方案</strong>发生移动，或者发送给合作者时，就会导致错误。这可以通过 Visual Studio 中提供的<strong>宏</strong>来解决。</p>
+
+<h2 id="宏macro">宏（Macro）</h2>
+
+<p>Visual Studio 提供了一系列预定义的<strong>宏</strong>（<em>Macro</em>），这些宏会在构建时被动态地解析为具体的路径。</p>
+
+<p>常用宏变量：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>宏</th>
+      <th>描述</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">$(SolutionDir)</code></td>
+      <td>解决方案文件（<code class="language-plaintext highlighter-rouge">.sln</code>）所在的目录</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">$(ProjectDir)</code></td>
+      <td>当前项目文件（<code class="language-plaintext highlighter-rouge">.vcxproj</code>）所在的目录</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">$(OutDir)</code></td>
+      <td>最终输出文件（如 <code class="language-plaintext highlighter-rouge">.exe</code>、<code class="language-plaintext highlighter-rouge">.dll</code>）的存放目录</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">$(IntDir)</code></td>
+      <td>编译过程中产生的中间文件（如 <code class="language-plaintext highlighter-rouge">.obj</code>）的存放目录</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">$(Configuration)</code></td>
+      <td>当前的构建配置名称，如 <code class="language-plaintext highlighter-rouge">Debug</code> 或 <code class="language-plaintext highlighter-rouge">Release</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">$(Platform)</code></td>
+      <td>当前的构建平台名称，如 <code class="language-plaintext highlighter-rouge">x64</code> 或 <code class="language-plaintext highlighter-rouge">Win32</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="示例">示例</h3>
+
+<p>假设解决方案目录结构如下：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>MySolution/
+├── MySolution.sln
+├── ProjectA/
+│   └── ProjectA.vcxproj
+└── Libraries/
+    └── MyLib/
+        └── include/
+            └── my_header.h
+</code></pre></div></div>
+
+<p>如果 <code class="language-plaintext highlighter-rouge">ProjectA</code> 需要包含 <code class="language-plaintext highlighter-rouge">my_header.h</code>，则可以在 <code class="language-plaintext highlighter-rouge">ProjectA</code> 的 “附加包含目录” 中设置为：<code class="language-plaintext highlighter-rouge">$(SolutionDir)\Libraries\MyLib\include</code>。</p>
+
+<p>这样一来，即使将整个 <code class="language-plaintext highlighter-rouge">MySolution</code> 文件夹移动到其他位置，这个相对路径依然有效。</p>
+
+<h2 id="库的使用">库的使用</h2>
+
+<h3 id="静态库static-librarylib">静态库（Static Library，<code class="language-plaintext highlighter-rouge">.lib</code>）</h3>
+
+<p>静态库是在<strong>链接阶段</strong>被并入到目标程序中的。最终生成的可执行文件会包含静态库的所有代码，因此文件体积较大，但运行时不依赖外部文件。</p>
+
+<h4 id="创建">创建</h4>
+
+<p>在解决方案中右键点击 “解决方案” $\rightarrow$ 添加 $\rightarrow$ 新建项目 $\rightarrow$ 静态库</p>
+
+<h4 id="使用">使用</h4>
+
+<h5 id="引用">引用</h5>
+
+<ul>
+  <li>在需要使用此库的项目上，右键点击<strong>引用</strong></li>
+  <li>选择<strong>添加引用</strong>，然后在弹出的对话框中勾选所需的静态库项目</li>
+</ul>
+
+<p>这是推荐的方式，原因如下：</p>
+
+<ul>
+  <li>它会自动设置<strong>链接器</strong>的输入，确保链接器能够找到库文件</li>
+  <li>它会自动创建<strong>项目依赖项</strong>，保证在编译主项目之前，静态库项目总是被优先编译</li>
+  <li>它还会自动将静态库的头文件目录添加到主项目的<strong>附加包含目录</strong>中，让开发者能够直接 <code class="language-plaintext highlighter-rouge">#include</code></li>
+</ul>
+
+<h5 id="手动配置不推荐">手动配置（不推荐）</h5>
+
+<p>如果引用的库是一个已经编译好、非解决方案内的 <code class="language-plaintext highlighter-rouge">.lib</code> 文件，则需要手动配置：</p>
+
+<ol>
+  <li><strong>附加库目录</strong>：在项目属性的<strong>链接器</strong> $\rightarrow$ <strong>常规</strong>中，添加 <code class="language-plaintext highlighter-rouge">.lib</code> 文件所在的目录。</li>
+  <li><strong>附加依赖项</strong>：在项目属性的<strong>链接器</strong> $\rightarrow$ <strong>输入</strong>中，添加 <code class="language-plaintext highlighter-rouge">.lib</code> 文件的具体名称（例如 <code class="language-plaintext highlighter-rouge">libtest.lib</code>）</li>
+</ol>
+
+<h3 id="动态链接库dynamic-link-librarydll">动态链接库（Dynamic Link Library，<code class="language-plaintext highlighter-rouge">.dll</code>）</h3>
+
+<p>动态库是程序<strong>运行时</strong>由操作系统加载到内存中的。多个程序可以共享同一个 DLL，从而节省磁盘空间和内存。项目生成时会同时产生一个 <code class="language-plaintext highlighter-rouge">.dll</code> 文件（运行时需要）和一个 <code class="language-plaintext highlighter-rouge">.lib</code> 文件（链接时需要）。</p>
+
+<p>注意事项：</p>
+
+<ul>
+  <li>导出与导入：从 DLL 中暴露函数或类给其他项目使用，需要使用 <code class="language-plaintext highlighter-rouge">__declspec(dllexport)</code> 关键字。而在使用该 DLL 的项目中，则需要使用 <code class="language-plaintext highlighter-rouge">__declspc(dllimport)</code> 来声明这些函数或类。</li>
+  <li>运行时环境：当运行依赖于 DLL 的程序时，操作系统必须能够找到这个 <code class="language-plaintext highlighter-rouge">.dll</code> 文件。通常由以下几种方式：
+    <ol>
+      <li>将 <code class="language-plaintext highlighter-rouge">.dll</code> 文件放置在与可执行文件（<code class="language-plaintext highlighter-rouge">.exe</code>）相同的目录下</li>
+      <li>将 <code class="language-plaintext highlighter-rouge">.dll</code> 文件所在的目录添加到系统的 <code class="language-plaintext highlighter-rouge">PATH</code> 环境变量中。</li>
+      <li>在 Visual Studio 中进行调试时，它通常会自动处理好路径问题。</li>
+    </ol>
+  </li>
+</ul>
+
+<h2 id="使用-cmake-自动生成解决方案">使用 CMake 自动生成解决方案</h2>
+
+<p>对于跨平台项目或大型复杂项目，直接使用 Visual Studio 的项目文件进行管理可能会变得非常繁琐。CMake 是一个强大的、开源的构建系统生成工具，它可以根据简单的配置文件（<code class="language-plaintext highlighter-rouge">CMakeLists.txt</code>）自动生成适用与多种平台和 IDE 的原生构建环境，包括 Visual Studio 的 <code class="language-plaintext highlighter-rouge">.sln</code> 和 <code class="language-plaintext highlighter-rouge">.vcxproj</code> 文件。</p>
+
+<h3 id="手动配置">手动配置</h3>
+
+<ol>
+  <li>为项目的根目录以及各个子模块（库、可执行文件）编写 <code class="language-plaintext highlighter-rouge">CMakeLists.txt</code> 文件。</li>
+  <li>创建一个独立的构建目录（通常命名为 <code class="language-plaintext highlighter-rouge">build</code>），以保持源码树的干净。</li>
+  <li>在 <code class="language-plaintext highlighter-rouge">build</code> 目录中运行 CMake，指令通常为 <code class="language-plaintext highlighter-rouge">cmake ..</code>，它会查找上一级目录的 <code class="language-plaintext highlighter-rouge">CMakeLists.txt</code> 并生成构建文件。</li>
+  <li>最后，用 Visual Studio 打开在 <code class="language-plaintext highlighter-rouge">build</code> 中生成的 <code class="language-plaintext highlighter-rouge">.sln</code> 文件。</li>
+</ol>
+
+<h3 id="原生支持">原生支持</h3>
+
+<p>从 Visual Studio 2017 开始，Visual Studio 提供了对 CMake 的原生集成支持。</p>
+
+<p>可以直接用 Visual Studio 打开一个包含 <code class="language-plaintext highlighter-rouge">CMakeLists.txt</code> 的文件节哀，而无需手动运行 <code class="language-plaintext highlighter-rouge">cmake</code> 命令和打开生成的 <code class="language-plaintext highlighter-rouge">.sln</code> 文件。Visual Studio 会自动在后台完成这一切，并提供完整的智能提示、构建和调试支持。</p>
+
+<p>这对于使用 CMake 的项目来说，是目前最便捷的开发方式。</p>
+
+<h2 id="参考资料">参考资料</h2>
+
+<ol>
+  <li><a href="https://www.bilibili.com/video/BV1S541137P2?spm_id_from=333.788.videopod.episodes&amp;vd_source=aece08350e40b390e044f67307ffd650">工程课代表——Visual Studio 工程实践开发</a></li>
+</ol>]]></content><author><name>bfmhno3</name></author><category term="Note" /><category term="Visual Studio" /><summary type="html"><![CDATA[解决方案（Solution）与项目（Project） 一个解决方案是用于组织和管理一个或多个相关联项目的容器。这套结构旨在将一个复杂的实际问题，分解成多个功能独立的模块（项目）来开发和管理。 解决方案（.sln 文件）：这是最高层级的组织单位，它定义了所包含的项目以及它们之间的依赖关系和构建配置。当你打开一个 .sln 文件时，Visual Studio 会加载整个工作区。 项目（.vcxproj、csproj 等文件）：每个项目对应一个独立的模块，最终会生成一个可执行文件（.exe）、一个静态库（.lib）或一个动态链接库（.dll）。 需要注意的地方： 单一启动项目：在一个解决方案中，通常只有一个项目被设置为启动项目。启动项目是点击 “开始调试”（F5）时，Visual Studio 将会编译和运行的项目。可以在解决方案资源管理器中右键点击不同的项目，选择 “设为启动项目“。 “将解决方案和项目放在同一目录中”： 勾选：解决方案文件（.sln）和项目文件（例如 .vcxproj）会存放在同一个文件夹中。这对于只有一个或少数几个项目的简单解决方案来说，目录结构更扁平、更清晰。 不勾选（默认）：Visual Studio 会创建一个顶层文件夹来存放解决方案文件（.sln），然后在该文件夹下为每一个项目再创建一个独立的子文件夹。当解决方案包含多个项目时，这种结构更加有条理，是更推荐的做法。 过滤器（Filter） 过滤器（Filter）是 Visual Studio 解决方案资源管理器中的一个虚拟文件夹结构。它的主要作用是帮助开发者组织和分类源文件、头文件等，使项目看起来更整洁，所有的代码文件（源文件和头文件）都应该加入过滤器中。开发者可以自由地创建、重命名或删除过滤器，这不会影响磁盘上文件的实际位置。 而对于编译器（例如 MSVC、GCC 等）在编译代码时，只关心真实的目录结构，而非过滤器中的配置。所以当编译器报错 “无法打开源文件” 或 “找不到头文件” 之类的错误时，问题几乎总是出在项目属性的路径配置上，而不是解决方案资源管理器的过滤器结构。 如何正确配置包含目录？ 当项目需要引入外部头文件（例如来自另一个项目货第三方库）时，必须明确告知编译器去哪里查找这些文件。 在解决方案资源管理器中右键点击项目，选择属性。 确保顶部的配置和平台设置正确。 导航到 C/C++ $\rightarrow$ 常规。 在附加包含目录字段中，添加所需头文件所在的真实目录路径。 在 Visual Studio 中选择的目录会被设置为绝对路径，当解决方案发生移动，或者发送给合作者时，就会导致错误。这可以通过 Visual Studio 中提供的宏来解决。 宏（Macro） Visual Studio 提供了一系列预定义的宏（Macro），这些宏会在构建时被动态地解析为具体的路径。 常用宏变量： 宏 描述 $(SolutionDir) 解决方案文件（.sln）所在的目录 $(ProjectDir) 当前项目文件（.vcxproj）所在的目录 $(OutDir) 最终输出文件（如 .exe、.dll）的存放目录 $(IntDir) 编译过程中产生的中间文件（如 .obj）的存放目录 $(Configuration) 当前的构建配置名称，如 Debug 或 Release $(Platform) 当前的构建平台名称，如 x64 或 Win32 示例 假设解决方案目录结构如下： MySolution/ ├── MySolution.sln ├── ProjectA/ │ └── ProjectA.vcxproj └── Libraries/ └── MyLib/ └── include/ └── my_header.h 如果 ProjectA 需要包含 my_header.h，则可以在 ProjectA 的 “附加包含目录” 中设置为：$(SolutionDir)\Libraries\MyLib\include。 这样一来，即使将整个 MySolution 文件夹移动到其他位置，这个相对路径依然有效。 库的使用 静态库（Static Library，.lib） 静态库是在链接阶段被并入到目标程序中的。最终生成的可执行文件会包含静态库的所有代码，因此文件体积较大，但运行时不依赖外部文件。 创建 在解决方案中右键点击 “解决方案” $\rightarrow$ 添加 $\rightarrow$ 新建项目 $\rightarrow$ 静态库 使用 引用 在需要使用此库的项目上，右键点击引用 选择添加引用，然后在弹出的对话框中勾选所需的静态库项目 这是推荐的方式，原因如下： 它会自动设置链接器的输入，确保链接器能够找到库文件 它会自动创建项目依赖项，保证在编译主项目之前，静态库项目总是被优先编译 它还会自动将静态库的头文件目录添加到主项目的附加包含目录中，让开发者能够直接 #include 手动配置（不推荐） 如果引用的库是一个已经编译好、非解决方案内的 .lib 文件，则需要手动配置： 附加库目录：在项目属性的链接器 $\rightarrow$ 常规中，添加 .lib 文件所在的目录。 附加依赖项：在项目属性的链接器 $\rightarrow$ 输入中，添加 .lib 文件的具体名称（例如 libtest.lib） 动态链接库（Dynamic Link Library，.dll） 动态库是程序运行时由操作系统加载到内存中的。多个程序可以共享同一个 DLL，从而节省磁盘空间和内存。项目生成时会同时产生一个 .dll 文件（运行时需要）和一个 .lib 文件（链接时需要）。 注意事项： 导出与导入：从 DLL 中暴露函数或类给其他项目使用，需要使用 __declspec(dllexport) 关键字。而在使用该 DLL 的项目中，则需要使用 __declspc(dllimport) 来声明这些函数或类。 运行时环境：当运行依赖于 DLL 的程序时，操作系统必须能够找到这个 .dll 文件。通常由以下几种方式： 将 .dll 文件放置在与可执行文件（.exe）相同的目录下 将 .dll 文件所在的目录添加到系统的 PATH 环境变量中。 在 Visual Studio 中进行调试时，它通常会自动处理好路径问题。 使用 CMake 自动生成解决方案 对于跨平台项目或大型复杂项目，直接使用 Visual Studio 的项目文件进行管理可能会变得非常繁琐。CMake 是一个强大的、开源的构建系统生成工具，它可以根据简单的配置文件（CMakeLists.txt）自动生成适用与多种平台和 IDE 的原生构建环境，包括 Visual Studio 的 .sln 和 .vcxproj 文件。 手动配置 为项目的根目录以及各个子模块（库、可执行文件）编写 CMakeLists.txt 文件。 创建一个独立的构建目录（通常命名为 build），以保持源码树的干净。 在 build 目录中运行 CMake，指令通常为 cmake ..，它会查找上一级目录的 CMakeLists.txt 并生成构建文件。 最后，用 Visual Studio 打开在 build 中生成的 .sln 文件。 原生支持 从 Visual Studio 2017 开始，Visual Studio 提供了对 CMake 的原生集成支持。 可以直接用 Visual Studio 打开一个包含 CMakeLists.txt 的文件节哀，而无需手动运行 cmake 命令和打开生成的 .sln 文件。Visual Studio 会自动在后台完成这一切，并提供完整的智能提示、构建和调试支持。 这对于使用 CMake 的项目来说，是目前最便捷的开发方式。 参考资料 工程课代表——Visual Studio 工程实践开发]]></summary></entry><entry><title type="html">VMware Workstation 17.x 中的虚拟机按键反应迟钝解决办法</title><link href="https://bfmhno3.github.io/tutorial/vmware-keyboard-lag-fix/" rel="alternate" type="text/html" title="VMware Workstation 17.x 中的虚拟机按键反应迟钝解决办法" /><published>2025-05-23T14:34:00+00:00</published><updated>2025-05-23T14:34:00+00:00</updated><id>https://bfmhno3.github.io/tutorial/vmware-keyboard-lag-fix</id><content type="html" xml:base="https://bfmhno3.github.io/tutorial/vmware-keyboard-lag-fix/"><![CDATA[<h2 id="问题描述">问题描述</h2>
+
+<p>在 VMware Workstation 17.x 中的虚拟机按键反映迟钝，具体而言即是屏幕显示的字符速度跟不上手打字的速度，你能很明显得感觉到迟钝。</p>
+
+<p>特别是长按方向键选择时，长按一两秒，光标会移动好几秒，跟手性非常差，非常难受。</p>
+
+<p>笔者这里所说的“<strong>跟手性</strong>”是指：当用户开始输入时，屏幕就开始刷新字符，刷新字符的速度与用户打字的速度不能差太多，并且当用户停止输入时，屏幕能立即停止刷新字符。</p>
+
+<h2 id="笔者环境">笔者环境</h2>
+
+<ul>
+  <li>VMware Workstatio 17 Pro：17.6.3 build-24583834</li>
+  <li>虚拟机：Ubuntu 16.04</li>
+  <li>操作系统：Windows 11 专业版 26100.4061</li>
+</ul>
+
+<h2 id="解决方法">解决方法</h2>
+
+<p>请按照以下步骤操作，修改虚拟机的配置文件：</p>
+
+<ol>
+  <li><strong>关闭虚拟机</strong>：确保虚拟机处于完全关闭状态（Power Off），而非挂起（Suspend）。</li>
+  <li><strong>找到配置文件</strong>：进入虚拟机所在的文件夹，找到后缀为 <code class="language-plaintext highlighter-rouge">.vmx</code> 的配置文件（通常与虚拟机同名）。</li>
+  <li><strong>编辑文件</strong>：右键点击该文件，选择使用记事本（Notepad）或 VS Code 打开。</li>
+  <li><strong>添加配置</strong>：在文件的末尾添加以下代码：
+    <div class="language-ini highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="py">keyboard.vusb.enable</span> <span class="p">=</span> <span class="s">"TRUE"</span>
+</code></pre></div>    </div>
+  </li>
+  <li><strong>保存并重启</strong>：保存文件后，重新启动虚拟机即可生效。</li>
+</ol>
+
+<blockquote>
+  <p><strong>原理说明</strong>：该配置强制启用了虚拟 USB 键盘设备，绕过了某些导致延迟的输入仿真层。</p>
+</blockquote>
+
+<h2 id="测试环境">测试环境</h2>
+
+<ul>
+  <li>Ubuntu 16.04</li>
+  <li>Ubuntu 18.04</li>
+  <li>Ubuntu 22.04</li>
+  <li>ElementaryOS 7 Horus</li>
+</ul>
+
+<p>在以上虚拟机中，笔者对此方法进行了测试，都取得了很好的效果。</p>
+
+<h2 id="faq">FAQ</h2>
+
+<h3 id="是否需要降低核心数">是否需要降低核心数</h3>
+
+<p>网上有很多其他的教程说可以降低 CPU 的核心数，具体原理是减少虚拟机等待的时间。</p>
+
+<p>笔者实测，降低 CPU 核心数确实能带来一定速度的提升，但是效果很微弱。</p>
+
+<p>但是当我在 <code class="language-plaintext highlighter-rouge">*.vmx</code> 文件中添加了 <code class="language-plaintext highlighter-rouge">keyboard.vusb.enable = "TRUE"</code> 后，我将虚拟机的核心数提高到了 16 个，在虚拟机中打字时的跟手性也非常好，只是整个虚拟机有时候会有点卡顿，完全在可接受的范围内。</p>
+
+<p>不过一般来说，核心数只需要设置为 1-4 即可，不然可能会拖慢宿主机的运行。</p>
+
+<p>终上所述，核心数并无太大影响，读者自己有数就行。</p>
+
+<h3 id="是否需要关闭-3d-图形加速">是否需要关闭 3D 图形加速</h3>
+
+<p>网上还有很多的教程说需要关闭 3D 图形加速，但是有很多软件的运行是需要这个功能的比如 Gazebo，不然就会变得非常卡。</p>
+
+<p>关闭 3D 图形加速后，确实能够比较明显的感觉到在虚拟机中打字时的跟手性有改善，但是也还没有到那种可以忍受的地步（至少对我而言）。</p>
+
+<p>在 <code class="language-plaintext highlighter-rouge">*.vmx</code> 文件中添加了 <code class="language-plaintext highlighter-rouge">keyboard.vusb.enable = "TRUE"</code> 后，我开启了 3D 图形加速，笔者实测打字的跟手性依旧非常好，同上的效果，只是虚拟机本身有一点卡顿，但完全在可接受的范围内。</p>
+
+<p>综上所述，无需关闭 3D 图形加速。不过开启了 3D 加速确实会影响虚拟机的运行，如果你的工作不需要大量 3D 渲染的话，笔者还是建议关闭 3D 图形加速功能。</p>
+
+<h2 id="参考资料">参考资料</h2>
+
+<ul>
+  <li><a href="https://community.broadcom.com/vmware-cloud-foundation/discussion/ws-1761-keyboard-lag-with-ubuntu-guest">WS 17.6.1 keyboard lag with Ubuntu guest</a></li>
+  <li><a href="https://www.reddit.com/r/vmware/comments/15kx569/experiencing_keyboard_laginput_delay_on_any_linux/">Experiencing keyboard lag/input delay on any Linux Distribution</a></li>
+</ul>]]></content><author><name>bfmhno3</name></author><category term="Tutorial" /><category term="VMware Workstation" /><summary type="html"><![CDATA[本文介绍了如何解决 VMware Workstation 17.x 中虚拟机（如 Ubuntu）按键反应迟钝、跟手性差的问题。通过在 .vmx 配置文件中添加 keyboard.vusb.enable = "TRUE" 参数，可以有效改善输入延迟，无需降低 CPU 核心数或关闭 3D 图形加速。]]></summary></entry><entry><title type="html">学习 fgets 函数和 strcspn 函数</title><link href="https://bfmhno3.github.io/note/learning-fgets-and-strcspn/" rel="alternate" type="text/html" title="学习 fgets 函数和 strcspn 函数" /><published>2023-08-20T15:44:31+00:00</published><updated>2023-08-20T15:44:31+00:00</updated><id>https://bfmhno3.github.io/note/learning-fgets-and-strcspn</id><content type="html" xml:base="https://bfmhno3.github.io/note/learning-fgets-and-strcspn/"><![CDATA[<h2 id="0-为什么要专门发布一篇文章来说明这两个函数">0. 为什么要专门发布一篇文章来说明这两个函数？</h2>
+
+<p>原因是今晚上在做牛客网的题目的时候，遇到了这么一个<a href="https://www.nowcoder.com/questionTerminal/cc57022cb4194697ac30bcb566aeb47b?f=discussion&amp;toCommentId=16721626">问题</a>。</p>
+
+<p>虽然这道题对大多数人来说都算是比较简单的题目，但是对于我这么一个小白还是比较难写的。最开始我是这么写的代码：</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include</span> <span class="cpf">&lt;stdio.h&gt;</span><span class="cp">
+</span>
+<span class="kt">void</span> <span class="nf">reverse</span><span class="p">(</span><span class="kt">char</span><span class="o">*</span> <span class="n">arr</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">char</span><span class="o">*</span> <span class="n">left</span> <span class="o">=</span> <span class="n">arr</span><span class="p">;</span>
+    <span class="kt">char</span><span class="o">*</span> <span class="n">right</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">arr</span><span class="p">[</span><span class="n">strlen</span><span class="p">(</span><span class="n">arr</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">];</span>
+    <span class="k">while</span><span class="p">(</span><span class="n">left</span> <span class="o">&lt;</span> <span class="n">right</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kt">char</span> <span class="n">mid</span> <span class="o">=</span> <span class="o">*</span><span class="n">left</span><span class="p">;</span>
+        <span class="o">*</span><span class="n">left</span> <span class="o">=</span> <span class="o">*</span><span class="n">right</span><span class="p">;</span>
+        <span class="o">*</span><span class="n">right</span> <span class="o">=</span> <span class="n">mid</span><span class="p">;</span>
+        <span class="n">left</span><span class="o">++</span><span class="p">;</span>
+        <span class="n">right</span><span class="o">--</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="k">for</span><span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">strlen</span><span class="p">(</span><span class="n">arr</span><span class="p">);</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">printf</span><span class="p">(</span><span class="s">"%c"</span><span class="p">,</span> <span class="n">arr</span><span class="p">[</span><span class="n">i</span><span class="p">]);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">char</span> <span class="n">arr</span><span class="p">[</span><span class="mi">10000</span><span class="p">];</span><span class="c1">//之所以创建这么大一个数组是因为题目中的示例10非常长</span>
+    <span class="n">scanf</span><span class="p">(</span><span class="s">"%s"</span><span class="p">,</span> <span class="n">arr</span><span class="p">);</span>
+    <span class="n">reverse</span><span class="p">(</span><span class="n">arr</span><span class="p">);</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>但是这样写代码连题目中的示例 1：输入：<code class="language-plaintext highlighter-rouge">I am a student</code>；输出：<code class="language-plaintext highlighter-rouge">tneduts a ma I</code> 都没有通过，最终只输出了一个 <code class="language-plaintext highlighter-rouge">I</code>。</p>
+
+<p>这是为什么呢？我思索了半天才明白是我的这一行代码 <code class="language-plaintext highlighter-rouge">scanf("%s", arr);</code> 有问题，就是因为 <code class="language-plaintext highlighter-rouge">scanf("%s", arr)</code> 会读取一个字符串，但会在遇到空格、制表符或换行符时停止。换句话说，<strong>它只会读取输入字符串中的第一个单词，然后停止</strong>。</p>
+
+<p>例如，如果你输入 “Hello World”，<code class="language-plaintext highlighter-rouge">scanf("%s", str)</code> 会将 “Hello” 作为一个字符串读取，而 “World” 则会留在输入流中等待后续读取。</p>
+
+<p>所以示例输入的 <code class="language-plaintext highlighter-rouge">I am a student</code> 只有 <code class="language-plaintext highlighter-rouge">I</code> 进入了 <code class="language-plaintext highlighter-rouge">arr[10000]</code> 中，剩下的字符串仍然留在输入流中等待下一次读取。所以最终自然而然也就只会输出 <code class="language-plaintext highlighter-rouge">I</code>。</p>
+
+<p>知道了问题的原因自然就要想办法解决问题，但是说实话，对于小编这种很笨的学生来说，几乎是不可能的。所以，我就去求助了 ChatGPT。ChatGPT 给出的解决办法是使用 <code class="language-plaintext highlighter-rouge">fgets</code> 函数，但是我真就第一次听这个函数，也完全不懂这个函数该如何使用，于是我就准备写下这篇文章来记录我的欠缺。</p>
+
+<p>那么下面就开始正题：</p>
+
+<h2 id="1-fgets函数">1. <code class="language-plaintext highlighter-rouge">fgets</code>函数</h2>
+
+<h3 id="11-函数介绍">1.1 函数介绍</h3>
+
+<p><code class="language-plaintext highlighter-rouge">fgets</code> 是 C 语言标准库 <code class="language-plaintext highlighter-rouge">stdio</code> 中的一个函数，用于从文件流（通常是标准输入流 <code class="language-plaintext highlighter-rouge">stdin</code> 或其他文件流）中读取一行字符串。它的主要作用是读取指定长度的字符，并且<strong>会保留换行符（如果存在的话）</strong>。</p>
+
+<p>函数原型：</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">char</span> <span class="o">*</span><span class="nf">fgets</span><span class="p">(</span><span class="kt">char</span> <span class="o">*</span><span class="n">str</span><span class="p">,</span> <span class="kt">int</span> <span class="n">n</span><span class="p">,</span> <span class="kt">FILE</span> <span class="o">*</span><span class="n">stream</span><span class="p">);</span>
+</code></pre></div></div>
+
+<h3 id="12-参数说明">1.2 参数说明</h3>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">str</code>：一个指向字符数组的指针，用于存储读取的字符串。</li>
+  <li><code class="language-plaintext highlighter-rouge">n</code>：要读取的最大字符数（包括字符串结尾的空字符 \0），通常为字符数组的长度。</li>
+  <li><code class="language-plaintext highlighter-rouge">stream</code>：文件流指针，通常是 <code class="language-plaintext highlighter-rouge">stdin</code>（标准输入流）或其他文件指针。</li>
+  <li><code class="language-plaintext highlighter-rouge">fgets</code> 会读取指定长度的字符，直到遇到换行符（<strong>包括换行符在内</strong>），或者读取了 <code class="language-plaintext highlighter-rouge">n-1</code> 个字符（包括字符串结尾的空字符 <code class="language-plaintext highlighter-rouge">\0</code> ），或者到达文件末尾为止。它会将读取的字符串存储到 <code class="language-plaintext highlighter-rouge">str</code> 指向的字符数组中，并在字符串的末尾添加一个空字符 <code class="language-plaintext highlighter-rouge">\0</code>，以表示字符串的结束。</li>
+</ul>
+
+<h3 id="13-注意事项">1.3 注意事项</h3>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">fgets</code> 会保留字符串中的换行符，所以如果不需要换行符，可以使用字符串处理函数（如 <code class="language-plaintext highlighter-rouge">strcspn</code>）将其替换为空字符 <code class="language-plaintext highlighter-rouge">\0</code>。</li>
+  <li>如果输入的字符串的长度超过了指定的 <code class="language-plaintext highlighter-rouge">n-1</code>，<code class="language-plaintext highlighter-rouge">fgets</code> 只会读取 <code class="language-plaintext highlighter-rouge">n-1</code> 个字符，其余字符会留在输入流中，可能影响后续的输入。</li>
+  <li><code class="language-plaintext highlighter-rouge">fgets</code> 在成功读取字符串时返回 <code class="language-plaintext highlighter-rouge">str</code>，在到达文件末尾或发生错误时返回 <code class="language-plaintext highlighter-rouge">NULL</code>。</li>
+</ul>
+
+<h3 id="14-使用示例">1.4 使用示例</h3>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include</span> <span class="cpf">&lt;stdio.h&gt;</span><span class="cp">
+#include</span> <span class="cpf">&lt;string.h&gt;</span><span class="cp">
+</span>
+<span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+    <span class="kt">char</span> <span class="n">str</span><span class="p">[</span><span class="mi">100</span><span class="p">];</span> <span class="c1">// 最多读取 99 个字符（包括结尾的空字符）</span>
+    
+    <span class="n">printf</span><span class="p">(</span><span class="s">"请输入一个字符串："</span><span class="p">);</span>
+    <span class="n">fgets</span><span class="p">(</span><span class="n">str</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">str</span><span class="p">),</span> <span class="n">stdin</span><span class="p">);</span> <span class="c1">// 从标准输入读取一行字符串</span>
+    
+    <span class="n">str</span><span class="p">[</span><span class="n">strcspn</span><span class="p">(</span><span class="n">str</span><span class="p">,</span> <span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">)]</span> <span class="o">=</span> <span class="sc">'\0'</span><span class="p">;</span> <span class="c1">// 去掉换行符（如果有）</span>
+    
+    <span class="n">printf</span><span class="p">(</span><span class="s">"你输入的字符串是：%s</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">str</span><span class="p">);</span>
+    
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h3 id="15-题目代码修改">1.5 题目代码修改</h3>
+
+<p>所以我原本写的代码中的 <code class="language-plaintext highlighter-rouge">scanf("%s", arr)</code> 应该改成 <code class="language-plaintext highlighter-rouge">fgets(arr, sizeof(arr), stdin)</code>。</p>
+
+<h3 id="是否这么写代码我就能通过测试了呢">是否这么写代码我就能通过测试了呢？</h3>
+
+<p>当然不是，事实上代码最终的输出结果是：</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+<span class="n">tneduts</span> <span class="n">a</span> <span class="n">ma</span> <span class="n">I</span>
+</code></pre></div></div>
+
+<p>所以最后的输出还是错误了，多输出了一个换行符 <code class="language-plaintext highlighter-rouge">\n</code>。</p>
+
+<p>事实上这里有很多种方法可以去除原来字符串末尾的换行符，但我最终选择了使用 <code class="language-plaintext highlighter-rouge">strcspn</code> 函数来处理,所以下面我会介绍 <code class="language-plaintext highlighter-rouge">strcspn</code> 函数。</p>
+
+<h2 id="2-strcspn函数">2. <code class="language-plaintext highlighter-rouge">strcspn</code>函数</h2>
+
+<h3 id="21-函数介绍">2.1 函数介绍</h3>
+
+<p><code class="language-plaintext highlighter-rouge">strcspn</code> 是 C 语言标准库 <code class="language-plaintext highlighter-rouge">string</code> 中的一个函数，用于查找一个字符串中第一次出现指定字符集合中的任何字符的位置。<strong>它返回的是第一个匹配字符的索引位置</strong>。</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">size_t</span> <span class="nf">strcspn</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">str1</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">str2</span><span class="p">);</span>
+</code></pre></div></div>
+
+<h3 id="22-参数说明">2.2 参数说明</h3>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">str1</code>：要查找的字符串。</li>
+  <li><code class="language-plaintext highlighter-rouge">str2</code>：一个包含字符集合的字符串，<code class="language-plaintext highlighter-rouge">strcspn</code> 会查找这个字符集合中的字符在 <code class="language-plaintext highlighter-rouge">str1</code> 中的第一次出现。</li>
+  <li>strcspn 会从 <code class="language-plaintext highlighter-rouge">str1</code> 的起始位置开始查找，直到遇到 <code class="language-plaintext highlighter-rouge">str2</code> 中的任何字符，或者到达字符串末尾。<strong>它返回第一个匹配字符的索引位置，如果未找到匹配字符，则返回 <code class="language-plaintext highlighter-rouge">str1</code> 的长度</strong>。</li>
+</ul>
+
+<h3 id="23-注意事项">2.3 注意事项</h3>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">strcspn</code> 返回的是 <code class="language-plaintext highlighter-rouge">size_t</code> 类型，它是无符号整数类型。如果未找到匹配字符，返回值会等于字符串的长度。因此，在使用返回值时，应该<strong>注意数据类型和范围</strong>。</li>
+</ul>
+
+<h3 id="24-使用示例">2.4 使用示例</h3>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include</span> <span class="cpf">&lt;stdio.h&gt;</span><span class="cp">
+#include</span> <span class="cpf">&lt;string.h&gt;</span><span class="cp">
+</span>
+<span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+    <span class="kt">char</span> <span class="n">str</span><span class="p">[]</span> <span class="o">=</span> <span class="s">"Hello, World!"</span><span class="p">;</span>
+    <span class="kt">char</span> <span class="n">chars</span><span class="p">[]</span> <span class="o">=</span> <span class="s">" ,"</span><span class="p">;</span> <span class="c1">// 字符集合包含空格和逗号</span>
+
+    <span class="kt">size_t</span> <span class="n">index</span> <span class="o">=</span> <span class="n">strcspn</span><span class="p">(</span><span class="n">str</span><span class="p">,</span> <span class="n">chars</span><span class="p">);</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">index</span> <span class="o">&lt;</span> <span class="n">strlen</span><span class="p">(</span><span class="n">str</span><span class="p">))</span> <span class="p">{</span>
+        <span class="n">printf</span><span class="p">(</span><span class="s">"第一个匹配字符在位置：%zu</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">index</span><span class="p">);</span>
+        <span class="n">printf</span><span class="p">(</span><span class="s">"匹配字符是：%c</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">str</span><span class="p">[</span><span class="n">index</span><span class="p">]);</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="n">printf</span><span class="p">(</span><span class="s">"未找到匹配字符</span><span class="se">\n</span><span class="s">"</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h2 id="3-最终代码">3. 最终代码</h2>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include</span> <span class="cpf">&lt;stdio.h&gt;</span><span class="cp">
+</span>
+<span class="kt">void</span> <span class="nf">reverse</span><span class="p">(</span><span class="kt">char</span><span class="o">*</span> <span class="n">arr</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">char</span><span class="o">*</span> <span class="n">left</span> <span class="o">=</span> <span class="n">arr</span><span class="p">;</span>
+    <span class="kt">char</span><span class="o">*</span> <span class="n">right</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">arr</span><span class="p">[</span><span class="n">strlen</span><span class="p">(</span><span class="n">arr</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">];</span>
+    <span class="k">while</span><span class="p">(</span><span class="n">left</span> <span class="o">&lt;</span> <span class="n">right</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kt">char</span> <span class="n">mid</span> <span class="o">=</span> <span class="o">*</span><span class="n">left</span><span class="p">;</span>
+        <span class="o">*</span><span class="n">left</span> <span class="o">=</span> <span class="o">*</span><span class="n">right</span><span class="p">;</span>
+        <span class="o">*</span><span class="n">right</span> <span class="o">=</span> <span class="n">mid</span><span class="p">;</span>
+        <span class="n">left</span><span class="o">++</span><span class="p">;</span>
+        <span class="n">right</span><span class="o">--</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="k">for</span><span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">strlen</span><span class="p">(</span><span class="n">arr</span><span class="p">);</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">printf</span><span class="p">(</span><span class="s">"%c"</span><span class="p">,</span> <span class="n">arr</span><span class="p">[</span><span class="n">i</span><span class="p">]);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">char</span> <span class="n">arr</span><span class="p">[</span><span class="mi">100000</span><span class="p">];</span>
+    <span class="n">fgets</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">arr</span><span class="p">),</span> <span class="n">stdin</span><span class="p">);</span>
+    <span class="n">arr</span><span class="p">[</span><span class="n">strcspn</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">)]</span> <span class="o">=</span> <span class="sc">'\0'</span><span class="p">;</span>
+    <span class="n">reverse</span><span class="p">(</span><span class="n">arr</span><span class="p">);</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h2 id="4-题后反思">4. 题后反思</h2>
+
+<p>最终的代码运行成功后，我总有一种大材小用的感觉，我就思考能不能用 <code class="language-plaintext highlighter-rouge">scanf</code> 函数来实现呢？经过与 ChatGPT 的一番讨论后，我最终找到了另一种更为简单的代码：那就是使用 <code class="language-plaintext highlighter-rouge">%[^\n]</code> 来格式化输入。</p>
+
+<h2 id="5-n">5. <code class="language-plaintext highlighter-rouge">%[^\n]</code></h2>
+
+<h3 id="51-介绍与解释">5.1 介绍与解释</h3>
+
+<p><code class="language-plaintext highlighter-rouge">%[^\n]</code> 是 C 语言中用于格式化输入的格式字符串之一。它用于 <code class="language-plaintext highlighter-rouge">scanf</code> 函数中，用于读取一行字符串，直到遇到换行符为止。</p>
+
+<p>让我解释一下 <code class="language-plaintext highlighter-rouge">%[^\n]</code> 的含义：</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">%[</code>：这部分表示开始读取一个自定义字符集。在方括号内放置你想要读取的字符的集合。</li>
+  <li><code class="language-plaintext highlighter-rouge">^</code>：在方括号内的开头，<code class="language-plaintext highlighter-rouge">^</code> 表示反转字符集。即，<code class="language-plaintext highlighter-rouge">%[^\n]</code> 表示读取除换行符外的所有字符。</li>
+  <li><code class="language-plaintext highlighter-rouge">\n</code>：这是一个转义序列，表示换行符。</li>
+</ul>
+
+<p>所以，<code class="language-plaintext highlighter-rouge">%[^\n]</code> 的意思是，<strong>读取除换行符之外的所有字符，直到遇到换行符为止</strong>，并且<strong>不会读取换行符</strong>！！！</p>
+
+<h2 id="52-再次修改代码">5.2 再次修改代码</h2>
+
+<p>所以，我们最终可以将代码从 <code class="language-plaintext highlighter-rouge">fgets(arr, sizeof(arr), stdin); arr[strcspn(arr, "\n")];</code> 修改成 <code class="language-plaintext highlighter-rouge">scanf("%[^\n]");</code>。</p>
+
+<h2 id="6-感悟">6. 感悟</h2>
+
+<p>通过这到题目，我深刻的感受到了什么叫做“条条大路通罗马”。作为小白的我，还有很多的知识去学习、去探索、去使用。</p>]]></content><author><name>bfmhno3</name></author><category term="Note" /><category term="C" /><summary type="html"><![CDATA[本文记录了在 C 语言刷题过程中遇到的字符串输入问题。详细介绍了 fgets 函数和 strcspn 函数的用法，用于解决 scanf 无法读取带空格字符串以及换行符处理的问题，并补充了 scanf("%[^\n]") 这一更简洁的替代方案。]]></summary></entry></feed>
