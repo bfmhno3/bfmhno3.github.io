@@ -93,6 +93,8 @@ Invoke-RestMethod -Uri [https://get.scoop.sh](https://get.scoop.sh) | Invoke-Exp
 
 安装完成后，输入 `scoop help`，如果有输出，说明安装成功。
 
+如果在新开启一个终端后执行 `scoop` 报错，则需要配置系统 `PATH` 变量，添加例如：`D:\Users\abc\scoop\shims`。
+
 ## 3. 初始化配置
 
 ### 安装必备组件
