@@ -1,7 +1,7 @@
 ---
 title: "C++ 中的 string"
 date: 2026-01-03 16:28:00 +08:00
-excerpt: ""
+excerpt: "深入理解 C++ 标准库中的 std::string 类：从基本用法到底层原理，涵盖初始化、容量管理、元素访问、修改操作、类型转换等核心知识点，以及 SSO 优化、string_view 等现代特性和最佳实践。"
 categories:
   - Note
 tags:
