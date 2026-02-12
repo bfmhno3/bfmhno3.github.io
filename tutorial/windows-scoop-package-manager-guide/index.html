@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<!--
+  Minimal Mistakes Jekyll Theme 4.27.3 by Michael Rose
+  Copyright 2013-2025 Michael Rose - mademistakes.com | @mmistakes
+  Free for personal and commercial use under the MIT license
+  https://github.com/mmistakes/minimal-mistakes/blob/master/LICENSE
+--><html lang="en-US" class="no-js">
+  <head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta charset="utf-8">
+
+<!-- begin _includes/seo.html --><title>Windows 包管理神器 Scoop：从入门到自定义安装配置 - Better Mistakes</title>
+<meta name="description" content="Windows 下最好用的命令行包管理工具 Scoop 保姆级教程。涵盖自定义安装路径、Aria2 加速配置、常用软件推荐以及常见问题解决。">
+
+
+  <meta name="author" content="bfmhno3">
+  
+  <meta property="article:author" content="bfmhno3">
+  
+
+
+<meta property="og:type" content="article">
+<meta property="og:locale" content="en_US">
+<meta property="og:site_name" content="Better Mistakes">
+<meta property="og:title" content="Windows 包管理神器 Scoop：从入门到自定义安装配置">
+<meta property="og:url" content="https://bfmhno3.github.io/tutorial/windows-scoop-package-manager-guide/">
+
+
+  <meta property="og:description" content="Windows 下最好用的命令行包管理工具 Scoop 保姆级教程。涵盖自定义安装路径、Aria2 加速配置、常用软件推荐以及常见问题解决。">
+
+
+
+  <meta property="og:image" content="https://bfmhno3.github.io/assets/images/avatar.jpg">
+
+
+
+
+
+  <meta property="article:published_time" content="2025-12-05T13:00:00+00:00">
+
+
+
+
+
+  
+
+  
+
+
+<link rel="canonical" href="https://bfmhno3.github.io/tutorial/windows-scoop-package-manager-guide/">
+
+
+
+
+
+
+
+  <meta name="google-site-verification" content="UUnU8OnGqO_2FFdhrv7eEABM5p_cNPhM4Se6HB1KFSk">
+
+
+  <meta name="msvalidate.01" content="FC3BA97765A3C90F8CA771F70AE34FB8">
+
+
+
+
+
+<!-- end _includes/seo.html -->
+
+
+
+  <link href="/feed.xml" type="application/atom+xml" rel="alternate" title="Better Mistakes Feed">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script>
+  document.documentElement.className = document.documentElement.className.replace(/\bno-js\b/g, '') + ' js ';
+  window.enable_copy_code_button = true;
+</script>
+
+<!-- For all browsers -->
+<link rel="stylesheet" href="/assets/css/main.css">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@latest/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@latest/css/all.min.css"></noscript>
+
+
+
+    <link rel="icon" type="image/png" href="/assets/images/favicon/favicon-96x96.png" sizes="96x96">
+<link rel="icon" type="image/svg+xml" href="/assets/images/favicon/favicon.svg">
+<link rel="shortcut icon" href="/assets/images/favicon/favicon.ico">
+<link rel="apple-touch-icon" sizes="180x180" href="/assets/images/favicon/apple-touch-icon.png">
+<link rel="manifest" href="/assets/images/favicon/site.webmanifest">
+  </head>
+
+  <body class="layout--single" dir="ltr">
+    <nav class="skip-links">
+  <ul>
+    <li><a href="#site-nav" class="screen-reader-shortcut">Skip to primary navigation</a></li>
+    <li><a href="#main" class="screen-reader-shortcut">Skip to content</a></li>
+    <li><a href="#footer" class="screen-reader-shortcut">Skip to footer</a></li>
+  </ul>
+</nav>
+
+    
+
+<div class="masthead">
+  <div class="masthead__inner-wrap">
+    <div class="masthead__menu">
+      <nav id="site-nav" class="greedy-nav">
+        
+          <a class="site-logo" href="/"><img src="/assets/images/logo.svg" alt="Better Mistakes"></a>
+        
+        <a class="site-title" href="/">
+          Better Mistakes
+          <span class="site-subtitle">Trial.Error.Iteration.</span>
+        </a>
+        <ul class="visible-links">
+<li class="masthead__menu-item">
+              <a href="/posts/">Posts</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/categories/">Categories</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/tags/">Tags</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/about/">About</a>
+            </li>
+</ul>
+        
+        <button class="search__toggle" type="button">
+          <span class="visually-hidden">Toggle search</span>
+          <i class="fas fa-search"></i>
+        </button>
+        
+        <button class="greedy-nav__toggle hidden" type="button">
+          <span class="visually-hidden">Toggle menu</span>
+          <div class="navicon"></div>
+        </button>
+        <ul class="hidden-links hidden"></ul>
+      </nav>
+    </div>
+  </div>
+</div>
+
+
+    <div class="initial-content">
+      
+
+
+
+
+
+<div id="main" role="main">
+  
+  <div class="sidebar sticky">
+  
+
+
+<div itemscope itemtype="https://schema.org/Person" class="h-card">
+
+  
+    <div class="author__avatar">
+      <a href="https://bfmhno3.github.io/">
+        <img src="/assets/images/avatar.jpg" alt="bfmhno3" itemprop="image" class="u-photo">
+      </a>
+    </div>
+  
+
+  <div class="author__content">
+    <h3 class="author__name p-name" itemprop="name">
+      <a class="u-url" rel="me" href="https://bfmhno3.github.io/" itemprop="url">bfmhno3</a>
+    </h3>
+    
+      <div class="author__bio p-note" itemprop="description">
+        <p>Third-year university student majoring in energy engineering. Exploring the world of code and mathematics.</p>
+
+      </div>
+    
+  </div>
+
+  <div class="author__urls-wrapper">
+    <button class="btn btn--inverse">Follow</button>
+    <ul class="author__urls social-icons">
+      
+
+      
+        
+          
+            <li><a href="https://github.com/bfmhno3" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fab fa-fw fa-github" aria-hidden="true"></i><span class="label">GitHub</span></a></li>
+          
+        
+          
+            <li><a href="https://gitee.com/bfmhno3" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fa-solid fa-g" aria-hidden="true"></i><span class="label">Gitee</span></a></li>
+          
+        
+          
+            <li><a href="https://www.cnblogs.com/bfmhno3" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fa-solid fa-blog" aria-hidden="true"></i><span class="label">cnblogs</span></a></li>
+          
+        
+          
+            <li><a href="https://blog.csdn.net/B33336" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fa-solid fa-blog" aria-hidden="true"></i><span class="label">CSDN</span></a></li>
+          
+        
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      <!--
+  <li>
+    <a href="http://link-to-whatever-social-network.com/user/" itemprop="sameAs" rel="nofollow noopener noreferrer me">
+      <i class="fas fa-fw" aria-hidden="true"></i> Custom Social Profile Link
+    </a>
+  </li>
+-->
+    </ul>
+  </div>
+</div>
+
+  
+  </div>
+
+
+
+  <article class="page" itemscope itemtype="https://schema.org/CreativeWork">
+    <meta itemprop="headline" content="Windows 包管理神器 Scoop：从入门到自定义安装配置">
+    <meta itemprop="description" content="Windows 下最好用的命令行包管理工具 Scoop 保姆级教程。涵盖自定义安装路径、Aria2 加速配置、常用软件推荐以及常见问题解决。">
+    <meta itemprop="datePublished" content="2025-12-05T13:00:00+00:00">
+    
+
+    <div class="page__inner-wrap">
+      
+        <header>
+          <h1 id="page-title" class="page__title" itemprop="headline">
+            <a href="https://bfmhno3.github.io/tutorial/windows-scoop-package-manager-guide/" itemprop="url">Windows 包管理神器 Scoop：从入门到自定义安装配置
+</a>
+          </h1>
+          
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2025-12-05T13:00:00+00:00">December 5, 2025</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-clock" aria-hidden="true"></i>
+        
+          3 minute read
+        
+      </span>
+    
+  </p>
+
+
+        </header>
+      
+
+      <section class="page__content" itemprop="text">
+        
+          <aside class="sidebar__right sticky">
+            <nav class="toc">
+              <header><h4 class="nav__title">
+<i class="fas fa-file-alt"></i> On this page</h4></header>
+              <ul class="toc__menu">
+<li>
+<a href="#1-%E8%B0%83%E6%95%B4-scoop-%E5%AE%89%E8%A3%85%E4%BD%8D%E7%BD%AE">1. 调整 Scoop 安装位置</a><ul>
+<li>
+<a href="#%E8%BF%98%E6%B2%A1%E6%9C%89%E5%AE%89%E8%A3%85-scoop%E6%8E%A8%E8%8D%90">还没有安装 Scoop（推荐）</a><ul>
+<li><a href="#%E7%AC%AC%E4%B8%80%E6%AD%A5%E8%AE%BE%E7%BD%AE%E7%94%A8%E6%88%B7%E5%AE%89%E8%A3%85%E7%9B%AE%E5%BD%95">第一步：设置用户安装目录</a></li>
+<li><a href="#%E7%AC%AC%E4%BA%8C%E6%AD%A5%E8%AE%BE%E7%BD%AE%E5%85%A8%E5%B1%80%E5%AE%89%E8%A3%85%E7%9B%AE%E5%BD%95%E5%8F%AF%E9%80%89">第二步：设置全局安装目录（可选）</a></li>
+<li><a href="#%E5%A4%87%E9%80%89%E6%96%B9%E6%A1%88%E9%80%9A%E8%BF%87%E5%9B%BE%E5%BD%A2%E7%95%8C%E9%9D%A2%E8%AE%BE%E7%BD%AE">备选方案：通过图形界面设置</a></li>
+</ul>
+</li>
+<li><a href="#%E5%B7%B2%E7%BB%8F%E5%AE%89%E8%A3%85%E4%BA%86-scoop%E8%BF%81%E7%A7%BB">已经安装了 Scoop（迁移）</a></li>
+</ul>
+</li>
+<li><a href="#2-%E5%AE%89%E8%A3%85-scoop">2. 安装 Scoop</a></li>
+<li>
+<a href="#3-%E5%88%9D%E5%A7%8B%E5%8C%96%E9%85%8D%E7%BD%AE">3. 初始化配置</a><ul>
+<li><a href="#%E5%AE%89%E8%A3%85%E5%BF%85%E5%A4%87%E7%BB%84%E4%BB%B6">安装必备组件</a></li>
+<li><a href="#%E6%B7%BB%E5%8A%A0%E5%B8%B8%E7%94%A8%E8%BD%AF%E4%BB%B6%E4%BB%93%E5%BA%93-buckets">添加常用软件仓库 (Buckets)</a></li>
+</ul>
+</li>
+<li><a href="#4-%E8%A3%85%E6%9C%BA%E5%BF%85%E5%A4%87%E8%BD%AF%E4%BB%B6%E6%B8%85%E5%8D%95">4. 装机必备软件清单</a></li>
+<li>
+<a href="#5-%E6%97%A5%E5%B8%B8%E7%BB%B4%E6%8A%A4%E4%B8%8E%E8%BF%9B%E9%98%B6">5. 日常维护与进阶</a><ul>
+<li><a href="#%E6%9B%B4%E6%96%B0%E8%BD%AF%E4%BB%B6">更新软件</a></li>
+<li><a href="#%E6%B8%85%E7%90%86%E6%97%A7%E7%89%88%E6%9C%AC">清理旧版本</a></li>
+<li><a href="#%E8%BD%AF%E4%BB%B6%E5%A4%87%E4%BB%BD%E4%B8%8E%E8%BF%81%E7%A7%BB">软件备份与迁移</a></li>
+</ul>
+</li>
+<li>
+<a href="#6-%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98%E8%A7%A3%E5%86%B3">6. 常见问题解决</a><ul><li><a href="#windows-%E6%90%9C%E7%B4%A2%E6%89%BE%E4%B8%8D%E5%88%B0%E5%AE%89%E8%A3%85%E7%9A%84%E8%BD%AF%E4%BB%B6">Windows 搜索找不到安装的软件</a></li></ul>
+</li>
+</ul>
+            </nav>
+          </aside>
+        
+        <p>如果你习惯了 Linux 下 <code class="language-plaintext highlighter-rouge">apt</code>、<code class="language-plaintext highlighter-rouge">pacman</code> 或 macOS 下 <code class="language-plaintext highlighter-rouge">brew</code> 的爽快体验，那么回到 Windows 面对满屏的安装包和 “下一步” 肯定会感到繁琐。</p>
+
+<p><strong>Scoop</strong> 是 Windows 下的一款轻量级包管理工具。与 Chocolatey 或 Winget 不同，Scoop 的设计哲学是 <strong>“非侵入式”</strong>：</p>
+
+<ul>
+  <li>
+<strong>权限洁癖</strong>：默认安装在用户目录，无需 UAC 提权（除非安装全局软件）。</li>
+  <li>
+<strong>绿色环保</strong>：自动处理环境变量（Shim 机制），卸载时瞬间清除，不残留注册表垃圾。</li>
+  <li>
+<strong>版本控制</strong>：利用 Git 管理软件仓库（Bucket），方便版本回退。</li>
+</ul>
+
+<p>本文将带你从零开始配置一个完美的 Scoop 环境。</p>
+
+<h2 id="1-调整-scoop-安装位置">1. 调整 Scoop 安装位置</h2>
+
+<p>Scoop 默认将软件安装在 C 盘。作为开发者，我们通常希望将工具链与系统盘分离。在运行安装脚本前，我们需要先设置环境变量。</p>
+
+<h3 id="还没有安装-scoop推荐">还没有安装 Scoop（推荐）</h3>
+
+<p>打开 <strong>PowerShell</strong>（无需管理员权限），依次执行以下命令。假设我们要安装到 <code class="language-plaintext highlighter-rouge">D:\Users\abc\scoop</code>（请根据你的实际情况修改路径）。</p>
+
+<h4 id="第一步设置用户安装目录">第一步：设置用户安装目录</h4>
+
+<p>这是普通软件（Chrome, VSCode 等）的安装位置。</p>
+
+<div class="language-powershell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$</span><span class="nn">env</span><span class="p">:</span><span class="nv">SCOOP</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'D:\Users\abc\scoop'</span><span class="w">
+</span><span class="p">[</span><span class="n">Environment</span><span class="p">]::</span><span class="n">SetEnvironmentVariable</span><span class="p">(</span><span class="s1">'SCOOP'</span><span class="p">,</span><span class="w"> </span><span class="nv">$env</span><span class="p">::</span><span class="n">SCOOP</span><span class="p">,</span><span class="w"> </span><span class="s1">'User'</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<h4 id="第二步设置全局安装目录可选">第二步：设置全局安装目录（可选）</h4>
+
+<p>这是需要管理员权限（如驱动、系统级工具）的软件安装位置。</p>
+
+<div class="language-powershell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$</span><span class="nn">env</span><span class="p">:</span><span class="nv">SCOOP_GLOBAL</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'D:\ProgramData\scoop'</span><span class="w">
+</span><span class="p">[</span><span class="n">Environment</span><span class="p">]::</span><span class="n">SetEnvironmentVariable</span><span class="p">(</span><span class="s1">'SCOOP_GLOBAL'</span><span class="p">,</span><span class="w"> </span><span class="nv">$env</span><span class="p">::</span><span class="n">SCOOP_GLOBAL</span><span class="p">,</span><span class="w"> </span><span class="s1">'Machine'</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<blockquote>
+  <p class="notice--info"><strong>注意</strong>：修改 <code class="language-plaintext highlighter-rouge">Machine</code> 级别的变量通常需要<strong>管理员权限</strong>的 PowerShell。</p>
+</blockquote>
+
+<blockquote>
+  <p><strong>警告：路径规范</strong>
+Scoop 的安装路径中<strong>严禁包含空格和中文字符</strong>！</p>
+
+  <ul>
+    <li>❌ 错误示例：<code class="language-plaintext highlighter-rouge">D:\Program Files\Scoop</code> 或 <code class="language-plaintext highlighter-rouge">D:\我的软件\Scoop</code>
+</li>
+    <li>✅ 正确示例：<code class="language-plaintext highlighter-rouge">D:\Users\abc\scoop</code> 或 <code class="language-plaintext highlighter-rouge">D:\Scoop</code>
+</li>
+  </ul>
+</blockquote>
+
+<h4 id="备选方案通过图形界面设置">备选方案：通过图形界面设置</h4>
+
+<p>如果你不习惯命令行，也可以通过 Windows 设置：</p>
+
+<ol>
+  <li>搜索 <strong>“编辑系统环境变量”</strong>。</li>
+  <li>点击 <strong>“环境变量(N)…”</strong>。</li>
+  <li>在 <strong>“用户变量”</strong> 中新建 <code class="language-plaintext highlighter-rouge">SCOOP</code>，值为你的自定义路径。</li>
+  <li>在 <strong>“系统变量”</strong> 中新建 <code class="language-plaintext highlighter-rouge">SCOOP_GLOBAL</code>，值为你的全局路径。</li>
+</ol>
+
+<h3 id="已经安装了-scoop迁移">已经安装了 Scoop（迁移）</h3>
+
+<p>如果你已经安装了 Scoop 但想迁移目录，操作稍微繁琐一些，因为 Scoop 不写注册表，它是“绿色”的。</p>
+
+<ol>
+  <li>将原目录（默认 <code class="language-plaintext highlighter-rouge">C:\Users\&lt;user_name&gt;\scoop</code>）<strong>剪切</strong>并<strong>粘贴</strong>到新目录（例如 <code class="language-plaintext highlighter-rouge">D:\Scoop</code>）。</li>
+  <li>修改系统环境变量 <code class="language-plaintext highlighter-rouge">Path</code>：
+    <ul>
+      <li>删除指向旧目录的条目（如 <code class="language-plaintext highlighter-rouge">C:\Users\...\scoop\shims</code>）。</li>
+      <li>添加新目录的 shim 路径（如 <code class="language-plaintext highlighter-rouge">D:\Scoop\shims</code>）。</li>
+    </ul>
+  </li>
+  <li>
+    <p><strong>关键步骤</strong>：打开新的 PowerShell 终端，执行以下命令重置所有软件的链接：</p>
+
+    <div class="language-powershell highlighter-rouge">
+<div class="highlight"><pre class="highlight"><code><span class="w"> </span><span class="n">scoop</span><span class="w"> </span><span class="nx">reset</span><span class="w"> </span><span class="o">*</span><span class="w">
+</span></code></pre></div>    </div>
+  </li>
+</ol>
+
+<h2 id="2-安装-scoop">2. 安装 Scoop</h2>
+
+<p>环境变量配置完成后，在 PowerShell 中执行以下命令进行安装：</p>
+
+<div class="language-powershell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">Set-ExecutionPolicy</span><span class="w"> </span><span class="nt">-ExecutionPolicy</span><span class="w"> </span><span class="nx">RemoteSigned</span><span class="w"> </span><span class="nt">-Scope</span><span class="w"> </span><span class="nx">CurrentUser</span><span class="w">
+</span><span class="n">Invoke-RestMethod</span><span class="w"> </span><span class="nt">-Uri</span><span class="w"> </span><span class="p">[</span><span class="n">https</span><span class="p">:</span><span class="n">//get.scoop.sh</span><span class="p">](</span><span class="n">https</span><span class="p">:</span><span class="n">//get.scoop.sh</span><span class="p">)</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="n">Invoke</span><span class="nt">-Expression</span><span class="w">
+</span></code></pre></div></div>
+
+<ul>
+  <li>第一行：允许当前用户运行本地脚本。</li>
+  <li>第二行：下载并执行 Scoop 官方安装脚本。</li>
+</ul>
+
+<p>安装完成后，输入 <code class="language-plaintext highlighter-rouge">scoop help</code>，如果有输出，说明安装成功。</p>
+
+<p>如果在新开启一个终端后执行 <code class="language-plaintext highlighter-rouge">scoop</code> 报错，则需要配置系统 <code class="language-plaintext highlighter-rouge">PATH</code> 变量，添加例如：<code class="language-plaintext highlighter-rouge">D:\Users\abc\scoop\shims</code>。</p>
+
+<h2 id="3-初始化配置">3. 初始化配置</h2>
+
+<h3 id="安装必备组件">安装必备组件</h3>
+
+<p>Scoop 依赖 Git 来管理仓库，同时强烈建议安装 Aria2 来进行多线程下载加速。</p>
+
+<div class="language-powershell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">scoop</span><span class="w"> </span><span class="nx">install</span><span class="w"> </span><span class="nx">git</span><span class="w"> </span><span class="nx">aria2</span><span class="w">
+</span></code></pre></div></div>
+
+<p>安装完成后，建议对 Aria2 进行调优，关闭警告并开启多线程：</p>
+
+<div class="language-powershell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">scoop</span><span class="w"> </span><span class="nx">config</span><span class="w"> </span><span class="nx">aria2-warning-enabled</span><span class="w"> </span><span class="nx">false</span><span class="w">
+</span><span class="n">scoop</span><span class="w"> </span><span class="nx">config</span><span class="w"> </span><span class="nx">aria2-retry-wait</span><span class="w"> </span><span class="nx">4</span><span class="w">
+</span><span class="n">scoop</span><span class="w"> </span><span class="nx">config</span><span class="w"> </span><span class="nx">aria2-max-connection-per-server</span><span class="w"> </span><span class="nx">16</span><span class="w">
+</span><span class="n">scoop</span><span class="w"> </span><span class="nx">config</span><span class="w"> </span><span class="nx">aria2-split</span><span class="w"> </span><span class="nx">16</span><span class="w">
+</span><span class="n">scoop</span><span class="w"> </span><span class="nx">config</span><span class="w"> </span><span class="nx">aria2-min-split-size</span><span class="w"> </span><span class="nx">1M</span><span class="w">
+</span></code></pre></div></div>
+
+<h3 id="添加常用软件仓库-buckets">添加常用软件仓库 (Buckets)</h3>
+
+<p>Scoop 默认的 <code class="language-plaintext highlighter-rouge">main</code> 仓库软件较少且由于标准严格，通常只包含 CLI 工具。我们需要添加社区仓库来扩展生态。</p>
+
+<div class="language-powershell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">scoop</span><span class="w"> </span><span class="nx">bucket</span><span class="w"> </span><span class="nx">add</span><span class="w"> </span><span class="nx">extras</span><span class="w">      </span><span class="c"># 包含大量 GUI 软件 (Chrome, VSCode 等)</span><span class="w">
+</span><span class="n">scoop</span><span class="w"> </span><span class="nx">bucket</span><span class="w"> </span><span class="nx">add</span><span class="w"> </span><span class="nx">versions</span><span class="w">    </span><span class="c"># 包含旧版本软件</span><span class="w">
+</span><span class="n">scoop</span><span class="w"> </span><span class="nx">bucket</span><span class="w"> </span><span class="nx">add</span><span class="w"> </span><span class="nx">java</span><span class="w">        </span><span class="c"># Java 开发相关</span><span class="w">
+</span><span class="n">scoop</span><span class="w"> </span><span class="nx">bucket</span><span class="w"> </span><span class="nx">add</span><span class="w"> </span><span class="nx">nerd-fonts</span><span class="w">  </span><span class="c"># 编程字体 (FiraCode NF, JetBrainsMono NF)</span><span class="w">
+</span></code></pre></div></div>
+
+<h2 id="4-装机必备软件清单">4. 装机必备软件清单</h2>
+
+<p>这里列出了一份高频使用的软件清单，涵盖了开发、系统增强和效率工具。</p>
+
+<p>你可以一次性复制执行：</p>
+
+<div class="language-powershell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 系统工具与命令行增强</span><span class="w">
+</span><span class="n">scoop</span><span class="w"> </span><span class="nx">install</span><span class="w"> </span><span class="nx">gsudo</span><span class="w"> </span><span class="nx">everything</span><span class="w"> </span><span class="nx">scoop-search</span><span class="w"> </span><span class="nx">starship</span><span class="w"> </span><span class="nx">fzf</span><span class="w"> </span><span class="nx">ripgrep</span><span class="w"> </span><span class="nx">bat</span><span class="w"> </span><span class="nx">powertoys</span><span class="w"> </span><span class="nx">everything-powertoys</span><span class="w">
+
+</span><span class="c"># 开发工具</span><span class="w">
+</span><span class="n">scoop</span><span class="w"> </span><span class="nx">install</span><span class="w"> </span><span class="nx">uv</span><span class="w"> </span><span class="nx">neovim</span><span class="w"> </span><span class="nx">vscode</span><span class="w"> </span><span class="nx">jetbrains-toolbox</span><span class="w">
+</span></code></pre></div></div>
+
+<p><strong>软件清单详解：</strong></p>
+
+<ul>
+  <li>
+<code class="language-plaintext highlighter-rouge">gsudo</code>: Windows 下的 <code class="language-plaintext highlighter-rouge">sudo</code>，比官方的更强，体验与 Linux 一致。</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">scoop-search</code>: 秒级搜索 Scoop 仓库软件（比原生 <code class="language-plaintext highlighter-rouge">scoop search</code> 快几十倍）。</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">everything</code>: Windows 文件搜索神器。</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">powertoys</code>: 微软官方出品的系统增强工具集。</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">everything-powertoys</code>: 让 PowerToys 的启动器调用 Everything 的索引。</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">starship</code>: 极速、高颜值的终端提示符（Prompt），支持显示 Git 状态、Python 版本等。</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">fzf</code>: 命令行模糊查找工具。</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">ripgrep</code> (<code class="language-plaintext highlighter-rouge">rg</code>): 速度极快的 <code class="language-plaintext highlighter-rouge">grep</code> 替代品。</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">bat</code>: 带语法高亮和 Git 集成的 <code class="language-plaintext highlighter-rouge">cat</code> 替代品。</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">uv</code>: Rust 编写的 Python 包版本管理器，速度飞快。</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">neovim</code>: 现代化 Vim 编辑器。</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">vscode</code>: 最流行的代码编辑器。</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">jetbrains-toolbox</code>: 管理 IDEA, PyCharm 等 JetBrains 全家桶。</li>
+</ul>
+
+<h2 id="5-日常维护与进阶">5. 日常维护与进阶</h2>
+
+<h3 id="更新软件">更新软件</h3>
+
+<p>Scoop 的更新分为两步：先更新仓库列表，再更新软件。</p>
+
+<div class="language-powershell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">scoop</span><span class="w"> </span><span class="nx">update</span><span class="w">           </span><span class="c"># 更新 scoop 本身和 bucket</span><span class="w">
+</span><span class="n">scoop</span><span class="w"> </span><span class="nx">update</span><span class="w"> </span><span class="o">*</span><span class="w">         </span><span class="c"># 更新所有已安装的软件</span><span class="w">
+</span></code></pre></div></div>
+
+<h3 id="清理旧版本">清理旧版本</h3>
+
+<p>Scoop 默认会保留软件的旧版本（为了方便回退）。如果你的磁盘空间紧张，可以清理旧包：</p>
+
+<div class="language-powershell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">scoop</span><span class="w"> </span><span class="nx">cleanup</span><span class="w"> </span><span class="o">*</span><span class="w">        </span><span class="c"># 清理所有软件的旧版本</span><span class="w">
+</span></code></pre></div></div>
+
+<h3 id="软件备份与迁移">软件备份与迁移</h3>
+
+<p>这是我最喜欢 Scoop 的一点：你可以导出一份列表，在另一台电脑上瞬间还原你的工作环境。</p>
+
+<p><strong>导出列表：</strong></p>
+
+<div class="language-powershell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">scoop</span><span class="w"> </span><span class="nx">export</span><span class="w"> </span><span class="err">&gt;</span><span class="w"> </span><span class="nx">scoop-apps.json</span><span class="w">
+</span></code></pre></div></div>
+
+<p><strong>在另一台电脑恢复：</strong></p>
+
+<div class="language-powershell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">scoop</span><span class="w"> </span><span class="nx">import</span><span class="w"> </span><span class="nx">scoop-apps.json</span><span class="w">
+</span></code></pre></div></div>
+
+<h2 id="6-常见问题解决">6. 常见问题解决</h2>
+
+<h3 id="windows-搜索找不到安装的软件">Windows 搜索找不到安装的软件</h3>
+
+<p><strong>现象</strong>：安装了 Chrome 或 VS Code，但按 Win 键搜索不到。</p>
+
+<p><strong>原因</strong>：Windows 索引默认只覆盖特定的开始菜单目录，具体路径为：<code class="language-plaintext highlighter-rouge">C:\Users\&lt;user&gt;\AppData\Roaming\Microsoft\Windows\Start Menu\Programs</code>（在运行窗口中输入 <code class="language-plaintext highlighter-rouge">shell:programs</code> 后点击 <kbd>Enter</kbd> 也可直接打开）。</p>
+
+<p><strong>解决方法</strong>：
+Scoop 实际上会自动创建快捷方式到 <code class="language-plaintext highlighter-rouge">C:\Users\&lt;user&gt;\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Scoop Apps</code>。如果搜索不到，通常是因为索引未更新或快捷方式未正确生成。</p>
+
+<p>尝试执行以下命令重置：</p>
+
+<div class="language-powershell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 重置指定软件的快捷方式</span><span class="w">
+</span><span class="n">scoop</span><span class="w"> </span><span class="nx">reset</span><span class="w"> </span><span class="err">&lt;</span><span class="nx">package-name</span><span class="err">&gt;</span><span class="w">
+
+</span><span class="c"># 或者重置所有软件（推荐）</span><span class="w">
+</span><span class="n">scoop</span><span class="w"> </span><span class="nx">reset</span><span class="w"> </span><span class="o">*</span><span class="w">
+</span></code></pre></div></div>
+
+<p><code class="language-plaintext highlighter-rouge">reset</code> 命令会重新执行安装脚本中的 “链接” 步骤，重建 <code class="language-plaintext highlighter-rouge">.exe</code> 的 shim 和开始菜单快捷方式。</p>
+
+<p>此外，也可以使用 Scoop 自带的体检工具来发现路径或权限问题：</p>
+
+<div class="language-powershell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">scoop</span><span class="w"> </span><span class="nx">checkup</span><span class="w">
+</span></code></pre></div></div>
+
+        
+      </section>
+
+      <footer class="page__meta">
+        
+        
+  
+
+
+  
+
+  <p class="page__taxonomy">
+    <strong><i class="fas fa-fw fa-tags" aria-hidden="true"></i> Tags: </strong>
+    <span itemprop="keywords">
+    
+      <a href="/tags/efficiency" class="page__taxonomy-item p-category" rel="tag">Efficiency</a><span class="sep">, </span>
+    
+      <a href="/tags/scoop" class="page__taxonomy-item p-category" rel="tag">Scoop</a><span class="sep">, </span>
+    
+      <a href="/tags/windows" class="page__taxonomy-item p-category" rel="tag">Windows</a>
+    
+    </span>
+  </p>
+
+
+
+
+  
+
+
+  
+
+  <p class="page__taxonomy">
+    <strong><i class="fas fa-fw fa-folder-open" aria-hidden="true"></i> Categories: </strong>
+    <span itemprop="keywords">
+    
+      <a href="/categories/tutorial" class="page__taxonomy-item p-category" rel="tag">Tutorial</a>
+    
+    </span>
+  </p>
+
+
+        
+
+  <p class="page__date"><strong><i class="fas fa-fw fa-calendar-alt" aria-hidden="true"></i> Updated:</strong> <time class="dt-published" datetime="2025-12-05T13:00:00+00:00">December 5, 2025</time></p>
+
+      </footer>
+
+      <section class="page__share">
+  <h4 class="page__share-title">Share on</h4>
+
+  <a href="https://x.com/intent/tweet?text=Windows+%E5%8C%85%E7%AE%A1%E7%90%86%E7%A5%9E%E5%99%A8+Scoop%EF%BC%9A%E4%BB%8E%E5%85%A5%E9%97%A8%E5%88%B0%E8%87%AA%E5%AE%9A%E4%B9%89%E5%AE%89%E8%A3%85%E9%85%8D%E7%BD%AE%20https%3A%2F%2Fbfmhno3.github.io%2Ftutorial%2Fwindows-scoop-package-manager-guide%2F" class="btn btn--x" aria-label="Share on X" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on X">
+    <i class="fab fa-fw fa-x-twitter" aria-hidden="true"></i><span> X</span>
+  </a>
+
+  <a href="https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fbfmhno3.github.io%2Ftutorial%2Fwindows-scoop-package-manager-guide%2F" class="btn btn--facebook" aria-label="Share on Facebook" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on Facebook">
+    <i class="fab fa-fw fa-facebook" aria-hidden="true"></i><span> Facebook</span>
+  </a>
+
+  <a href="https://www.linkedin.com/shareArticle?mini=true&url=https://bfmhno3.github.io/tutorial/windows-scoop-package-manager-guide/" class="btn btn--linkedin" aria-label="Share on LinkedIn" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on LinkedIn">
+    <i class="fab fa-fw fa-linkedin" aria-hidden="true"></i><span> LinkedIn</span>
+  </a>
+
+  <a href="https://bsky.app/intent/compose?text=Windows+%E5%8C%85%E7%AE%A1%E7%90%86%E7%A5%9E%E5%99%A8+Scoop%EF%BC%9A%E4%BB%8E%E5%85%A5%E9%97%A8%E5%88%B0%E8%87%AA%E5%AE%9A%E4%B9%89%E5%AE%89%E8%A3%85%E9%85%8D%E7%BD%AE%20https%3A%2F%2Fbfmhno3.github.io%2Ftutorial%2Fwindows-scoop-package-manager-guide%2F" class="btn btn--bluesky" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on Bluesky">
+    <i class="fab fa-fw fa-bluesky" aria-hidden="true"></i><span> Bluesky</span>
+  </a>
+</section>
+
+
+      
+  <nav class="pagination">
+    
+      <a href="/note/english-translation-techniques/" class="pagination--pager" title="英语翻译技巧">Previous</a>
+    
+    
+      <a href="/note/string-in-cpp/" class="pagination--pager" title="C++ 中的 string">Next</a>
+    
+  </nav>
+
+
+    </div>
+
+    
+      
+        <div class="page__comments">
+  
+  
+      <h4 class="page__comments-title">Comments</h4>
+      <section id="giscus-comments"></section>
+    
+</div>
+
+      
+    
+  </article>
+
+  
+  
+    
+<div class="page__related">
+  
+  <h2 class="page__related-title">You May Also Enjoy</h2>
+  <div class="grid__wrapper">
+    
+      
+      
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc" itemprop="headline">
+      
+        <a href="/note/process-in-os/" rel="permalink">操作系统中的进程
+</a>
+      
+    </h2>
+    
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-01-26T22:10:00+00:00">January 26, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          4 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt" itemprop="description">教科书对于进程常定义通常极为简洁凝练，但其诞生是为了解决什么问题？本文通过回顾从 ENIAC 到分时系统的演进历史，探讨进程是如何为了填补人、I/O 与 CPU 之间的速度鸿沟而进化出来的。
+</p>
+  </article>
+</div>
+
+    
+      
+      
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc" itemprop="headline">
+      
+        <a href="/note/initialization-in-cpp/" rel="permalink">C++ 中的初始化列表和列表初始化
+</a>
+      
+    </h2>
+    
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-01-03T15:07:00+00:00">January 3, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          6 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt" itemprop="description">深入理解 C++ 中初始化列表与列表初始化的区别：前者解决对象生命周期与内存模型问题，后者统一初始化语法并提供类型安全保障。
+</p>
+  </article>
+</div>
+
+    
+      
+      
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc" itemprop="headline">
+      
+        <a href="/note/list-in-cpp/" rel="permalink">C++ 中的 list
+</a>
+      
+    </h2>
+    
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-01-03T13:05:00+00:00">January 3, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          2 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt" itemprop="description">深入理解 C++ 中的 std::list 双向链表容器，探讨其底层原理、独有优势（如头部操作、接合等）、迭代器特性，以及与 std::vector 的选择权衡。
+</p>
+  </article>
+</div>
+
+    
+      
+      
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc" itemprop="headline">
+      
+        <a href="/note/constructor-in-cpp/" rel="permalink">C++ 中的构造函数
+</a>
+      
+    </h2>
+    
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-01-03T13:05:00+00:00">January 3, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          5 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt" itemprop="description">深入理解 C++ 构造函数的本质：从资源管理到性能优化。涵盖默认构造、拷贝构造、移动构造，以及 RAII、explicit、constexpr 等关键机制。
+</p>
+  </article>
+</div>
+
+    
+  </div>
+</div>
+
+  
+  
+</div>
+
+      
+    </div>
+
+    
+      <div class="search-content">
+        <div class="search-content__inner-wrap">
+<form class="search-content__form" onkeydown="return event.key != 'Enter';" role="search">
+    <label class="sr-only" for="search">
+      Enter your search term...
+    </label>
+    <input type="search" id="search" class="search-input" tabindex="-1" placeholder="Enter your search term...">
+  </form>
+  <div id="results" class="results"></div>
+</div>
+
+      </div>
+    
+
+    <div id="footer" class="page__footer">
+      <footer>
+        <!-- start custom footer snippets -->
+
+<!-- end custom footer snippets -->
+        
+
+<div class="page__footer-follow">
+  <ul class="social-icons">
+    
+
+    
+      
+        
+          <li><a href="https://github.com/bfmhno3" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-github" aria-hidden="true"></i> GitHub</a></li>
+        
+      
+        
+          <li><a href="https://gitee.com/bfmhno3" rel="nofollow noopener noreferrer"><i class="fa-solid fa-g" aria-hidden="true"></i> Gitee</a></li>
+        
+      
+        
+          <li><a href="https://www.cnblogs.com/bfmhno3" rel="nofollow noopener noreferrer"><i class="fa-solid fa-blog" aria-hidden="true"></i> cnblogs</a></li>
+        
+      
+        
+          <li><a href="https://blog.csdn.net/B33336" rel="nofollow noopener noreferrer"><i class="fa-solid fa-blog" aria-hidden="true"></i> CSDN</a></li>
+        
+      
+    
+
+    
+      <li><a href="/feed.xml"><i class="fas fa-fw fa-rss-square" aria-hidden="true"></i> Feed</a></li>
+    
+  </ul>
+</div>
+
+
+<div class="page__footer-copyright">© 2026 <a href="https://bfmhno3.github.io">Better Mistakes</a>. Powered by <a href="https://jekyllrb.com" rel="nofollow">Jekyll</a> &amp; <a href="https://mademistakes.com/work/jekyll-themes/minimal-mistakes/" rel="nofollow">Minimal Mistakes</a>.</div>
+
+      </footer>
+    </div>
+
+    
+  <script src="/assets/js/main.min.js"></script>
+
+
+
+
+<script src="/assets/js/lunr/lunr.min.js"></script>
+<script src="/assets/js/lunr/lunr-store.js"></script>
+<script src="/assets/js/lunr/lunr-en.js"></script>
+
+
+
+
+  <!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-VS5B3CR1M6"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-VS5B3CR1M6', { 'anonymize_ip': false});
+</script>
+
+
+
+
+
+
+    <script>
+  'use strict';
+
+  (function () {
+    var commentContainer = document.querySelector('#giscus-comments');
+
+    if (!commentContainer) {
+      return;
+    }
+
+    var script = document.createElement('script');
+
+    script.setAttribute('src', 'https://giscus.app/client.js');
+    script.setAttribute('data-repo', 'bfmhno3/bfmhno3.github.io');
+    script.setAttribute('data-repo-id', 'R_kgDOQCQGxg');
+    script.setAttribute('data-category', 'General');
+    script.setAttribute('data-category-id', 'DIC_kwDOQCQGxs4CzG3a');
+    script.setAttribute('data-mapping', 'pathname');
+    script.setAttribute('data-strict', '0');
+    script.setAttribute('data-reactions-enabled', '1');
+    script.setAttribute('data-emit-metadata', '0');
+    script.setAttribute('data-input-position', 'bottom');
+    script.setAttribute('data-theme', 'transparent_dark');
+    script.setAttribute('data-lang',  'en');
+    
+    script.setAttribute('data-loading', 'lazy');
+    
+    script.setAttribute('crossorigin', 'anonymous');
+
+    script.setAttribute('async', '');
+
+    commentContainer.appendChild(script);
+  })();
+</script>
+
+  
+
+
+
+
+  </body>
+</html>

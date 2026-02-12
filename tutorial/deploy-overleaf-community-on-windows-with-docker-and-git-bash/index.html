@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<!--
+  Minimal Mistakes Jekyll Theme 4.27.3 by Michael Rose
+  Copyright 2013-2025 Michael Rose - mademistakes.com | @mmistakes
+  Free for personal and commercial use under the MIT license
+  https://github.com/mmistakes/minimal-mistakes/blob/master/LICENSE
+--><html lang="en-US" class="no-js">
+  <head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta charset="utf-8">
+
+<!-- begin _includes/seo.html --><title>在 Windows 上使用 Docker、Git Bash 和 overleaf-toolkit 部署 Overleaf 社区版 - Better Mistakes</title>
+<meta name="description" content="本教程提供了一份详尽的指南，旨在帮助用户在 Windows 10/11 系统上，通过 Docker Desktop 和 Git Bash 成功部署 Overleaf 社区版。文章重点解决了官方 overleaf-toolkit 脚本在 Windows 环境下因路径不兼容而导致的部署失败问题，并提供了简单有效的脚本修复方案。跟随本教程，您可以轻松搭建一个属于自己的私有 Overleaf 实例，确保数据安全与访问稳定。">
+
+
+  <meta name="author" content="bfmhno3">
+  
+  <meta property="article:author" content="bfmhno3">
+  
+
+
+<meta property="og:type" content="article">
+<meta property="og:locale" content="en_US">
+<meta property="og:site_name" content="Better Mistakes">
+<meta property="og:title" content="在 Windows 上使用 Docker、Git Bash 和 overleaf-toolkit 部署 Overleaf 社区版">
+<meta property="og:url" content="https://bfmhno3.github.io/tutorial/deploy-overleaf-community-on-windows-with-docker-and-git-bash/">
+
+
+  <meta property="og:description" content="本教程提供了一份详尽的指南，旨在帮助用户在 Windows 10/11 系统上，通过 Docker Desktop 和 Git Bash 成功部署 Overleaf 社区版。文章重点解决了官方 overleaf-toolkit 脚本在 Windows 环境下因路径不兼容而导致的部署失败问题，并提供了简单有效的脚本修复方案。跟随本教程，您可以轻松搭建一个属于自己的私有 Overleaf 实例，确保数据安全与访问稳定。">
+
+
+
+  <meta property="og:image" content="https://bfmhno3.github.io/assets/images/avatar.jpg">
+
+
+
+
+
+  <meta property="article:published_time" content="2025-10-18T14:30:00+00:00">
+
+
+
+
+
+  
+
+  
+
+
+<link rel="canonical" href="https://bfmhno3.github.io/tutorial/deploy-overleaf-community-on-windows-with-docker-and-git-bash/">
+
+
+
+
+
+
+
+  <meta name="google-site-verification" content="UUnU8OnGqO_2FFdhrv7eEABM5p_cNPhM4Se6HB1KFSk">
+
+
+  <meta name="msvalidate.01" content="FC3BA97765A3C90F8CA771F70AE34FB8">
+
+
+
+
+
+<!-- end _includes/seo.html -->
+
+
+
+  <link href="/feed.xml" type="application/atom+xml" rel="alternate" title="Better Mistakes Feed">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script>
+  document.documentElement.className = document.documentElement.className.replace(/\bno-js\b/g, '') + ' js ';
+  window.enable_copy_code_button = true;
+</script>
+
+<!-- For all browsers -->
+<link rel="stylesheet" href="/assets/css/main.css">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@latest/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@latest/css/all.min.css"></noscript>
+
+
+
+    <link rel="icon" type="image/png" href="/assets/images/favicon/favicon-96x96.png" sizes="96x96">
+<link rel="icon" type="image/svg+xml" href="/assets/images/favicon/favicon.svg">
+<link rel="shortcut icon" href="/assets/images/favicon/favicon.ico">
+<link rel="apple-touch-icon" sizes="180x180" href="/assets/images/favicon/apple-touch-icon.png">
+<link rel="manifest" href="/assets/images/favicon/site.webmanifest">
+  </head>
+
+  <body class="layout--single" dir="ltr">
+    <nav class="skip-links">
+  <ul>
+    <li><a href="#site-nav" class="screen-reader-shortcut">Skip to primary navigation</a></li>
+    <li><a href="#main" class="screen-reader-shortcut">Skip to content</a></li>
+    <li><a href="#footer" class="screen-reader-shortcut">Skip to footer</a></li>
+  </ul>
+</nav>
+
+    
+
+<div class="masthead">
+  <div class="masthead__inner-wrap">
+    <div class="masthead__menu">
+      <nav id="site-nav" class="greedy-nav">
+        
+          <a class="site-logo" href="/"><img src="/assets/images/logo.svg" alt="Better Mistakes"></a>
+        
+        <a class="site-title" href="/">
+          Better Mistakes
+          <span class="site-subtitle">Trial.Error.Iteration.</span>
+        </a>
+        <ul class="visible-links">
+<li class="masthead__menu-item">
+              <a href="/posts/">Posts</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/categories/">Categories</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/tags/">Tags</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/about/">About</a>
+            </li>
+</ul>
+        
+        <button class="search__toggle" type="button">
+          <span class="visually-hidden">Toggle search</span>
+          <i class="fas fa-search"></i>
+        </button>
+        
+        <button class="greedy-nav__toggle hidden" type="button">
+          <span class="visually-hidden">Toggle menu</span>
+          <div class="navicon"></div>
+        </button>
+        <ul class="hidden-links hidden"></ul>
+      </nav>
+    </div>
+  </div>
+</div>
+
+
+    <div class="initial-content">
+      
+
+
+
+
+
+<div id="main" role="main">
+  
+  <div class="sidebar sticky">
+  
+
+
+<div itemscope itemtype="https://schema.org/Person" class="h-card">
+
+  
+    <div class="author__avatar">
+      <a href="https://bfmhno3.github.io/">
+        <img src="/assets/images/avatar.jpg" alt="bfmhno3" itemprop="image" class="u-photo">
+      </a>
+    </div>
+  
+
+  <div class="author__content">
+    <h3 class="author__name p-name" itemprop="name">
+      <a class="u-url" rel="me" href="https://bfmhno3.github.io/" itemprop="url">bfmhno3</a>
+    </h3>
+    
+      <div class="author__bio p-note" itemprop="description">
+        <p>Third-year university student majoring in energy engineering. Exploring the world of code and mathematics.</p>
+
+      </div>
+    
+  </div>
+
+  <div class="author__urls-wrapper">
+    <button class="btn btn--inverse">Follow</button>
+    <ul class="author__urls social-icons">
+      
+
+      
+        
+          
+            <li><a href="https://github.com/bfmhno3" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fab fa-fw fa-github" aria-hidden="true"></i><span class="label">GitHub</span></a></li>
+          
+        
+          
+            <li><a href="https://gitee.com/bfmhno3" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fa-solid fa-g" aria-hidden="true"></i><span class="label">Gitee</span></a></li>
+          
+        
+          
+            <li><a href="https://www.cnblogs.com/bfmhno3" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fa-solid fa-blog" aria-hidden="true"></i><span class="label">cnblogs</span></a></li>
+          
+        
+          
+            <li><a href="https://blog.csdn.net/B33336" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fa-solid fa-blog" aria-hidden="true"></i><span class="label">CSDN</span></a></li>
+          
+        
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      <!--
+  <li>
+    <a href="http://link-to-whatever-social-network.com/user/" itemprop="sameAs" rel="nofollow noopener noreferrer me">
+      <i class="fas fa-fw" aria-hidden="true"></i> Custom Social Profile Link
+    </a>
+  </li>
+-->
+    </ul>
+  </div>
+</div>
+
+  
+  </div>
+
+
+
+  <article class="page" itemscope itemtype="https://schema.org/CreativeWork">
+    <meta itemprop="headline" content="在 Windows 上使用 Docker、Git Bash 和 overleaf-toolkit 部署 Overleaf 社区版">
+    <meta itemprop="description" content="本教程提供了一份详尽的指南，旨在帮助用户在 Windows 10/11 系统上，通过 Docker Desktop 和 Git Bash 成功部署 Overleaf 社区版。文章重点解决了官方 overleaf-toolkit 脚本在 Windows 环境下因路径不兼容而导致的部署失败问题，并提供了简单有效的脚本修复方案。跟随本教程，您可以轻松搭建一个属于自己的私有 Overleaf 实例，确保数据安全与访问稳定。">
+    <meta itemprop="datePublished" content="2025-10-18T14:30:00+00:00">
+    
+
+    <div class="page__inner-wrap">
+      
+        <header>
+          <h1 id="page-title" class="page__title" itemprop="headline">
+            <a href="https://bfmhno3.github.io/tutorial/deploy-overleaf-community-on-windows-with-docker-and-git-bash/" itemprop="url">在 Windows 上使用 Docker、Git Bash 和 overleaf-toolkit 部署 Overleaf 社区版
+</a>
+          </h1>
+          
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2025-10-18T14:30:00+00:00">October 18, 2025</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-clock" aria-hidden="true"></i>
+        
+          2 minute read
+        
+      </span>
+    
+  </p>
+
+
+        </header>
+      
+
+      <section class="page__content" itemprop="text">
+        
+          <aside class="sidebar__right sticky">
+            <nav class="toc">
+              <header><h4 class="nav__title">
+<i class="fas fa-file-alt"></i> On this page</h4></header>
+              <ul class="toc__menu">
+<li><a href="#0-%E5%89%8D%E8%A8%80">0. 前言</a></li>
+<li><a href="#1-%E7%8E%AF%E5%A2%83%E5%87%86%E5%A4%87">1. 环境准备</a></li>
+<li>
+<a href="#2-%E9%83%A8%E7%BD%B2%E6%AD%A5%E9%AA%A4">2. 部署步骤</a><ul>
+<li><a href="#%E7%AC%AC%E4%B8%80%E6%AD%A5%E5%85%8B%E9%9A%86-overleaf-toolkit-%E4%BB%93%E5%BA%93">第一步：克隆 Overleaf Toolkit 仓库</a></li>
+<li><a href="#%E7%AC%AC%E4%BA%8C%E6%AD%A5%E4%BF%AE%E5%A4%8D-windows-%E8%B7%AF%E5%BE%84%E5%85%BC%E5%AE%B9%E6%80%A7%E9%97%AE%E9%A2%98">第二步：修复 Windows 路径兼容性问题</a></li>
+<li>
+<a href="#%E7%AC%AC%E4%B8%89%E6%AD%A5%E5%88%9D%E5%A7%8B%E5%8C%96%E5%B9%B6%E5%90%AF%E5%8A%A8-overleaf-%E6%9C%8D%E5%8A%A1">第三步：初始化并启动 Overleaf 服务</a><ul>
+<li><a href="#%E5%88%9D%E5%A7%8B%E5%8C%96-overleaf-%E9%85%8D%E7%BD%AE">初始化 Overleaf 配置</a></li>
+<li><a href="#%E5%90%AF%E5%8A%A8-overleaf-%E5%AE%B9%E5%99%A8%E6%9C%8D%E5%8A%A1">启动 Overleaf 容器服务</a></li>
+</ul>
+</li>
+<li><a href="#%E7%AC%AC%E5%9B%9B%E6%AD%A5%E9%A6%96%E6%AC%A1%E8%AE%BF%E9%97%AE%E4%B8%8E%E7%AE%A1%E7%90%86%E5%91%98%E9%85%8D%E7%BD%AE">第四步：首次访问与管理员配置</a></li>
+</ul>
+</li>
+<li><a href="#3-%E6%97%A5%E5%B8%B8%E7%AE%A1%E7%90%86">3. 日常管理</a></li>
+<li><a href="#%E6%80%BB%E7%BB%93">总结</a></li>
+</ul>
+            </nav>
+          </aside>
+        
+        <h2 id="0-前言">0. 前言</h2>
+
+<p><a href="https://www.overleaf.com/">Overleaf</a> 是一个广受欢迎的在线 LaTeX 编辑器，它极大地简化了 LaTeX 的使用门槛。虽然官方提供了在线服务，但是处于数据隐私、网络稳定或自定义需求，我们常常希望搭建一个私有的 Overleaf 实例。Overleaf 官方提供了基于 Docker 的 <code class="language-plaintext highlighter-rouge">toolkit</code> 工具来简化社区版的部署流程。</p>
+
+<p>然而，官方的 <code class="language-plaintext highlighter-rouge">toolkit</code> 主要面向 Linux/macOS 环境，在 Windows 上通过 Git Bash 执行时会遇到一个棘手的路径问题。本教程将详细记录如何在 Windows 11/10 环境下，借助 Docker Desktop 和 Git Bash，成功部署 Overleaf 社区版，并提供关键的脚本修复方案。</p>
+
+<h2 id="1-环境准备">1. 环境准备</h2>
+
+<p>在开始之前，请确保你的系统已安装并正确配置了以下软件：</p>
+
+<ul>
+  <li>Windows 10/11：需开启 Hyper-V 或 WSL 2 功能</li>
+  <li>
+<a href="https://www.docker.com/products/docker-desktop/">Docker Desktop for Windows</a>：建议使用 WSL 2 后端，性能更佳。安装后请确保 Docker 服务已正常启动。</li>
+  <li>
+<a href="https://git-scm.com/downloads/win">Git for Windows</a>: 安装时请务必勾选 <code class="language-plaintext highlighter-rouge">Git Bash Here</code> 选项，我们将使用它来执行 shell 脚本。</li>
+</ul>
+
+<p><strong>笔者环境参考</strong>：</p>
+
+<ul>
+  <li>OS: Windows 11 Professional 24H2</li>
+  <li>Docker: 28.5.1</li>
+  <li>Git: 2.51.0.windows.2</li>
+</ul>
+
+<h2 id="2-部署步骤">2. 部署步骤</h2>
+
+<h3 id="第一步克隆-overleaf-toolkit-仓库">第一步：克隆 Overleaf Toolkit 仓库</h3>
+
+<p>首先，打开 Git Bash，选择一个你喜欢的工作目录（例如 <code class="language-plaintext highlighter-rouge">D:\</code>），然后执行以下命令克隆官方的 <code class="language-plaintext highlighter-rouge">toolkit</code> 仓库：</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 进入 D:\</span>
+<span class="nb">cd</span> /d
+
+<span class="c"># 克隆官方仓库</span>
+git clone https://github.com/overleaf/toolkit.git ./overleaf-toolkit
+<span class="nb">cd</span> ./overleaf-toolkit
+</code></pre></div></div>
+
+<h3 id="第二步修复-windows-路径兼容性问题">第二步：修复 Windows 路径兼容性问题</h3>
+
+<p>这是整个教程最核心的一步。官方的 <code class="language-plaintext highlighter-rouge">docker-compose</code> 脚本在生成容器挂载路径时，没有正确处理 Git Bash 在 Windows 上的路径格式，导致 Docker 无法找到数据卷。</p>
+
+<p>我已就此问题向官方提交了 <a href="https://github.com/overleaf/toolkit/issues/379">Issue #379</a>，并提交了修复方案 <a href="https://github.com/overleaf/toolkit/pull/380">PR #380</a>。</p>
+
+<p>鉴于此 PR 还并未被合并到主分支，需要用户自行进行修改。</p>
+
+<p>解决方案如下：</p>
+
+<p>使用你喜欢的代码编辑器（如 VS Code 或者记事本）打开 <code class="language-plaintext highlighter-rouge">bin/docker-compose</code> 文件。</p>
+
+<p>找到 <code class="language-plaintext highlighter-rouge">set_base_vars()</code> 函数，其中有两次对 <code class="language-plaintext highlighter-rouge">OVERLEAF_IN_CONTAINER_DATA_PATH</code> 变量的赋值。我们需要在路径的开头额外添加一个斜杠 <code class="language-plaintext highlighter-rouge">/</code>。</p>
+
+<p>修改前：</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">OVERLEAF_IN_CONTAINER_DATA_PATH</span><span class="o">=</span>/var/lib/overleaf
+</code></pre></div></div>
+
+<p>修改后：</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">OVERLEAF_IN_CONTAINER_DATA_PATH</span><span class="o">=</span>//var/lib/overleaf
+</code></pre></div></div>
+
+<p>注意：此函数有<strong>两处</strong> <code class="language-plaintext highlighter-rouge">OVERLEAF_IN_CONTAINER_DATA_PATH=/var/lib/overleaf</code>，请务必全部修改。这个修改的本质是帮助 Git Bash/MSYS2 正确地将 POSIX 风格的路径 <code class="language-plaintext highlighter-rouge">/var/lib/overleaf</code> 转换为 Docker 能理解的 Windows 路径。</p>
+
+<h3 id="第三步初始化并启动-overleaf-服务">第三步：初始化并启动 Overleaf 服务</h3>
+
+<p>修改脚本后，我们回到 Git Bash 终端，继续在 <code class="language-plaintext highlighter-rouge">overleaf-toolkit</code> 目录下执行命令。</p>
+
+<h4 id="初始化-overleaf-配置">初始化 Overleaf 配置</h4>
+
+<p>执行 <code class="language-plaintext highlighter-rouge">init</code> 命令，该命令会生成初始化配置文件，例如 <code class="language-plaintext highlighter-rouge">config/overleaf.rc</code>、<code class="language-plaintext highlighter-rouge">config/variables.env</code>、<code class="language-plaintext highlighter-rouge">config/version</code> 等。</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>./bin/init
+</code></pre></div></div>
+
+<h4 id="启动-overleaf-容器服务">启动 Overleaf 容器服务</h4>
+
+<p>初始化完成后，执行 <code class="language-plaintext highlighter-rouge">up</code> 命令来启动所有服务。</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>./bin/up
+</code></pre></div></div>
+
+<p>提示：首次执行时，由于需要下载多个 Docker 镜像，此过程可能会持续较长时间，具体取决于你的网络速度。请耐心等待，确保所有镜像都成功拉取。</p>
+
+<p>执行成功后，你将看到大量的服务日志输出。</p>
+
+<h3 id="第四步首次访问与管理员配置">第四步：首次访问与管理员配置</h3>
+
+<p>服务启动后，打开你的浏览器，访问 <code class="language-plaintext highlighter-rouge">http://127.0.0.1</code>。</p>
+
+<p>首次访问时，你会被引导至管理员账户创建页面。请根据提示设置你的第一个管理员用户的邮箱和密码。创建成功后，你就可以使用这个账户登录并开始使用你的私有 Overleaf 实例了！</p>
+
+<h2 id="3-日常管理">3. 日常管理</h2>
+
+<p>在日常使用中，你可能会需要启动或停止 Overleaf 服务。</p>
+
+<ul>
+  <li>停止服务：在 <code class="language-plaintext highlighter-rouge">overleaf-toolkit</code> 目录下打开 Git Bash，执行：</li>
+</ul>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>./bin/stop
+</code></pre></div></div>
+
+<ul>
+  <li>重新启动服务：同样，在 <code class="language-plaintext highlighter-rouge">overleaf-toolkit</code> 目录下执行：</li>
+</ul>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>./bin/up
+</code></pre></div></div>
+
+<h2 id="总结">总结</h2>
+
+<p>通过对 <code class="language-plaintext highlighter-rouge">bin/docker-compose</code> 脚本进行一个小小的修改，我们成功解决了 <code class="language-plaintext highlighter-rouge">overleaf-toolkit</code> 在 Windows + Git Bash 环境下的路径兼容性问题，顺利地部署了 Overleaf 社区版。自托管 Overleaf 不仅保障了数据安全，还提供了更自由的定制空间。</p>
+
+<p>希望这篇教程能帮助到同样遇到此问题的同学。</p>
+
+        
+      </section>
+
+      <footer class="page__meta">
+        
+        
+  
+
+
+  
+
+  <p class="page__taxonomy">
+    <strong><i class="fas fa-fw fa-tags" aria-hidden="true"></i> Tags: </strong>
+    <span itemprop="keywords">
+    
+      <a href="/tags/docker" class="page__taxonomy-item p-category" rel="tag">Docker</a><span class="sep">, </span>
+    
+      <a href="/tags/git-bash" class="page__taxonomy-item p-category" rel="tag">Git Bash</a><span class="sep">, </span>
+    
+      <a href="/tags/overleaf" class="page__taxonomy-item p-category" rel="tag">Overleaf</a><span class="sep">, </span>
+    
+      <a href="/tags/windows" class="page__taxonomy-item p-category" rel="tag">Windows</a>
+    
+    </span>
+  </p>
+
+
+
+
+  
+
+
+  
+
+  <p class="page__taxonomy">
+    <strong><i class="fas fa-fw fa-folder-open" aria-hidden="true"></i> Categories: </strong>
+    <span itemprop="keywords">
+    
+      <a href="/categories/tutorial" class="page__taxonomy-item p-category" rel="tag">Tutorial</a>
+    
+    </span>
+  </p>
+
+
+        
+
+  <p class="page__date"><strong><i class="fas fa-fw fa-calendar-alt" aria-hidden="true"></i> Updated:</strong> <time class="dt-published" datetime="2025-10-18T14:30:00+00:00">October 18, 2025</time></p>
+
+      </footer>
+
+      <section class="page__share">
+  <h4 class="page__share-title">Share on</h4>
+
+  <a href="https://x.com/intent/tweet?text=%E5%9C%A8+Windows+%E4%B8%8A%E4%BD%BF%E7%94%A8+Docker%E3%80%81Git+Bash+%E5%92%8C+overleaf-toolkit+%E9%83%A8%E7%BD%B2+Overleaf+%E7%A4%BE%E5%8C%BA%E7%89%88%20https%3A%2F%2Fbfmhno3.github.io%2Ftutorial%2Fdeploy-overleaf-community-on-windows-with-docker-and-git-bash%2F" class="btn btn--x" aria-label="Share on X" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on X">
+    <i class="fab fa-fw fa-x-twitter" aria-hidden="true"></i><span> X</span>
+  </a>
+
+  <a href="https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fbfmhno3.github.io%2Ftutorial%2Fdeploy-overleaf-community-on-windows-with-docker-and-git-bash%2F" class="btn btn--facebook" aria-label="Share on Facebook" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on Facebook">
+    <i class="fab fa-fw fa-facebook" aria-hidden="true"></i><span> Facebook</span>
+  </a>
+
+  <a href="https://www.linkedin.com/shareArticle?mini=true&url=https://bfmhno3.github.io/tutorial/deploy-overleaf-community-on-windows-with-docker-and-git-bash/" class="btn btn--linkedin" aria-label="Share on LinkedIn" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on LinkedIn">
+    <i class="fab fa-fw fa-linkedin" aria-hidden="true"></i><span> LinkedIn</span>
+  </a>
+
+  <a href="https://bsky.app/intent/compose?text=%E5%9C%A8+Windows+%E4%B8%8A%E4%BD%BF%E7%94%A8+Docker%E3%80%81Git+Bash+%E5%92%8C+overleaf-toolkit+%E9%83%A8%E7%BD%B2+Overleaf+%E7%A4%BE%E5%8C%BA%E7%89%88%20https%3A%2F%2Fbfmhno3.github.io%2Ftutorial%2Fdeploy-overleaf-community-on-windows-with-docker-and-git-bash%2F" class="btn btn--bluesky" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on Bluesky">
+    <i class="fab fa-fw fa-bluesky" aria-hidden="true"></i><span> Bluesky</span>
+  </a>
+</section>
+
+
+      
+  <nav class="pagination">
+    
+      <a href="/note/notes-of-effective-cmake/" class="pagination--pager" title="Notes of Effective CMake">Previous</a>
+    
+    
+      <a href="/tutorial/xiaomi-debloat-guide/" class="pagination--pager" title="小米手机 (HyperOS/MIUI) 深度优化指南：移除 AI 组件与去广告">Next</a>
+    
+  </nav>
+
+
+    </div>
+
+    
+      
+        <div class="page__comments">
+  
+  
+      <h4 class="page__comments-title">Comments</h4>
+      <section id="giscus-comments"></section>
+    
+</div>
+
+      
+    
+  </article>
+
+  
+  
+    
+<div class="page__related">
+  
+  <h2 class="page__related-title">You May Also Enjoy</h2>
+  <div class="grid__wrapper">
+    
+      
+      
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc" itemprop="headline">
+      
+        <a href="/note/process-in-os/" rel="permalink">操作系统中的进程
+</a>
+      
+    </h2>
+    
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-01-26T22:10:00+00:00">January 26, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          4 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt" itemprop="description">教科书对于进程常定义通常极为简洁凝练，但其诞生是为了解决什么问题？本文通过回顾从 ENIAC 到分时系统的演进历史，探讨进程是如何为了填补人、I/O 与 CPU 之间的速度鸿沟而进化出来的。
+</p>
+  </article>
+</div>
+
+    
+      
+      
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc" itemprop="headline">
+      
+        <a href="/note/initialization-in-cpp/" rel="permalink">C++ 中的初始化列表和列表初始化
+</a>
+      
+    </h2>
+    
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-01-03T15:07:00+00:00">January 3, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          6 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt" itemprop="description">深入理解 C++ 中初始化列表与列表初始化的区别：前者解决对象生命周期与内存模型问题，后者统一初始化语法并提供类型安全保障。
+</p>
+  </article>
+</div>
+
+    
+      
+      
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc" itemprop="headline">
+      
+        <a href="/note/list-in-cpp/" rel="permalink">C++ 中的 list
+</a>
+      
+    </h2>
+    
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-01-03T13:05:00+00:00">January 3, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          2 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt" itemprop="description">深入理解 C++ 中的 std::list 双向链表容器，探讨其底层原理、独有优势（如头部操作、接合等）、迭代器特性，以及与 std::vector 的选择权衡。
+</p>
+  </article>
+</div>
+
+    
+      
+      
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc" itemprop="headline">
+      
+        <a href="/note/constructor-in-cpp/" rel="permalink">C++ 中的构造函数
+</a>
+      
+    </h2>
+    
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-01-03T13:05:00+00:00">January 3, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          5 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt" itemprop="description">深入理解 C++ 构造函数的本质：从资源管理到性能优化。涵盖默认构造、拷贝构造、移动构造，以及 RAII、explicit、constexpr 等关键机制。
+</p>
+  </article>
+</div>
+
+    
+  </div>
+</div>
+
+  
+  
+</div>
+
+      
+    </div>
+
+    
+      <div class="search-content">
+        <div class="search-content__inner-wrap">
+<form class="search-content__form" onkeydown="return event.key != 'Enter';" role="search">
+    <label class="sr-only" for="search">
+      Enter your search term...
+    </label>
+    <input type="search" id="search" class="search-input" tabindex="-1" placeholder="Enter your search term...">
+  </form>
+  <div id="results" class="results"></div>
+</div>
+
+      </div>
+    
+
+    <div id="footer" class="page__footer">
+      <footer>
+        <!-- start custom footer snippets -->
+
+<!-- end custom footer snippets -->
+        
+
+<div class="page__footer-follow">
+  <ul class="social-icons">
+    
+
+    
+      
+        
+          <li><a href="https://github.com/bfmhno3" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-github" aria-hidden="true"></i> GitHub</a></li>
+        
+      
+        
+          <li><a href="https://gitee.com/bfmhno3" rel="nofollow noopener noreferrer"><i class="fa-solid fa-g" aria-hidden="true"></i> Gitee</a></li>
+        
+      
+        
+          <li><a href="https://www.cnblogs.com/bfmhno3" rel="nofollow noopener noreferrer"><i class="fa-solid fa-blog" aria-hidden="true"></i> cnblogs</a></li>
+        
+      
+        
+          <li><a href="https://blog.csdn.net/B33336" rel="nofollow noopener noreferrer"><i class="fa-solid fa-blog" aria-hidden="true"></i> CSDN</a></li>
+        
+      
+    
+
+    
+      <li><a href="/feed.xml"><i class="fas fa-fw fa-rss-square" aria-hidden="true"></i> Feed</a></li>
+    
+  </ul>
+</div>
+
+
+<div class="page__footer-copyright">© 2026 <a href="https://bfmhno3.github.io">Better Mistakes</a>. Powered by <a href="https://jekyllrb.com" rel="nofollow">Jekyll</a> &amp; <a href="https://mademistakes.com/work/jekyll-themes/minimal-mistakes/" rel="nofollow">Minimal Mistakes</a>.</div>
+
+      </footer>
+    </div>
+
+    
+  <script src="/assets/js/main.min.js"></script>
+
+
+
+
+<script src="/assets/js/lunr/lunr.min.js"></script>
+<script src="/assets/js/lunr/lunr-store.js"></script>
+<script src="/assets/js/lunr/lunr-en.js"></script>
+
+
+
+
+  <!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-VS5B3CR1M6"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-VS5B3CR1M6', { 'anonymize_ip': false});
+</script>
+
+
+
+
+
+
+    <script>
+  'use strict';
+
+  (function () {
+    var commentContainer = document.querySelector('#giscus-comments');
+
+    if (!commentContainer) {
+      return;
+    }
+
+    var script = document.createElement('script');
+
+    script.setAttribute('src', 'https://giscus.app/client.js');
+    script.setAttribute('data-repo', 'bfmhno3/bfmhno3.github.io');
+    script.setAttribute('data-repo-id', 'R_kgDOQCQGxg');
+    script.setAttribute('data-category', 'General');
+    script.setAttribute('data-category-id', 'DIC_kwDOQCQGxs4CzG3a');
+    script.setAttribute('data-mapping', 'pathname');
+    script.setAttribute('data-strict', '0');
+    script.setAttribute('data-reactions-enabled', '1');
+    script.setAttribute('data-emit-metadata', '0');
+    script.setAttribute('data-input-position', 'bottom');
+    script.setAttribute('data-theme', 'transparent_dark');
+    script.setAttribute('data-lang',  'en');
+    
+    script.setAttribute('data-loading', 'lazy');
+    
+    script.setAttribute('crossorigin', 'anonymous');
+
+    script.setAttribute('async', '');
+
+    commentContainer.appendChild(script);
+  })();
+</script>
+
+  
+
+
+
+
+  </body>
+</html>

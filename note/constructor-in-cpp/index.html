@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<!--
+  Minimal Mistakes Jekyll Theme 4.27.3 by Michael Rose
+  Copyright 2013-2025 Michael Rose - mademistakes.com | @mmistakes
+  Free for personal and commercial use under the MIT license
+  https://github.com/mmistakes/minimal-mistakes/blob/master/LICENSE
+--><html lang="en-US" class="no-js">
+  <head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta charset="utf-8">
+
+<!-- begin _includes/seo.html --><title>C++ 中的构造函数 - Better Mistakes</title>
+<meta name="description" content="深入理解 C++ 构造函数的本质：从资源管理到性能优化。涵盖默认构造、拷贝构造、移动构造，以及 RAII、explicit、constexpr 等关键机制。">
+
+
+  <meta name="author" content="bfmhno3">
+  
+  <meta property="article:author" content="bfmhno3">
+  
+
+
+<meta property="og:type" content="article">
+<meta property="og:locale" content="en_US">
+<meta property="og:site_name" content="Better Mistakes">
+<meta property="og:title" content="C++ 中的构造函数">
+<meta property="og:url" content="https://bfmhno3.github.io/note/constructor-in-cpp/">
+
+
+  <meta property="og:description" content="深入理解 C++ 构造函数的本质：从资源管理到性能优化。涵盖默认构造、拷贝构造、移动构造，以及 RAII、explicit、constexpr 等关键机制。">
+
+
+
+  <meta property="og:image" content="https://bfmhno3.github.io/assets/images/avatar.jpg">
+
+
+
+
+
+  <meta property="article:published_time" content="2026-01-03T13:05:00+00:00">
+
+
+
+
+
+  
+
+  
+
+
+<link rel="canonical" href="https://bfmhno3.github.io/note/constructor-in-cpp/">
+
+
+
+
+
+
+
+  <meta name="google-site-verification" content="UUnU8OnGqO_2FFdhrv7eEABM5p_cNPhM4Se6HB1KFSk">
+
+
+  <meta name="msvalidate.01" content="FC3BA97765A3C90F8CA771F70AE34FB8">
+
+
+
+
+
+<!-- end _includes/seo.html -->
+
+
+
+  <link href="/feed.xml" type="application/atom+xml" rel="alternate" title="Better Mistakes Feed">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script>
+  document.documentElement.className = document.documentElement.className.replace(/\bno-js\b/g, '') + ' js ';
+  window.enable_copy_code_button = true;
+</script>
+
+<!-- For all browsers -->
+<link rel="stylesheet" href="/assets/css/main.css">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@latest/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@latest/css/all.min.css"></noscript>
+
+
+
+    <link rel="icon" type="image/png" href="/assets/images/favicon/favicon-96x96.png" sizes="96x96">
+<link rel="icon" type="image/svg+xml" href="/assets/images/favicon/favicon.svg">
+<link rel="shortcut icon" href="/assets/images/favicon/favicon.ico">
+<link rel="apple-touch-icon" sizes="180x180" href="/assets/images/favicon/apple-touch-icon.png">
+<link rel="manifest" href="/assets/images/favicon/site.webmanifest">
+  </head>
+
+  <body class="layout--single" dir="ltr">
+    <nav class="skip-links">
+  <ul>
+    <li><a href="#site-nav" class="screen-reader-shortcut">Skip to primary navigation</a></li>
+    <li><a href="#main" class="screen-reader-shortcut">Skip to content</a></li>
+    <li><a href="#footer" class="screen-reader-shortcut">Skip to footer</a></li>
+  </ul>
+</nav>
+
+    
+
+<div class="masthead">
+  <div class="masthead__inner-wrap">
+    <div class="masthead__menu">
+      <nav id="site-nav" class="greedy-nav">
+        
+          <a class="site-logo" href="/"><img src="/assets/images/logo.svg" alt="Better Mistakes"></a>
+        
+        <a class="site-title" href="/">
+          Better Mistakes
+          <span class="site-subtitle">Trial.Error.Iteration.</span>
+        </a>
+        <ul class="visible-links">
+<li class="masthead__menu-item">
+              <a href="/posts/">Posts</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/categories/">Categories</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/tags/">Tags</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/about/">About</a>
+            </li>
+</ul>
+        
+        <button class="search__toggle" type="button">
+          <span class="visually-hidden">Toggle search</span>
+          <i class="fas fa-search"></i>
+        </button>
+        
+        <button class="greedy-nav__toggle hidden" type="button">
+          <span class="visually-hidden">Toggle menu</span>
+          <div class="navicon"></div>
+        </button>
+        <ul class="hidden-links hidden"></ul>
+      </nav>
+    </div>
+  </div>
+</div>
+
+
+    <div class="initial-content">
+      
+
+
+
+
+
+<div id="main" role="main">
+  
+  <div class="sidebar sticky">
+  
+
+
+<div itemscope itemtype="https://schema.org/Person" class="h-card">
+
+  
+    <div class="author__avatar">
+      <a href="https://bfmhno3.github.io/">
+        <img src="/assets/images/avatar.jpg" alt="bfmhno3" itemprop="image" class="u-photo">
+      </a>
+    </div>
+  
+
+  <div class="author__content">
+    <h3 class="author__name p-name" itemprop="name">
+      <a class="u-url" rel="me" href="https://bfmhno3.github.io/" itemprop="url">bfmhno3</a>
+    </h3>
+    
+      <div class="author__bio p-note" itemprop="description">
+        <p>Third-year university student majoring in energy engineering. Exploring the world of code and mathematics.</p>
+
+      </div>
+    
+  </div>
+
+  <div class="author__urls-wrapper">
+    <button class="btn btn--inverse">Follow</button>
+    <ul class="author__urls social-icons">
+      
+
+      
+        
+          
+            <li><a href="https://github.com/bfmhno3" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fab fa-fw fa-github" aria-hidden="true"></i><span class="label">GitHub</span></a></li>
+          
+        
+          
+            <li><a href="https://gitee.com/bfmhno3" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fa-solid fa-g" aria-hidden="true"></i><span class="label">Gitee</span></a></li>
+          
+        
+          
+            <li><a href="https://www.cnblogs.com/bfmhno3" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fa-solid fa-blog" aria-hidden="true"></i><span class="label">cnblogs</span></a></li>
+          
+        
+          
+            <li><a href="https://blog.csdn.net/B33336" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fa-solid fa-blog" aria-hidden="true"></i><span class="label">CSDN</span></a></li>
+          
+        
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      <!--
+  <li>
+    <a href="http://link-to-whatever-social-network.com/user/" itemprop="sameAs" rel="nofollow noopener noreferrer me">
+      <i class="fas fa-fw" aria-hidden="true"></i> Custom Social Profile Link
+    </a>
+  </li>
+-->
+    </ul>
+  </div>
+</div>
+
+  
+  </div>
+
+
+
+  <article class="page" itemscope itemtype="https://schema.org/CreativeWork">
+    <meta itemprop="headline" content="C++ 中的构造函数">
+    <meta itemprop="description" content="深入理解 C++ 构造函数的本质：从资源管理到性能优化。涵盖默认构造、拷贝构造、移动构造，以及 RAII、explicit、constexpr 等关键机制。">
+    <meta itemprop="datePublished" content="2026-01-03T13:05:00+00:00">
+    
+
+    <div class="page__inner-wrap">
+      
+        <header>
+          <h1 id="page-title" class="page__title" itemprop="headline">
+            <a href="https://bfmhno3.github.io/note/constructor-in-cpp/" itemprop="url">C++ 中的构造函数
+</a>
+          </h1>
+          
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-01-03T13:05:00+00:00">January 3, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-clock" aria-hidden="true"></i>
+        
+          4 minute read
+        
+      </span>
+    
+  </p>
+
+
+        </header>
+      
+
+      <section class="page__content" itemprop="text">
+        
+          <aside class="sidebar__right sticky">
+            <nav class="toc">
+              <header><h4 class="nav__title">
+<i class="fas fa-file-alt"></i> On this page</h4></header>
+              <ul class="toc__menu">
+<li><a href="#%E6%A0%B8%E5%BF%83%E9%80%BB%E8%BE%91">核心逻辑</a></li>
+<li>
+<a href="#%E6%9E%84%E9%80%A0%E5%87%BD%E6%95%B0%E7%9A%84%E6%89%A7%E8%A1%8C%E6%B5%81">构造函数的执行流</a><ul><li><a href="#%E4%B8%BA%E4%BB%80%E4%B9%88%E9%A6%96%E9%80%89%E5%88%9D%E5%A7%8B%E5%8C%96%E5%88%97%E8%A1%A8">为什么首选初始化列表？</a></li></ul>
+</li>
+<li>
+<a href="#%E6%9E%84%E9%80%A0%E5%87%BD%E6%95%B0%E7%9A%84%E5%88%86%E7%B1%BB">构造函数的分类</a><ul>
+<li><a href="#%E9%BB%98%E8%AE%A4%E6%9E%84%E9%80%A0%E5%87%BD%E6%95%B0default-constructor">默认构造函数（Default Constructor）</a></li>
+<li><a href="#%E5%8F%82%E6%95%B0%E5%8C%96%E6%9E%84%E9%80%A0%E5%87%BD%E6%95%B0parameterized-constructor">参数化构造函数（Parameterized Constructor）</a></li>
+<li><a href="#%E6%8B%B7%E8%B4%9D%E6%9E%84%E9%80%A0%E5%87%BD%E6%95%B0copy-constructor">拷贝构造函数（Copy Constructor）</a></li>
+<li><a href="#%E7%A7%BB%E5%8A%A8%E6%9E%84%E9%80%A0%E5%87%BD%E6%95%B0move-constructor">移动构造函数（Move Constructor）</a></li>
+</ul>
+</li>
+<li>
+<a href="#%E5%85%B3%E9%94%AE%E6%9C%BA%E5%88%B6%E4%B8%8E%E9%99%B7%E9%98%B1">关键机制与陷阱</a><ul>
+<li><a href="#explicit-%E5%85%B3%E9%94%AE%E5%AD%97%E6%8B%92%E7%BB%9D%E9%9A%90%E5%BC%8F%E8%BD%AC%E6%8D%A2">explicit 关键字：拒绝隐式转换</a></li>
+<li><a href="#%E5%A7%94%E6%89%98%E6%9E%84%E9%80%A0delegating-constructors">委托构造（Delegating Constructors）</a></li>
+<li><a href="#%E6%9E%84%E9%80%A0%E4%B8%8E%E8%99%9A%E5%87%BD%E6%95%B0">构造与虚函数</a></li>
+</ul>
+</li>
+<li><a href="#raii-%E4%B8%8E%E6%9E%84%E9%80%A0%E5%87%BD%E6%95%B0">RAII 与构造函数</a></li>
+<li>
+<a href="#%E7%9B%B8%E5%85%B3%E5%85%B3%E9%94%AE%E5%AD%97">相关关键字</a><ul>
+<li>
+<a href="#%E6%8E%A7%E5%88%B6%E7%BC%96%E8%AF%91%E5%99%A8%E8%A1%8C%E4%B8%BA">控制编译器行为</a><ul>
+<li><a href="#-default">= default</a></li>
+<li><a href="#-deletec11">= delete（C++11）</a></li>
+<li><a href="#using%E7%BB%A7%E6%89%BF%E6%9E%84%E9%80%A0%E5%87%BD%E6%95%B0">using（继承构造函数）</a></li>
+</ul>
+</li>
+<li>
+<a href="#%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96">性能优化</a><ul>
+<li><a href="#noexcept">noexcept</a></li>
+<li><a href="#constexprc1114">constexpr（C++11/14）</a></li>
+</ul>
+</li>
+<li>
+<a href="#%E9%80%BB%E8%BE%91%E6%8E%A7%E5%88%B6%E4%B8%8E%E5%BC%82%E5%B8%B8%E5%A4%84%E7%90%86">逻辑控制与异常处理</a><ul>
+<li><a href="#explicit">explicit</a></li>
+<li><a href="#tryfunction-try-block">try（Function-try block）</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+            </nav>
+          </aside>
+        
+        <p>对于 C++ 对象而言，我们认为：对象 = 内存 + 语义（不变量）。</p>
+
+<ul>
+  <li>内存：仅仅是电子与硅晶体中状态未知的比特位。</li>
+  <li>
+<strong>语义</strong>：这段内存代表什么含义（是 <code class="language-plaintext highlighter-rouge">int</code>、是 <code class="language-plaintext highlighter-rouge">char</code> 还是 <code class="language-plaintext highlighter-rouge">float</code>），以及它必须满足的条件（“不变量”，Invariant）。</li>
+</ul>
+
+<p><strong>构造函数</strong>（<em>Constructor</em>）的本质就是将 “原始、混沌” 的内存强制转换为 “持有特定语义的、合法的对象” 的原子操作过程。</p>
+
+<h2 id="核心逻辑">核心逻辑</h2>
+
+<p>在 C 语言中，创建一个 <code class="language-plaintext highlighter-rouge">struct</code> 通常分为两步：</p>
+
+<ol>
+  <li>分配内存（<code class="language-plaintext highlighter-rouge">malloc</code> 或栈上声明）</li>
+  <li>赋值（<code class="language-plaintext highlighter-rouge">init</code> 函数或手动赋值）</li>
+</ol>
+
+<p>问题在于：如果在第 1 步和第 2 步之间使用该对象，就会导致灾难（未定义行为）。或者，如果使用者忘记了第 2 步，系统就会处于 “非法状态”。</p>
+
+<p>C++ 引入构造函数就是为了保证：</p>
+
+<blockquote>
+  <p>如果一个对象存在，那么它一定是合法的。</p>
+</blockquote>
+
+<p>构造函数保证了<strong>初始化</strong>（<em>Initialization</em>）与<strong>定义</strong>（<em>Defination</em>）的不可分割性。</p>
+
+<h2 id="构造函数的执行流">构造函数的执行流</h2>
+
+<p>当你写下 <code class="language-plaintext highlighter-rouge">T object(args);</code> 时，编译器实际执行了以下步骤：</p>
+
+<ol>
+  <li>
+<strong>分配内存</strong>：在栈或堆上找到一块足够容纳 <code class="language-plaintext highlighter-rouge">sizeof(T)</code> 的空间。此时，内存里的数据是随机的（Garbage）。</li>
+  <li>
+<strong>执行初始化列表</strong>（Initialization List）：这是真正的初始化时刻。</li>
+  <li>
+<strong>执行函数体</strong>（Function Body）：这实际上是后续的计算或赋值操作，而非初始化。</li>
+</ol>
+
+<h3 id="为什么首选初始化列表">为什么首选初始化列表？</h3>
+
+<p>因为 C++ 规定成员变量在进入构造函数体 <code class="language-plaintext highlighter-rouge">{}</code> 之前必须完成构建。</p>
+
+<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">Class</span><span class="p">()</span> <span class="o">:</span> <span class="n">member</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="p">{}</span> <span class="c1">// 直接在内存位置上构造 member</span>
+</code></pre></div></div>
+
+<p>使用初始化列表的成本仅为 1 次构造。</p>
+
+<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">Class</span><span class="p">()</span> <span class="p">{</span> <span class="n">member</span> <span class="o">=</span> <span class="n">value</span><span class="p">;</span> <span class="p">}</span>
+</code></pre></div></div>
+
+<p>过程：</p>
+
+<ol>
+  <li>调用 <code class="language-plaintext highlighter-rouge">member</code> 的默认构造函数（无参）。</li>
+  <li>调用 <code class="language-plaintext highlighter-rouge">member</code> 的赋值运算符 <code class="language-plaintext highlighter-rouge">operator=</code>。</li>
+</ol>
+
+<p>在这个过程中的成本为：1 次构造 + 1 次赋值（还可能设计旧内存释放和新内存申请）。</p>
+
+<blockquote>
+  <p>初始化列表不仅是效率优化，对于 <code class="language-plaintext highlighter-rouge">const</code> 成员或 <code class="language-plaintext highlighter-rouge">reference</code>（引用）成员，它是<strong>唯一</strong>的初始化方式，因为它们创建后不可修改（不可赋值）。</p>
+</blockquote>
+
+<h2 id="构造函数的分类">构造函数的分类</h2>
+
+<p>根据对象资源管理的不同需求，构造函数演化出了四种主要形态。我们将用<strong>资源所有权</strong>的视角来区分它们。</p>
+
+<h3 id="默认构造函数default-constructor">默认构造函数（Default Constructor）</h3>
+
+<ul>
+  <li>语义：无中生有</li>
+  <li>形式：<code class="language-plaintext highlighter-rouge">T()</code>
+</li>
+  <li>视角：当对象被创建但外界未提供任何信息时，对象应处于什么状态？通常是 “空状态” 或 “零状态”</li>
+  <li>注意：如果类中包含原始指针，编译器生成的默认构造函数不会置空指针（由于 C 的遗留包袱），这会导致悬垂指针。因此现代 C++ 提倡显式定义或使用成员默认初始化（<code class="language-plaintext highlighter-rouge">int* p = nullptr;</code>）</li>
+</ul>
+
+<h3 id="参数化构造函数parameterized-constructor">参数化构造函数（Parameterized Constructor）</h3>
+
+<ul>
+  <li>语义：根据蓝图定制</li>
+  <li>形式：<code class="language-plaintext highlighter-rouge">T(args...)</code>
+</li>
+  <li>视角：将外部数据约束映射到内部不变量。例如，创建 “圆” 对象，参数是半径。构造函数必须检查 <code class="language-plaintext highlighter-rouge">radius &gt; 0</code>，这就是维护 “不变量”</li>
+</ul>
+
+<h3 id="拷贝构造函数copy-constructor">拷贝构造函数（Copy Constructor）</h3>
+
+<ul>
+  <li>语义：复制（细胞分裂、克隆）</li>
+  <li>形式：<code class="language-plaintext highlighter-rouge">T(const T&amp; other)</code>
+</li>
+  <li>视角：
+    <ul>
+      <li>如果对象时<strong>值语义</strong>（如整数、坐标），直接按位拷贝（Shallow Copy）</li>
+      <li>如果对象持有<strong>资源</strong>（如堆内存指针、文件句柄），必须进行<strong>深拷贝</strong>（<em>Deep Copy</em>）</li>
+      <li>本质矛盾：如果只复制指针，两个对象指向同一块内存，析构时会发生 “Double Free” 错误。因此拷贝构造函数必须重新分配资源。</li>
+    </ul>
+  </li>
+</ul>
+
+<h3 id="移动构造函数move-constructor">移动构造函数（Move Constructor）</h3>
+
+<p>移动构造函数是 C++11 提出的革命性进步。</p>
+
+<ul>
+  <li>语义：所有权转移（器官移植）</li>
+  <li>形式：<code class="language-plaintext highlighter-rouge">T(T&amp;&amp; other)</code>
+</li>
+  <li>视角：
+    <ul>
+      <li>在 C++98 中，如果要将一个临时对象（即将销毁）放入容器，比如先复制再销毁。这极度浪费性能（如复制一个巨大的 <code class="language-plaintext highlighter-rouge">std::vector</code>）</li>
+      <li>移动构造函数利用<strong>右值引用</strong>（<code class="language-plaintext highlighter-rouge">&amp;&amp;</code>），识别出 <code class="language-plaintext highlighter-rouge">other</code> 是一个即将消亡的对象。</li>
+      <li>它<strong>偷走</strong> <code class="language-plaintext highlighter-rouge">other</code> 的资源（指针指向新主，旧指针置空），而非复制数据</li>
+      <li>代价：极低（仅是指针赋值）</li>
+    </ul>
+  </li>
+</ul>
+
+<h2 id="关键机制与陷阱">关键机制与陷阱</h2>
+
+<h3 id="explicit-关键字拒绝隐式转换">
+<code class="language-plaintext highlighter-rouge">explicit</code> 关键字：拒绝隐式转换</h3>
+
+<p>C++ 默认允许单参数构造函数进行隐式类型转换。</p>
+
+<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">struct</span> <span class="nc">Buffer</span> <span class="p">{</span> <span class="n">Buffer</span><span class="p">(</span><span class="kt">int</span> <span class="n">size</span><span class="p">)</span> <span class="p">{</span> <span class="p">...</span> <span class="p">}</span> <span class="p">};</span>
+<span class="kt">void</span> <span class="n">func</span><span class="p">(</span><span class="n">Buffer</span> <span class="n">b</span><span class="p">);</span>
+
+<span class="n">func</span><span class="p">(</span><span class="mi">42</span><span class="p">)</span><span class="err">；</span> <span class="c1">// 编译器偷偷执行了 Buffer(42)，可能并不是你想要的</span>
+</code></pre></div></div>
+
+<p>从安全角度（Safety First）出发，隐式类型转换破坏了强类型系统。标记 <code class="language-plaintext highlighter-rouge">explicit</code> 禁止这种 “自作聪明” 的行为，强制显式调用。</p>
+
+<h3 id="委托构造delegating-constructors">委托构造（Delegating Constructors）</h3>
+
+<p>允许一个构造函数调用同类的另一个构造函数。这是为了准许 <strong>DRY</strong>（<em>Don’t Repeat Yourself</em>）原则，防止初始化逻辑碎片化。</p>
+
+<h3 id="构造与虚函数">构造与虚函数</h3>
+
+<p><strong>永远不要在构造函数中调用虚函数</strong>。</p>
+
+<ul>
+  <li>原理：在基类构造期间，派生类的部分尚未初始化。为了安全，C++ 此时将对象视为基类类型。虚函数表（<code class="language-plaintext highlighter-rouge">vtalbe</code>）指针指向基类表，多态失效。</li>
+</ul>
+
+<h2 id="raii-与构造函数">RAII 与构造函数</h2>
+
+<p>将上述所有内容串联起来的概念就是 RAII（<em>Resource Acquisition Is Initialization</em>），这是 C++ 的灵魂。</p>
+
+<ul>
+  <li>
+<strong>资源获取即初始化</strong>：资源的生命周期严格绑定对象的生命周期</li>
+  <li>
+<strong>构造函数</strong>：资源的获取点（锁住互斥量、打开文件、分配内存）</li>
+  <li>
+<strong>析构函数</strong>：资源的释放点（解锁、关闭、释放）</li>
+</ul>
+
+<p>C++ 的构造函数不仅仅是用来 “赋值” 的函数，它是类型系统安全性的守门人，是资源管理自动化的起点。</p>
+
+<p>掌握构造函数，不仅仅是记住语法，而是要时刻思考：</p>
+
+<blockquote>
+  <p>这个对象诞生的一瞬间，我如何保证它拥有了所需的资源，且处于绝对合法的状态？</p>
+</blockquote>
+
+<h2 id="相关关键字">相关关键字</h2>
+
+<h3 id="控制编译器行为">控制编译器行为</h3>
+
+<p>C++ 编译器通常会 “自作聪明” 地为你生成默认构造、拷贝构造等。以下关键字则可以用于<strong>精确控制</strong>这种自动行为。</p>
+
+<h4 id="-default"><code class="language-plaintext highlighter-rouge">= default</code></h4>
+
+<ul>
+  <li>语义：出厂设置</li>
+</ul>
+
+<p>当你手写了一个参数化构造函数 <code class="language-plaintext highlighter-rouge">T(int a)</code> 后，编译器认为你是一个有主见的人，于是不再自动生成无参的默认构造函数 <code class="language-plaintext highlighter-rouge">T()</code>。如果此时你又想要那个 “空” 的默认构造函数，不需要再手写个空函数体 <code class="language-plaintext highlighter-rouge">{}</code>（这会导致它变成 “用户提供的”，从而失去某些 trivial/POD 特性），直接用 <code class="language-plaintext highlighter-rouge">= default</code> 让编译器恢复它的默认生成逻辑。</p>
+
+<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">struct</span> <span class="nc">Example</span> <span class="p">{</span>
+    <span class="n">Example</span><span class="p">(</span><span class="kt">int</span> <span class="n">a</span><span class="p">);</span>         <span class="c1">// 自定义构造</span>
+    <span class="n">Example</span><span class="p">()</span> <span class="o">=</span> <span class="k">default</span><span class="p">;</span>    <span class="c1">// 强制找回默认构造，且比手写 {} 更高效</span>
+<span class="p">};</span>
+</code></pre></div></div>
+
+<h4 id="-deletec11">
+<code class="language-plaintext highlighter-rouge">= delete</code>（C++11）</h4>
+
+<ul>
+  <li>语义：此路不通</li>
+</ul>
+
+<p>有些对象在语义上是<strong>独一无二</strong>的（例如：单例模式、硬件驱动句柄 <code class="language-plaintext highlighter-rouge">Mutex</code>、<code class="language-plaintext highlighter-rouge">FileStream</code>），它们<strong>绝不能</strong>被拷贝。</p>
+
+<p>在 C++11 之前，我们通过把拷贝构造函数设为 <code class="language-plaintext highlighter-rouge">private</code> 来防止拷贝。C++11 之后，可以直接在<strong>语法层面</strong> “删除” 这个函数的存在。</p>
+
+<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">struct</span> <span class="nc">Mutex</span> <span class="p">{</span>
+    <span class="c1">// 任何尝试拷贝代码的操作，在编译期间就会报错</span>
+    <span class="n">Mutex</span><span class="p">(</span><span class="k">const</span> <span class="n">Mutex</span><span class="o">&amp;</span><span class="p">)</span> <span class="o">=</span> <span class="k">delete</span><span class="p">;</span>
+    <span class="n">Mutex</span><span class="o">&amp;</span> <span class="k">operator</span><span class="p">(</span><span class="k">const</span> <span class="n">Mutex</span><span class="o">&amp;</span><span class="p">)</span> <span class="o">=</span> <span class="k">delete</span><span class="p">;</span>
+<span class="p">};</span>
+</code></pre></div></div>
+
+<h4 id="using继承构造函数">
+<code class="language-plaintext highlighter-rouge">using</code>（继承构造函数）</h4>
+
+<ul>
+  <li>语义：拿来主义</li>
+</ul>
+
+<p>派生类通常不会继承基类的构造函数。如果基类有 10 种构造方式，派生类想支持同样的 10 种，以前得手动写 10 个转发函数。</p>
+
+<p><code class="language-plaintext highlighter-rouge">using</code> 关键字告诉编译器：把基类的构造函数直接 “引入” 到当前作用域。</p>
+
+<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">struct</span> <span class="nc">Base</span> <span class="p">{</span>
+    <span class="n">Base</span><span class="p">(</span><span class="kt">int</span><span class="p">);</span> <span class="n">Base</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">);</span> <span class="n">Base</span><span class="p">(</span><span class="kt">float</span><span class="p">);</span>
+<span class="p">};</span>
+
+<span class="k">struct</span> <span class="nc">Derived</span><span class="o">:</span> <span class="n">Base</span> <span class="p">{</span>
+    <span class="k">using</span> <span class="n">Base</span><span class="o">::</span><span class="n">Base</span><span class="p">;</span> <span class="c1">// 一句话，拥有了上述三种构造方式</span>
+<span class="p">};</span>
+</code></pre></div></div>
+
+<h3 id="性能优化">性能优化</h3>
+
+<p>这部分关键字主要服务于嵌入式开发和高性能计算，通过向编译器提供更多信息来优化机器码。</p>
+
+<h4 id="noexcept"><code class="language-plaintext highlighter-rouge">noexcept</code></h4>
+
+<ul>
+  <li>语义：我保证不惹麻烦（不抛出异常）</li>
+</ul>
+
+<p>这是<strong>移动语义</strong>（Move Semantics）生效的关键。当 <code class="language-plaintext highlighter-rouge">std::vector</code> 扩容时，它需要把旧数据搬到新内存。如果你的移动构造函数没有标记 <code class="language-plaintext highlighter-rouge">noexcept</code>，<code class="language-plaintext highlighter-rouge">std::vector</code> 为了内存安全（怕搬到一半抛异常，导致旧数据没了，新数据也没好），会放弃移动，强行降级为拷贝。</p>
+
+<p>这在大数据量或高性能要求场景下会带来极大的损耗。</p>
+
+<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">class</span> <span class="nc">BigData</span> <span class="p">{</span>
+<span class="nl">public:</span>
+    <span class="c1">// 承诺：移动操作绝不会失败，编译器看到这个才会大胆优化</span>
+    <span class="n">BigData</span><span class="p">(</span><span class="n">BigData</span><span class="o">&amp;&amp;</span> <span class="n">other</span><span class="p">)</span> <span class="k">noexcept</span> <span class="p">{</span> <span class="p">...</span> <span class="p">}</span>
+<span class="p">};</span>
+</code></pre></div></div>
+
+<h4 id="constexprc1114">
+<code class="language-plaintext highlighter-rouge">constexpr</code>（C++11/14）</h4>
+
+<ul>
+  <li>语义：在编译时就已经准备好了</li>
+</ul>
+
+<p>如果一个对象的构造参数在编译时就是确定的常量，那么为什么要等到程序运行（Runtime）才去分配内存、赋值呢？</p>
+
+<p><code class="language-plaintext highlighter-rouge">constexpr</code> 构造函数允许编译器在<strong>编译阶段</strong>就计算出对象的内存布局，并直接烧录在二进制文件的只读数据端（<code class="language-plaintext highlighter-rouge">.rodata</code>）或直接作为立即数嵌入指令中。</p>
+
+<p>这对于<strong>嵌入式系统</strong>（节省运行时开销、Flash/RAM 布局）至关重要。</p>
+
+<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">struct</span> <span class="nc">Point</span> <span class="p">{</span>
+    <span class="kt">int</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">;</span>
+    <span class="k">constexpr</span> <span class="n">Point</span><span class="p">(</span><span class="kt">int</span> <span class="n">_x</span><span class="p">,</span> <span class="kt">int</span> <span class="n">_y</span><span class="p">)</span> <span class="o">:</span> <span class="n">x</span><span class="p">(</span><span class="n">_x</span><span class="p">),</span> <span class="n">y</span><span class="p">(</span><span class="n">_y</span><span class="p">)</span> <span class="p">{}</span>
+<span class="p">};</span>
+
+<span class="c1">// 编译后，p 甚至可能不存在，直接被优化为立即数操作</span>
+<span class="k">constexpr</span> <span class="n">Point</span> <span class="n">p</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">20</span><span class="p">);</span>
+</code></pre></div></div>
+
+<h3 id="逻辑控制与异常处理">逻辑控制与异常处理</h3>
+
+<h4 id="explicit"><code class="language-plaintext highlighter-rouge">explicit</code></h4>
+
+<p>在前文已经讲到。同时，除了单参数构造函数，<strong>多参数构造函数</strong>（C++11 列表初始化）也需要注意。</p>
+
+<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">struct</span> <span class="nc">Vector3</span> <span class="p">{</span>
+    <span class="k">explicit</span> <span class="n">Vector3</span><span class="p">(</span><span class="kt">float</span> <span class="n">x</span><span class="p">,</span> <span class="kt">float</span> <span class="n">y</span><span class="p">,</span> <span class="kt">float</span> <span class="n">z</span><span class="p">);</span>
+<span class="p">};</span>
+
+<span class="kt">void</span> <span class="n">func</span><span class="p">(</span><span class="n">Vector3</span> <span class="n">v</span><span class="p">);</span>
+
+<span class="n">func</span><span class="p">({</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">,</span> <span class="mf">3.0</span><span class="p">});</span> <span class="c1">// 错误！因为 explicit 禁止了 {list} -&gt; Object 的隐式类型转换</span>
+<span class="n">func</span><span class="p">(</span><span class="n">Vector3</span><span class="p">{</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">,</span> <span class="mf">3.0</span><span class="p">});</span> <span class="c1">// 正确，显式调用</span>
+</code></pre></div></div>
+
+<h4 id="tryfunction-try-block">
+<code class="language-plaintext highlighter-rouge">try</code>（Function-try block）</h4>
+
+<ul>
+  <li>语义：在进入内部前就能捕获错误</li>
+</ul>
+
+<p>构造函数分两步：初始化列表 $\rightarrow$ 函数体。如果在<strong>初始化列表</strong>阶段（比如基类构造、成员对象构造）抛出了异常，普通的 <code class="language-plaintext highlighter-rouge">try-catch</code> 包裹函数体是<strong>抓不住</strong>的。必须把 <code class="language-plaintext highlighter-rouge">try</code> 写在函数体外，这就是<strong>函数 try 块</strong>。</p>
+
+<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">ResourceManager</span><span class="p">()</span> <span class="k">try</span> <span class="o">:</span> <span class="n">core_resource</span><span class="p">(</span><span class="k">new</span> <span class="n">core</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c1">// ... 函数体</span>
+<span class="p">}</span> <span class="k">catch</span> <span class="p">(...)</span> <span class="p">{</span>
+    <span class="c1">// 能够捕获 core_resource 初始化时抛出的异常</span>
+    <span class="c1">// 注意：构造函数里的 catch 必定会再次抛出异常，因为对象构造函数失败了，必须通知外界</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+        
+      </section>
+
+      <footer class="page__meta">
+        
+        
+  
+
+
+  
+
+  <p class="page__taxonomy">
+    <strong><i class="fas fa-fw fa-tags" aria-hidden="true"></i> Tags: </strong>
+    <span itemprop="keywords">
+    
+      <a href="/tags/c" class="page__taxonomy-item p-category" rel="tag">C++</a>
+    
+    </span>
+  </p>
+
+
+
+
+  
+
+
+  
+
+  <p class="page__taxonomy">
+    <strong><i class="fas fa-fw fa-folder-open" aria-hidden="true"></i> Categories: </strong>
+    <span itemprop="keywords">
+    
+      <a href="/categories/note" class="page__taxonomy-item p-category" rel="tag">Note</a>
+    
+    </span>
+  </p>
+
+
+        
+
+  <p class="page__date"><strong><i class="fas fa-fw fa-calendar-alt" aria-hidden="true"></i> Updated:</strong> <time class="dt-published" datetime="2026-01-03T13:05:00+00:00">January 3, 2026</time></p>
+
+      </footer>
+
+      <section class="page__share">
+  <h4 class="page__share-title">Share on</h4>
+
+  <a href="https://x.com/intent/tweet?text=C%2B%2B+%E4%B8%AD%E7%9A%84%E6%9E%84%E9%80%A0%E5%87%BD%E6%95%B0%20https%3A%2F%2Fbfmhno3.github.io%2Fnote%2Fconstructor-in-cpp%2F" class="btn btn--x" aria-label="Share on X" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on X">
+    <i class="fab fa-fw fa-x-twitter" aria-hidden="true"></i><span> X</span>
+  </a>
+
+  <a href="https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fbfmhno3.github.io%2Fnote%2Fconstructor-in-cpp%2F" class="btn btn--facebook" aria-label="Share on Facebook" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on Facebook">
+    <i class="fab fa-fw fa-facebook" aria-hidden="true"></i><span> Facebook</span>
+  </a>
+
+  <a href="https://www.linkedin.com/shareArticle?mini=true&url=https://bfmhno3.github.io/note/constructor-in-cpp/" class="btn btn--linkedin" aria-label="Share on LinkedIn" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on LinkedIn">
+    <i class="fab fa-fw fa-linkedin" aria-hidden="true"></i><span> LinkedIn</span>
+  </a>
+
+  <a href="https://bsky.app/intent/compose?text=C%2B%2B+%E4%B8%AD%E7%9A%84%E6%9E%84%E9%80%A0%E5%87%BD%E6%95%B0%20https%3A%2F%2Fbfmhno3.github.io%2Fnote%2Fconstructor-in-cpp%2F" class="btn btn--bluesky" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on Bluesky">
+    <i class="fab fa-fw fa-bluesky" aria-hidden="true"></i><span> Bluesky</span>
+  </a>
+</section>
+
+
+      
+  <nav class="pagination">
+    
+      <a href="/note/vector-in-cpp/" class="pagination--pager" title="C++ 中的 vector">Previous</a>
+    
+    
+      <a href="/note/list-in-cpp/" class="pagination--pager" title="C++ 中的 list">Next</a>
+    
+  </nav>
+
+
+    </div>
+
+    
+      
+        <div class="page__comments">
+  
+  
+      <h4 class="page__comments-title">Comments</h4>
+      <section id="giscus-comments"></section>
+    
+</div>
+
+      
+    
+  </article>
+
+  
+  
+    
+<div class="page__related">
+  
+  <h2 class="page__related-title">You May Also Enjoy</h2>
+  <div class="grid__wrapper">
+    
+      
+      
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc" itemprop="headline">
+      
+        <a href="/note/process-in-os/" rel="permalink">操作系统中的进程
+</a>
+      
+    </h2>
+    
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-01-26T22:10:00+00:00">January 26, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          4 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt" itemprop="description">教科书对于进程常定义通常极为简洁凝练，但其诞生是为了解决什么问题？本文通过回顾从 ENIAC 到分时系统的演进历史，探讨进程是如何为了填补人、I/O 与 CPU 之间的速度鸿沟而进化出来的。
+</p>
+  </article>
+</div>
+
+    
+      
+      
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc" itemprop="headline">
+      
+        <a href="/note/initialization-in-cpp/" rel="permalink">C++ 中的初始化列表和列表初始化
+</a>
+      
+    </h2>
+    
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-01-03T15:07:00+00:00">January 3, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          6 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt" itemprop="description">深入理解 C++ 中初始化列表与列表初始化的区别：前者解决对象生命周期与内存模型问题，后者统一初始化语法并提供类型安全保障。
+</p>
+  </article>
+</div>
+
+    
+      
+      
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc" itemprop="headline">
+      
+        <a href="/note/list-in-cpp/" rel="permalink">C++ 中的 list
+</a>
+      
+    </h2>
+    
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-01-03T13:05:00+00:00">January 3, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          2 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt" itemprop="description">深入理解 C++ 中的 std::list 双向链表容器，探讨其底层原理、独有优势（如头部操作、接合等）、迭代器特性，以及与 std::vector 的选择权衡。
+</p>
+  </article>
+</div>
+
+    
+      
+      
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc" itemprop="headline">
+      
+        <a href="/note/vector-in-cpp/" rel="permalink">C++ 中的 vector
+</a>
+      
+    </h2>
+    
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-01-03T10:50:00+00:00">January 3, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          3 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt" itemprop="description">std::vector 是 C++ 中最重要、最常用的容器，没有之一。它的本质是动态数组（Dynamic Array）。
+
+std::vector 是在堆（Heap）上管理一块连续的内存，可以存放任意类型的对象。
+
+核心特性与底层原理
+
+
+  头文件：#include &lt;vector&gt;
+  内存模型：...</p>
+  </article>
+</div>
+
+    
+  </div>
+</div>
+
+  
+  
+</div>
+
+      
+    </div>
+
+    
+      <div class="search-content">
+        <div class="search-content__inner-wrap">
+<form class="search-content__form" onkeydown="return event.key != 'Enter';" role="search">
+    <label class="sr-only" for="search">
+      Enter your search term...
+    </label>
+    <input type="search" id="search" class="search-input" tabindex="-1" placeholder="Enter your search term...">
+  </form>
+  <div id="results" class="results"></div>
+</div>
+
+      </div>
+    
+
+    <div id="footer" class="page__footer">
+      <footer>
+        <!-- start custom footer snippets -->
+
+<!-- end custom footer snippets -->
+        
+
+<div class="page__footer-follow">
+  <ul class="social-icons">
+    
+
+    
+      
+        
+          <li><a href="https://github.com/bfmhno3" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-github" aria-hidden="true"></i> GitHub</a></li>
+        
+      
+        
+          <li><a href="https://gitee.com/bfmhno3" rel="nofollow noopener noreferrer"><i class="fa-solid fa-g" aria-hidden="true"></i> Gitee</a></li>
+        
+      
+        
+          <li><a href="https://www.cnblogs.com/bfmhno3" rel="nofollow noopener noreferrer"><i class="fa-solid fa-blog" aria-hidden="true"></i> cnblogs</a></li>
+        
+      
+        
+          <li><a href="https://blog.csdn.net/B33336" rel="nofollow noopener noreferrer"><i class="fa-solid fa-blog" aria-hidden="true"></i> CSDN</a></li>
+        
+      
+    
+
+    
+      <li><a href="/feed.xml"><i class="fas fa-fw fa-rss-square" aria-hidden="true"></i> Feed</a></li>
+    
+  </ul>
+</div>
+
+
+<div class="page__footer-copyright">© 2026 <a href="https://bfmhno3.github.io">Better Mistakes</a>. Powered by <a href="https://jekyllrb.com" rel="nofollow">Jekyll</a> &amp; <a href="https://mademistakes.com/work/jekyll-themes/minimal-mistakes/" rel="nofollow">Minimal Mistakes</a>.</div>
+
+      </footer>
+    </div>
+
+    
+  <script src="/assets/js/main.min.js"></script>
+
+
+
+
+<script src="/assets/js/lunr/lunr.min.js"></script>
+<script src="/assets/js/lunr/lunr-store.js"></script>
+<script src="/assets/js/lunr/lunr-en.js"></script>
+
+
+
+
+  <!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-VS5B3CR1M6"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-VS5B3CR1M6', { 'anonymize_ip': false});
+</script>
+
+
+
+
+
+
+    <script>
+  'use strict';
+
+  (function () {
+    var commentContainer = document.querySelector('#giscus-comments');
+
+    if (!commentContainer) {
+      return;
+    }
+
+    var script = document.createElement('script');
+
+    script.setAttribute('src', 'https://giscus.app/client.js');
+    script.setAttribute('data-repo', 'bfmhno3/bfmhno3.github.io');
+    script.setAttribute('data-repo-id', 'R_kgDOQCQGxg');
+    script.setAttribute('data-category', 'General');
+    script.setAttribute('data-category-id', 'DIC_kwDOQCQGxs4CzG3a');
+    script.setAttribute('data-mapping', 'pathname');
+    script.setAttribute('data-strict', '0');
+    script.setAttribute('data-reactions-enabled', '1');
+    script.setAttribute('data-emit-metadata', '0');
+    script.setAttribute('data-input-position', 'bottom');
+    script.setAttribute('data-theme', 'transparent_dark');
+    script.setAttribute('data-lang',  'en');
+    
+    script.setAttribute('data-loading', 'lazy');
+    
+    script.setAttribute('crossorigin', 'anonymous');
+
+    script.setAttribute('async', '');
+
+    commentContainer.appendChild(script);
+  })();
+</script>
+
+  
+
+
+
+
+  </body>
+</html>

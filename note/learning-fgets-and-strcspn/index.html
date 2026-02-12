@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<!--
+  Minimal Mistakes Jekyll Theme 4.27.3 by Michael Rose
+  Copyright 2013-2025 Michael Rose - mademistakes.com | @mmistakes
+  Free for personal and commercial use under the MIT license
+  https://github.com/mmistakes/minimal-mistakes/blob/master/LICENSE
+--><html lang="en-US" class="no-js">
+  <head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta charset="utf-8">
+
+<!-- begin _includes/seo.html --><title>学习 fgets 函数和 strcspn 函数 - Better Mistakes</title>
+<meta name="description" content="本文记录了在 C 语言刷题过程中遇到的字符串输入问题。详细介绍了 fgets 函数和 strcspn 函数的用法，用于解决 scanf 无法读取带空格字符串以及换行符处理的问题，并补充了 scanf(“%[^\n]”) 这一更简洁的替代方案。">
+
+
+  <meta name="author" content="bfmhno3">
+  
+  <meta property="article:author" content="bfmhno3">
+  
+
+
+<meta property="og:type" content="article">
+<meta property="og:locale" content="en_US">
+<meta property="og:site_name" content="Better Mistakes">
+<meta property="og:title" content="学习 fgets 函数和 strcspn 函数">
+<meta property="og:url" content="https://bfmhno3.github.io/note/learning-fgets-and-strcspn/">
+
+
+  <meta property="og:description" content="本文记录了在 C 语言刷题过程中遇到的字符串输入问题。详细介绍了 fgets 函数和 strcspn 函数的用法，用于解决 scanf 无法读取带空格字符串以及换行符处理的问题，并补充了 scanf(“%[^\n]”) 这一更简洁的替代方案。">
+
+
+
+  <meta property="og:image" content="https://bfmhno3.github.io/assets/images/avatar.jpg">
+
+
+
+
+
+  <meta property="article:published_time" content="2023-08-20T15:44:31+00:00">
+
+
+
+
+
+  
+
+  
+
+
+<link rel="canonical" href="https://bfmhno3.github.io/note/learning-fgets-and-strcspn/">
+
+
+
+
+
+
+
+  <meta name="google-site-verification" content="UUnU8OnGqO_2FFdhrv7eEABM5p_cNPhM4Se6HB1KFSk">
+
+
+  <meta name="msvalidate.01" content="FC3BA97765A3C90F8CA771F70AE34FB8">
+
+
+
+
+
+<!-- end _includes/seo.html -->
+
+
+
+  <link href="/feed.xml" type="application/atom+xml" rel="alternate" title="Better Mistakes Feed">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script>
+  document.documentElement.className = document.documentElement.className.replace(/\bno-js\b/g, '') + ' js ';
+  window.enable_copy_code_button = true;
+</script>
+
+<!-- For all browsers -->
+<link rel="stylesheet" href="/assets/css/main.css">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@latest/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@latest/css/all.min.css"></noscript>
+
+
+
+    <link rel="icon" type="image/png" href="/assets/images/favicon/favicon-96x96.png" sizes="96x96">
+<link rel="icon" type="image/svg+xml" href="/assets/images/favicon/favicon.svg">
+<link rel="shortcut icon" href="/assets/images/favicon/favicon.ico">
+<link rel="apple-touch-icon" sizes="180x180" href="/assets/images/favicon/apple-touch-icon.png">
+<link rel="manifest" href="/assets/images/favicon/site.webmanifest">
+  </head>
+
+  <body class="layout--single" dir="ltr">
+    <nav class="skip-links">
+  <ul>
+    <li><a href="#site-nav" class="screen-reader-shortcut">Skip to primary navigation</a></li>
+    <li><a href="#main" class="screen-reader-shortcut">Skip to content</a></li>
+    <li><a href="#footer" class="screen-reader-shortcut">Skip to footer</a></li>
+  </ul>
+</nav>
+
+    
+
+<div class="masthead">
+  <div class="masthead__inner-wrap">
+    <div class="masthead__menu">
+      <nav id="site-nav" class="greedy-nav">
+        
+          <a class="site-logo" href="/"><img src="/assets/images/logo.svg" alt="Better Mistakes"></a>
+        
+        <a class="site-title" href="/">
+          Better Mistakes
+          <span class="site-subtitle">Trial.Error.Iteration.</span>
+        </a>
+        <ul class="visible-links">
+<li class="masthead__menu-item">
+              <a href="/posts/">Posts</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/categories/">Categories</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/tags/">Tags</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/about/">About</a>
+            </li>
+</ul>
+        
+        <button class="search__toggle" type="button">
+          <span class="visually-hidden">Toggle search</span>
+          <i class="fas fa-search"></i>
+        </button>
+        
+        <button class="greedy-nav__toggle hidden" type="button">
+          <span class="visually-hidden">Toggle menu</span>
+          <div class="navicon"></div>
+        </button>
+        <ul class="hidden-links hidden"></ul>
+      </nav>
+    </div>
+  </div>
+</div>
+
+
+    <div class="initial-content">
+      
+
+
+
+
+
+<div id="main" role="main">
+  
+  <div class="sidebar sticky">
+  
+
+
+<div itemscope itemtype="https://schema.org/Person" class="h-card">
+
+  
+    <div class="author__avatar">
+      <a href="https://bfmhno3.github.io/">
+        <img src="/assets/images/avatar.jpg" alt="bfmhno3" itemprop="image" class="u-photo">
+      </a>
+    </div>
+  
+
+  <div class="author__content">
+    <h3 class="author__name p-name" itemprop="name">
+      <a class="u-url" rel="me" href="https://bfmhno3.github.io/" itemprop="url">bfmhno3</a>
+    </h3>
+    
+      <div class="author__bio p-note" itemprop="description">
+        <p>Third-year university student majoring in energy engineering. Exploring the world of code and mathematics.</p>
+
+      </div>
+    
+  </div>
+
+  <div class="author__urls-wrapper">
+    <button class="btn btn--inverse">Follow</button>
+    <ul class="author__urls social-icons">
+      
+
+      
+        
+          
+            <li><a href="https://github.com/bfmhno3" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fab fa-fw fa-github" aria-hidden="true"></i><span class="label">GitHub</span></a></li>
+          
+        
+          
+            <li><a href="https://gitee.com/bfmhno3" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fa-solid fa-g" aria-hidden="true"></i><span class="label">Gitee</span></a></li>
+          
+        
+          
+            <li><a href="https://www.cnblogs.com/bfmhno3" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fa-solid fa-blog" aria-hidden="true"></i><span class="label">cnblogs</span></a></li>
+          
+        
+          
+            <li><a href="https://blog.csdn.net/B33336" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fa-solid fa-blog" aria-hidden="true"></i><span class="label">CSDN</span></a></li>
+          
+        
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      <!--
+  <li>
+    <a href="http://link-to-whatever-social-network.com/user/" itemprop="sameAs" rel="nofollow noopener noreferrer me">
+      <i class="fas fa-fw" aria-hidden="true"></i> Custom Social Profile Link
+    </a>
+  </li>
+-->
+    </ul>
+  </div>
+</div>
+
+  
+  </div>
+
+
+
+  <article class="page" itemscope itemtype="https://schema.org/CreativeWork">
+    <meta itemprop="headline" content="学习 fgets 函数和 strcspn 函数">
+    <meta itemprop="description" content="本文记录了在 C 语言刷题过程中遇到的字符串输入问题。详细介绍了 fgets 函数和 strcspn 函数的用法，用于解决 scanf 无法读取带空格字符串以及换行符处理的问题，并补充了 scanf(“%[^\n]”) 这一更简洁的替代方案。">
+    <meta itemprop="datePublished" content="2023-08-20T15:44:31+00:00">
+    
+
+    <div class="page__inner-wrap">
+      
+        <header>
+          <h1 id="page-title" class="page__title" itemprop="headline">
+            <a href="https://bfmhno3.github.io/note/learning-fgets-and-strcspn/" itemprop="url">学习 fgets 函数和 strcspn 函数
+</a>
+          </h1>
+          
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2023-08-20T15:44:31+00:00">August 20, 2023</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-clock" aria-hidden="true"></i>
+        
+          3 minute read
+        
+      </span>
+    
+  </p>
+
+
+        </header>
+      
+
+      <section class="page__content" itemprop="text">
+        
+          <aside class="sidebar__right sticky">
+            <nav class="toc">
+              <header><h4 class="nav__title">
+<i class="fas fa-file-alt"></i> On this page</h4></header>
+              <ul class="toc__menu">
+<li><a href="#0-%E4%B8%BA%E4%BB%80%E4%B9%88%E8%A6%81%E4%B8%93%E9%97%A8%E5%8F%91%E5%B8%83%E4%B8%80%E7%AF%87%E6%96%87%E7%AB%A0%E6%9D%A5%E8%AF%B4%E6%98%8E%E8%BF%99%E4%B8%A4%E4%B8%AA%E5%87%BD%E6%95%B0">0. 为什么要专门发布一篇文章来说明这两个函数？</a></li>
+<li>
+<a href="#1-fgets%E5%87%BD%E6%95%B0">1. fgets函数</a><ul>
+<li><a href="#11-%E5%87%BD%E6%95%B0%E4%BB%8B%E7%BB%8D">1.1 函数介绍</a></li>
+<li><a href="#12-%E5%8F%82%E6%95%B0%E8%AF%B4%E6%98%8E">1.2 参数说明</a></li>
+<li><a href="#13-%E6%B3%A8%E6%84%8F%E4%BA%8B%E9%A1%B9">1.3 注意事项</a></li>
+<li><a href="#14-%E4%BD%BF%E7%94%A8%E7%A4%BA%E4%BE%8B">1.4 使用示例</a></li>
+<li><a href="#15-%E9%A2%98%E7%9B%AE%E4%BB%A3%E7%A0%81%E4%BF%AE%E6%94%B9">1.5 题目代码修改</a></li>
+<li><a href="#%E6%98%AF%E5%90%A6%E8%BF%99%E4%B9%88%E5%86%99%E4%BB%A3%E7%A0%81%E6%88%91%E5%B0%B1%E8%83%BD%E9%80%9A%E8%BF%87%E6%B5%8B%E8%AF%95%E4%BA%86%E5%91%A2">是否这么写代码我就能通过测试了呢？</a></li>
+</ul>
+</li>
+<li>
+<a href="#2-strcspn%E5%87%BD%E6%95%B0">2. strcspn函数</a><ul>
+<li><a href="#21-%E5%87%BD%E6%95%B0%E4%BB%8B%E7%BB%8D">2.1 函数介绍</a></li>
+<li><a href="#22-%E5%8F%82%E6%95%B0%E8%AF%B4%E6%98%8E">2.2 参数说明</a></li>
+<li><a href="#23-%E6%B3%A8%E6%84%8F%E4%BA%8B%E9%A1%B9">2.3 注意事项</a></li>
+<li><a href="#24-%E4%BD%BF%E7%94%A8%E7%A4%BA%E4%BE%8B">2.4 使用示例</a></li>
+</ul>
+</li>
+<li><a href="#3-%E6%9C%80%E7%BB%88%E4%BB%A3%E7%A0%81">3. 最终代码</a></li>
+<li><a href="#4-%E9%A2%98%E5%90%8E%E5%8F%8D%E6%80%9D">4. 题后反思</a></li>
+<li>
+<a href="#5-n">5. %[^\n]</a><ul><li><a href="#51-%E4%BB%8B%E7%BB%8D%E4%B8%8E%E8%A7%A3%E9%87%8A">5.1 介绍与解释</a></li></ul>
+</li>
+<li><a href="#52-%E5%86%8D%E6%AC%A1%E4%BF%AE%E6%94%B9%E4%BB%A3%E7%A0%81">5.2 再次修改代码</a></li>
+<li><a href="#6-%E6%84%9F%E6%82%9F">6. 感悟</a></li>
+</ul>
+            </nav>
+          </aside>
+        
+        <h2 id="0-为什么要专门发布一篇文章来说明这两个函数">0. 为什么要专门发布一篇文章来说明这两个函数？</h2>
+
+<p>原因是今晚上在做牛客网的题目的时候，遇到了这么一个<a href="https://www.nowcoder.com/questionTerminal/cc57022cb4194697ac30bcb566aeb47b?f=discussion&toCommentId=16721626">问题</a>。</p>
+
+<p>虽然这道题对大多数人来说都算是比较简单的题目，但是对于我这么一个小白还是比较难写的。最开始我是这么写的代码：</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include</span> <span class="cpf">&lt;stdio.h&gt;</span><span class="cp">
+</span>
+<span class="kt">void</span> <span class="nf">reverse</span><span class="p">(</span><span class="kt">char</span><span class="o">*</span> <span class="n">arr</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">char</span><span class="o">*</span> <span class="n">left</span> <span class="o">=</span> <span class="n">arr</span><span class="p">;</span>
+    <span class="kt">char</span><span class="o">*</span> <span class="n">right</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">arr</span><span class="p">[</span><span class="n">strlen</span><span class="p">(</span><span class="n">arr</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">];</span>
+    <span class="k">while</span><span class="p">(</span><span class="n">left</span> <span class="o">&lt;</span> <span class="n">right</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kt">char</span> <span class="n">mid</span> <span class="o">=</span> <span class="o">*</span><span class="n">left</span><span class="p">;</span>
+        <span class="o">*</span><span class="n">left</span> <span class="o">=</span> <span class="o">*</span><span class="n">right</span><span class="p">;</span>
+        <span class="o">*</span><span class="n">right</span> <span class="o">=</span> <span class="n">mid</span><span class="p">;</span>
+        <span class="n">left</span><span class="o">++</span><span class="p">;</span>
+        <span class="n">right</span><span class="o">--</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="k">for</span><span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">strlen</span><span class="p">(</span><span class="n">arr</span><span class="p">);</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">printf</span><span class="p">(</span><span class="s">"%c"</span><span class="p">,</span> <span class="n">arr</span><span class="p">[</span><span class="n">i</span><span class="p">]);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">char</span> <span class="n">arr</span><span class="p">[</span><span class="mi">10000</span><span class="p">];</span><span class="c1">//之所以创建这么大一个数组是因为题目中的示例10非常长</span>
+    <span class="n">scanf</span><span class="p">(</span><span class="s">"%s"</span><span class="p">,</span> <span class="n">arr</span><span class="p">);</span>
+    <span class="n">reverse</span><span class="p">(</span><span class="n">arr</span><span class="p">);</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>但是这样写代码连题目中的示例 1：输入：<code class="language-plaintext highlighter-rouge">I am a student</code>；输出：<code class="language-plaintext highlighter-rouge">tneduts a ma I</code> 都没有通过，最终只输出了一个 <code class="language-plaintext highlighter-rouge">I</code>。</p>
+
+<p>这是为什么呢？我思索了半天才明白是我的这一行代码 <code class="language-plaintext highlighter-rouge">scanf("%s", arr);</code> 有问题，就是因为 <code class="language-plaintext highlighter-rouge">scanf("%s", arr)</code> 会读取一个字符串，但会在遇到空格、制表符或换行符时停止。换句话说，<strong>它只会读取输入字符串中的第一个单词，然后停止</strong>。</p>
+
+<p>例如，如果你输入 “Hello World”，<code class="language-plaintext highlighter-rouge">scanf("%s", str)</code> 会将 “Hello” 作为一个字符串读取，而 “World” 则会留在输入流中等待后续读取。</p>
+
+<p>所以示例输入的 <code class="language-plaintext highlighter-rouge">I am a student</code> 只有 <code class="language-plaintext highlighter-rouge">I</code> 进入了 <code class="language-plaintext highlighter-rouge">arr[10000]</code> 中，剩下的字符串仍然留在输入流中等待下一次读取。所以最终自然而然也就只会输出 <code class="language-plaintext highlighter-rouge">I</code>。</p>
+
+<p>知道了问题的原因自然就要想办法解决问题，但是说实话，对于小编这种很笨的学生来说，几乎是不可能的。所以，我就去求助了 ChatGPT。ChatGPT 给出的解决办法是使用 <code class="language-plaintext highlighter-rouge">fgets</code> 函数，但是我真就第一次听这个函数，也完全不懂这个函数该如何使用，于是我就准备写下这篇文章来记录我的欠缺。</p>
+
+<p>那么下面就开始正题：</p>
+
+<h2 id="1-fgets函数">1. <code class="language-plaintext highlighter-rouge">fgets</code>函数</h2>
+
+<h3 id="11-函数介绍">1.1 函数介绍</h3>
+
+<p><code class="language-plaintext highlighter-rouge">fgets</code> 是 C 语言标准库 <code class="language-plaintext highlighter-rouge">stdio</code> 中的一个函数，用于从文件流（通常是标准输入流 <code class="language-plaintext highlighter-rouge">stdin</code> 或其他文件流）中读取一行字符串。它的主要作用是读取指定长度的字符，并且<strong>会保留换行符（如果存在的话）</strong>。</p>
+
+<p>函数原型：</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">char</span> <span class="o">*</span><span class="nf">fgets</span><span class="p">(</span><span class="kt">char</span> <span class="o">*</span><span class="n">str</span><span class="p">,</span> <span class="kt">int</span> <span class="n">n</span><span class="p">,</span> <span class="kt">FILE</span> <span class="o">*</span><span class="n">stream</span><span class="p">);</span>
+</code></pre></div></div>
+
+<h3 id="12-参数说明">1.2 参数说明</h3>
+
+<ul>
+  <li>
+<code class="language-plaintext highlighter-rouge">str</code>：一个指向字符数组的指针，用于存储读取的字符串。</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">n</code>：要读取的最大字符数（包括字符串结尾的空字符 \0），通常为字符数组的长度。</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">stream</code>：文件流指针，通常是 <code class="language-plaintext highlighter-rouge">stdin</code>（标准输入流）或其他文件指针。</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">fgets</code> 会读取指定长度的字符，直到遇到换行符（<strong>包括换行符在内</strong>），或者读取了 <code class="language-plaintext highlighter-rouge">n-1</code> 个字符（包括字符串结尾的空字符 <code class="language-plaintext highlighter-rouge">\0</code> ），或者到达文件末尾为止。它会将读取的字符串存储到 <code class="language-plaintext highlighter-rouge">str</code> 指向的字符数组中，并在字符串的末尾添加一个空字符 <code class="language-plaintext highlighter-rouge">\0</code>，以表示字符串的结束。</li>
+</ul>
+
+<h3 id="13-注意事项">1.3 注意事项</h3>
+
+<ul>
+  <li>
+<code class="language-plaintext highlighter-rouge">fgets</code> 会保留字符串中的换行符，所以如果不需要换行符，可以使用字符串处理函数（如 <code class="language-plaintext highlighter-rouge">strcspn</code>）将其替换为空字符 <code class="language-plaintext highlighter-rouge">\0</code>。</li>
+  <li>如果输入的字符串的长度超过了指定的 <code class="language-plaintext highlighter-rouge">n-1</code>，<code class="language-plaintext highlighter-rouge">fgets</code> 只会读取 <code class="language-plaintext highlighter-rouge">n-1</code> 个字符，其余字符会留在输入流中，可能影响后续的输入。</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">fgets</code> 在成功读取字符串时返回 <code class="language-plaintext highlighter-rouge">str</code>，在到达文件末尾或发生错误时返回 <code class="language-plaintext highlighter-rouge">NULL</code>。</li>
+</ul>
+
+<h3 id="14-使用示例">1.4 使用示例</h3>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include</span> <span class="cpf">&lt;stdio.h&gt;</span><span class="cp">
+#include</span> <span class="cpf">&lt;string.h&gt;</span><span class="cp">
+</span>
+<span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+    <span class="kt">char</span> <span class="n">str</span><span class="p">[</span><span class="mi">100</span><span class="p">];</span> <span class="c1">// 最多读取 99 个字符（包括结尾的空字符）</span>
+    
+    <span class="n">printf</span><span class="p">(</span><span class="s">"请输入一个字符串："</span><span class="p">);</span>
+    <span class="n">fgets</span><span class="p">(</span><span class="n">str</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">str</span><span class="p">),</span> <span class="n">stdin</span><span class="p">);</span> <span class="c1">// 从标准输入读取一行字符串</span>
+    
+    <span class="n">str</span><span class="p">[</span><span class="n">strcspn</span><span class="p">(</span><span class="n">str</span><span class="p">,</span> <span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">)]</span> <span class="o">=</span> <span class="sc">'\0'</span><span class="p">;</span> <span class="c1">// 去掉换行符（如果有）</span>
+    
+    <span class="n">printf</span><span class="p">(</span><span class="s">"你输入的字符串是：%s</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">str</span><span class="p">);</span>
+    
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h3 id="15-题目代码修改">1.5 题目代码修改</h3>
+
+<p>所以我原本写的代码中的 <code class="language-plaintext highlighter-rouge">scanf("%s", arr)</code> 应该改成 <code class="language-plaintext highlighter-rouge">fgets(arr, sizeof(arr), stdin)</code>。</p>
+
+<h3 id="是否这么写代码我就能通过测试了呢">是否这么写代码我就能通过测试了呢？</h3>
+
+<p>当然不是，事实上代码最终的输出结果是：</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+<span class="n">tneduts</span> <span class="n">a</span> <span class="n">ma</span> <span class="n">I</span>
+</code></pre></div></div>
+
+<p>所以最后的输出还是错误了，多输出了一个换行符 <code class="language-plaintext highlighter-rouge">\n</code>。</p>
+
+<p>事实上这里有很多种方法可以去除原来字符串末尾的换行符，但我最终选择了使用 <code class="language-plaintext highlighter-rouge">strcspn</code> 函数来处理,所以下面我会介绍 <code class="language-plaintext highlighter-rouge">strcspn</code> 函数。</p>
+
+<h2 id="2-strcspn函数">2. <code class="language-plaintext highlighter-rouge">strcspn</code>函数</h2>
+
+<h3 id="21-函数介绍">2.1 函数介绍</h3>
+
+<p><code class="language-plaintext highlighter-rouge">strcspn</code> 是 C 语言标准库 <code class="language-plaintext highlighter-rouge">string</code> 中的一个函数，用于查找一个字符串中第一次出现指定字符集合中的任何字符的位置。<strong>它返回的是第一个匹配字符的索引位置</strong>。</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">size_t</span> <span class="nf">strcspn</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">str1</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">str2</span><span class="p">);</span>
+</code></pre></div></div>
+
+<h3 id="22-参数说明">2.2 参数说明</h3>
+
+<ul>
+  <li>
+<code class="language-plaintext highlighter-rouge">str1</code>：要查找的字符串。</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">str2</code>：一个包含字符集合的字符串，<code class="language-plaintext highlighter-rouge">strcspn</code> 会查找这个字符集合中的字符在 <code class="language-plaintext highlighter-rouge">str1</code> 中的第一次出现。</li>
+  <li>strcspn 会从 <code class="language-plaintext highlighter-rouge">str1</code> 的起始位置开始查找，直到遇到 <code class="language-plaintext highlighter-rouge">str2</code> 中的任何字符，或者到达字符串末尾。<strong>它返回第一个匹配字符的索引位置，如果未找到匹配字符，则返回 <code class="language-plaintext highlighter-rouge">str1</code> 的长度</strong>。</li>
+</ul>
+
+<h3 id="23-注意事项">2.3 注意事项</h3>
+
+<ul>
+  <li>
+<code class="language-plaintext highlighter-rouge">strcspn</code> 返回的是 <code class="language-plaintext highlighter-rouge">size_t</code> 类型，它是无符号整数类型。如果未找到匹配字符，返回值会等于字符串的长度。因此，在使用返回值时，应该<strong>注意数据类型和范围</strong>。</li>
+</ul>
+
+<h3 id="24-使用示例">2.4 使用示例</h3>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include</span> <span class="cpf">&lt;stdio.h&gt;</span><span class="cp">
+#include</span> <span class="cpf">&lt;string.h&gt;</span><span class="cp">
+</span>
+<span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+    <span class="kt">char</span> <span class="n">str</span><span class="p">[]</span> <span class="o">=</span> <span class="s">"Hello, World!"</span><span class="p">;</span>
+    <span class="kt">char</span> <span class="n">chars</span><span class="p">[]</span> <span class="o">=</span> <span class="s">" ,"</span><span class="p">;</span> <span class="c1">// 字符集合包含空格和逗号</span>
+
+    <span class="kt">size_t</span> <span class="n">index</span> <span class="o">=</span> <span class="n">strcspn</span><span class="p">(</span><span class="n">str</span><span class="p">,</span> <span class="n">chars</span><span class="p">);</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">index</span> <span class="o">&lt;</span> <span class="n">strlen</span><span class="p">(</span><span class="n">str</span><span class="p">))</span> <span class="p">{</span>
+        <span class="n">printf</span><span class="p">(</span><span class="s">"第一个匹配字符在位置：%zu</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">index</span><span class="p">);</span>
+        <span class="n">printf</span><span class="p">(</span><span class="s">"匹配字符是：%c</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">str</span><span class="p">[</span><span class="n">index</span><span class="p">]);</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="n">printf</span><span class="p">(</span><span class="s">"未找到匹配字符</span><span class="se">\n</span><span class="s">"</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h2 id="3-最终代码">3. 最终代码</h2>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include</span> <span class="cpf">&lt;stdio.h&gt;</span><span class="cp">
+</span>
+<span class="kt">void</span> <span class="nf">reverse</span><span class="p">(</span><span class="kt">char</span><span class="o">*</span> <span class="n">arr</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">char</span><span class="o">*</span> <span class="n">left</span> <span class="o">=</span> <span class="n">arr</span><span class="p">;</span>
+    <span class="kt">char</span><span class="o">*</span> <span class="n">right</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">arr</span><span class="p">[</span><span class="n">strlen</span><span class="p">(</span><span class="n">arr</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">];</span>
+    <span class="k">while</span><span class="p">(</span><span class="n">left</span> <span class="o">&lt;</span> <span class="n">right</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kt">char</span> <span class="n">mid</span> <span class="o">=</span> <span class="o">*</span><span class="n">left</span><span class="p">;</span>
+        <span class="o">*</span><span class="n">left</span> <span class="o">=</span> <span class="o">*</span><span class="n">right</span><span class="p">;</span>
+        <span class="o">*</span><span class="n">right</span> <span class="o">=</span> <span class="n">mid</span><span class="p">;</span>
+        <span class="n">left</span><span class="o">++</span><span class="p">;</span>
+        <span class="n">right</span><span class="o">--</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="k">for</span><span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">strlen</span><span class="p">(</span><span class="n">arr</span><span class="p">);</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">printf</span><span class="p">(</span><span class="s">"%c"</span><span class="p">,</span> <span class="n">arr</span><span class="p">[</span><span class="n">i</span><span class="p">]);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">char</span> <span class="n">arr</span><span class="p">[</span><span class="mi">100000</span><span class="p">];</span>
+    <span class="n">fgets</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">arr</span><span class="p">),</span> <span class="n">stdin</span><span class="p">);</span>
+    <span class="n">arr</span><span class="p">[</span><span class="n">strcspn</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">)]</span> <span class="o">=</span> <span class="sc">'\0'</span><span class="p">;</span>
+    <span class="n">reverse</span><span class="p">(</span><span class="n">arr</span><span class="p">);</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h2 id="4-题后反思">4. 题后反思</h2>
+
+<p>最终的代码运行成功后，我总有一种大材小用的感觉，我就思考能不能用 <code class="language-plaintext highlighter-rouge">scanf</code> 函数来实现呢？经过与 ChatGPT 的一番讨论后，我最终找到了另一种更为简单的代码：那就是使用 <code class="language-plaintext highlighter-rouge">%[^\n]</code> 来格式化输入。</p>
+
+<h2 id="5-n">5. <code class="language-plaintext highlighter-rouge">%[^\n]</code>
+</h2>
+
+<h3 id="51-介绍与解释">5.1 介绍与解释</h3>
+
+<p><code class="language-plaintext highlighter-rouge">%[^\n]</code> 是 C 语言中用于格式化输入的格式字符串之一。它用于 <code class="language-plaintext highlighter-rouge">scanf</code> 函数中，用于读取一行字符串，直到遇到换行符为止。</p>
+
+<p>让我解释一下 <code class="language-plaintext highlighter-rouge">%[^\n]</code> 的含义：</p>
+
+<ul>
+  <li>
+<code class="language-plaintext highlighter-rouge">%[</code>：这部分表示开始读取一个自定义字符集。在方括号内放置你想要读取的字符的集合。</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">^</code>：在方括号内的开头，<code class="language-plaintext highlighter-rouge">^</code> 表示反转字符集。即，<code class="language-plaintext highlighter-rouge">%[^\n]</code> 表示读取除换行符外的所有字符。</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">\n</code>：这是一个转义序列，表示换行符。</li>
+</ul>
+
+<p>所以，<code class="language-plaintext highlighter-rouge">%[^\n]</code> 的意思是，<strong>读取除换行符之外的所有字符，直到遇到换行符为止</strong>，并且<strong>不会读取换行符</strong>！！！</p>
+
+<h2 id="52-再次修改代码">5.2 再次修改代码</h2>
+
+<p>所以，我们最终可以将代码从 <code class="language-plaintext highlighter-rouge">fgets(arr, sizeof(arr), stdin); arr[strcspn(arr, "\n")];</code> 修改成 <code class="language-plaintext highlighter-rouge">scanf("%[^\n]");</code>。</p>
+
+<h2 id="6-感悟">6. 感悟</h2>
+
+<p>通过这到题目，我深刻的感受到了什么叫做“条条大路通罗马”。作为小白的我，还有很多的知识去学习、去探索、去使用。</p>
+
+        
+      </section>
+
+      <footer class="page__meta">
+        
+        
+  
+
+
+  
+
+  <p class="page__taxonomy">
+    <strong><i class="fas fa-fw fa-tags" aria-hidden="true"></i> Tags: </strong>
+    <span itemprop="keywords">
+    
+      <a href="/tags/c" class="page__taxonomy-item p-category" rel="tag">C</a>
+    
+    </span>
+  </p>
+
+
+
+
+  
+
+
+  
+
+  <p class="page__taxonomy">
+    <strong><i class="fas fa-fw fa-folder-open" aria-hidden="true"></i> Categories: </strong>
+    <span itemprop="keywords">
+    
+      <a href="/categories/note" class="page__taxonomy-item p-category" rel="tag">Note</a>
+    
+    </span>
+  </p>
+
+
+        
+
+  <p class="page__date"><strong><i class="fas fa-fw fa-calendar-alt" aria-hidden="true"></i> Updated:</strong> <time class="dt-published" datetime="2023-08-20T15:44:31+00:00">August 20, 2023</time></p>
+
+      </footer>
+
+      <section class="page__share">
+  <h4 class="page__share-title">Share on</h4>
+
+  <a href="https://x.com/intent/tweet?text=%E5%AD%A6%E4%B9%A0+fgets+%E5%87%BD%E6%95%B0%E5%92%8C+strcspn+%E5%87%BD%E6%95%B0%20https%3A%2F%2Fbfmhno3.github.io%2Fnote%2Flearning-fgets-and-strcspn%2F" class="btn btn--x" aria-label="Share on X" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on X">
+    <i class="fab fa-fw fa-x-twitter" aria-hidden="true"></i><span> X</span>
+  </a>
+
+  <a href="https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fbfmhno3.github.io%2Fnote%2Flearning-fgets-and-strcspn%2F" class="btn btn--facebook" aria-label="Share on Facebook" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on Facebook">
+    <i class="fab fa-fw fa-facebook" aria-hidden="true"></i><span> Facebook</span>
+  </a>
+
+  <a href="https://www.linkedin.com/shareArticle?mini=true&url=https://bfmhno3.github.io/note/learning-fgets-and-strcspn/" class="btn btn--linkedin" aria-label="Share on LinkedIn" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on LinkedIn">
+    <i class="fab fa-fw fa-linkedin" aria-hidden="true"></i><span> LinkedIn</span>
+  </a>
+
+  <a href="https://bsky.app/intent/compose?text=%E5%AD%A6%E4%B9%A0+fgets+%E5%87%BD%E6%95%B0%E5%92%8C+strcspn+%E5%87%BD%E6%95%B0%20https%3A%2F%2Fbfmhno3.github.io%2Fnote%2Flearning-fgets-and-strcspn%2F" class="btn btn--bluesky" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on Bluesky">
+    <i class="fab fa-fw fa-bluesky" aria-hidden="true"></i><span> Bluesky</span>
+  </a>
+</section>
+
+
+      
+  <nav class="pagination">
+    
+      <a href="#" class="pagination--pager disabled">Previous</a>
+    
+    
+      <a href="/tutorial/vmware-keyboard-lag-fix/" class="pagination--pager" title="VMware Workstation 17.x 中的虚拟机按键反应迟钝解决办法">Next</a>
+    
+  </nav>
+
+
+    </div>
+
+    
+      
+        <div class="page__comments">
+  
+  
+      <h4 class="page__comments-title">Comments</h4>
+      <section id="giscus-comments"></section>
+    
+</div>
+
+      
+    
+  </article>
+
+  
+  
+    
+<div class="page__related">
+  
+  <h2 class="page__related-title">You May Also Enjoy</h2>
+  <div class="grid__wrapper">
+    
+      
+      
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc" itemprop="headline">
+      
+        <a href="/note/process-in-os/" rel="permalink">操作系统中的进程
+</a>
+      
+    </h2>
+    
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-01-26T22:10:00+00:00">January 26, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          4 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt" itemprop="description">教科书对于进程常定义通常极为简洁凝练，但其诞生是为了解决什么问题？本文通过回顾从 ENIAC 到分时系统的演进历史，探讨进程是如何为了填补人、I/O 与 CPU 之间的速度鸿沟而进化出来的。
+</p>
+  </article>
+</div>
+
+    
+      
+      
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc" itemprop="headline">
+      
+        <a href="/note/initialization-in-cpp/" rel="permalink">C++ 中的初始化列表和列表初始化
+</a>
+      
+    </h2>
+    
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-01-03T15:07:00+00:00">January 3, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          6 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt" itemprop="description">深入理解 C++ 中初始化列表与列表初始化的区别：前者解决对象生命周期与内存模型问题，后者统一初始化语法并提供类型安全保障。
+</p>
+  </article>
+</div>
+
+    
+      
+      
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc" itemprop="headline">
+      
+        <a href="/note/list-in-cpp/" rel="permalink">C++ 中的 list
+</a>
+      
+    </h2>
+    
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-01-03T13:05:00+00:00">January 3, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          2 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt" itemprop="description">深入理解 C++ 中的 std::list 双向链表容器，探讨其底层原理、独有优势（如头部操作、接合等）、迭代器特性，以及与 std::vector 的选择权衡。
+</p>
+  </article>
+</div>
+
+    
+      
+      
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc" itemprop="headline">
+      
+        <a href="/note/constructor-in-cpp/" rel="permalink">C++ 中的构造函数
+</a>
+      
+    </h2>
+    
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-01-03T13:05:00+00:00">January 3, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          5 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt" itemprop="description">深入理解 C++ 构造函数的本质：从资源管理到性能优化。涵盖默认构造、拷贝构造、移动构造，以及 RAII、explicit、constexpr 等关键机制。
+</p>
+  </article>
+</div>
+
+    
+  </div>
+</div>
+
+  
+  
+</div>
+
+      
+    </div>
+
+    
+      <div class="search-content">
+        <div class="search-content__inner-wrap">
+<form class="search-content__form" onkeydown="return event.key != 'Enter';" role="search">
+    <label class="sr-only" for="search">
+      Enter your search term...
+    </label>
+    <input type="search" id="search" class="search-input" tabindex="-1" placeholder="Enter your search term...">
+  </form>
+  <div id="results" class="results"></div>
+</div>
+
+      </div>
+    
+
+    <div id="footer" class="page__footer">
+      <footer>
+        <!-- start custom footer snippets -->
+
+<!-- end custom footer snippets -->
+        
+
+<div class="page__footer-follow">
+  <ul class="social-icons">
+    
+
+    
+      
+        
+          <li><a href="https://github.com/bfmhno3" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-github" aria-hidden="true"></i> GitHub</a></li>
+        
+      
+        
+          <li><a href="https://gitee.com/bfmhno3" rel="nofollow noopener noreferrer"><i class="fa-solid fa-g" aria-hidden="true"></i> Gitee</a></li>
+        
+      
+        
+          <li><a href="https://www.cnblogs.com/bfmhno3" rel="nofollow noopener noreferrer"><i class="fa-solid fa-blog" aria-hidden="true"></i> cnblogs</a></li>
+        
+      
+        
+          <li><a href="https://blog.csdn.net/B33336" rel="nofollow noopener noreferrer"><i class="fa-solid fa-blog" aria-hidden="true"></i> CSDN</a></li>
+        
+      
+    
+
+    
+      <li><a href="/feed.xml"><i class="fas fa-fw fa-rss-square" aria-hidden="true"></i> Feed</a></li>
+    
+  </ul>
+</div>
+
+
+<div class="page__footer-copyright">© 2026 <a href="https://bfmhno3.github.io">Better Mistakes</a>. Powered by <a href="https://jekyllrb.com" rel="nofollow">Jekyll</a> &amp; <a href="https://mademistakes.com/work/jekyll-themes/minimal-mistakes/" rel="nofollow">Minimal Mistakes</a>.</div>
+
+      </footer>
+    </div>
+
+    
+  <script src="/assets/js/main.min.js"></script>
+
+
+
+
+<script src="/assets/js/lunr/lunr.min.js"></script>
+<script src="/assets/js/lunr/lunr-store.js"></script>
+<script src="/assets/js/lunr/lunr-en.js"></script>
+
+
+
+
+  <!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-VS5B3CR1M6"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-VS5B3CR1M6', { 'anonymize_ip': false});
+</script>
+
+
+
+
+
+
+    <script>
+  'use strict';
+
+  (function () {
+    var commentContainer = document.querySelector('#giscus-comments');
+
+    if (!commentContainer) {
+      return;
+    }
+
+    var script = document.createElement('script');
+
+    script.setAttribute('src', 'https://giscus.app/client.js');
+    script.setAttribute('data-repo', 'bfmhno3/bfmhno3.github.io');
+    script.setAttribute('data-repo-id', 'R_kgDOQCQGxg');
+    script.setAttribute('data-category', 'General');
+    script.setAttribute('data-category-id', 'DIC_kwDOQCQGxs4CzG3a');
+    script.setAttribute('data-mapping', 'pathname');
+    script.setAttribute('data-strict', '0');
+    script.setAttribute('data-reactions-enabled', '1');
+    script.setAttribute('data-emit-metadata', '0');
+    script.setAttribute('data-input-position', 'bottom');
+    script.setAttribute('data-theme', 'transparent_dark');
+    script.setAttribute('data-lang',  'en');
+    
+    script.setAttribute('data-loading', 'lazy');
+    
+    script.setAttribute('crossorigin', 'anonymous');
+
+    script.setAttribute('async', '');
+
+    commentContainer.appendChild(script);
+  })();
+</script>
+
+  
+
+
+
+
+  </body>
+</html>

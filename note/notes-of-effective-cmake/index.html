@@ -1,0 +1,1497 @@
+<!DOCTYPE html>
+<!--
+  Minimal Mistakes Jekyll Theme 4.27.3 by Michael Rose
+  Copyright 2013-2025 Michael Rose - mademistakes.com | @mmistakes
+  Free for personal and commercial use under the MIT license
+  https://github.com/mmistakes/minimal-mistakes/blob/master/LICENSE
+--><html lang="en-US" class="no-js">
+  <head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta charset="utf-8">
+
+<!-- begin _includes/seo.html --><title>Notes of Effective CMake - Better Mistakes</title>
+<meta name="description" content="Notes on modern CMake best practices based on “Effective CMake”. Covers the philosophy of CMake as code, the importance of targets and properties, generator expressions, dependency management, testing, and static analysis integration.">
+
+
+  <meta name="author" content="bfmhno3">
+  
+  <meta property="article:author" content="bfmhno3">
+  
+
+
+<meta property="og:type" content="article">
+<meta property="og:locale" content="en_US">
+<meta property="og:site_name" content="Better Mistakes">
+<meta property="og:title" content="Notes of Effective CMake">
+<meta property="og:url" content="https://bfmhno3.github.io/note/notes-of-effective-cmake/">
+
+
+  <meta property="og:description" content="Notes on modern CMake best practices based on “Effective CMake”. Covers the philosophy of CMake as code, the importance of targets and properties, generator expressions, dependency management, testing, and static analysis integration.">
+
+
+
+  <meta property="og:image" content="https://bfmhno3.github.io/assets/images/avatar.jpg">
+
+
+
+
+
+  <meta property="article:published_time" content="2025-08-08T15:17:00+00:00">
+
+
+
+
+
+  
+
+  
+
+
+<link rel="canonical" href="https://bfmhno3.github.io/note/notes-of-effective-cmake/">
+
+
+
+
+
+
+
+  <meta name="google-site-verification" content="UUnU8OnGqO_2FFdhrv7eEABM5p_cNPhM4Se6HB1KFSk">
+
+
+  <meta name="msvalidate.01" content="FC3BA97765A3C90F8CA771F70AE34FB8">
+
+
+
+
+
+<!-- end _includes/seo.html -->
+
+
+
+  <link href="/feed.xml" type="application/atom+xml" rel="alternate" title="Better Mistakes Feed">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script>
+  document.documentElement.className = document.documentElement.className.replace(/\bno-js\b/g, '') + ' js ';
+  window.enable_copy_code_button = true;
+</script>
+
+<!-- For all browsers -->
+<link rel="stylesheet" href="/assets/css/main.css">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@latest/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@latest/css/all.min.css"></noscript>
+
+
+
+    <link rel="icon" type="image/png" href="/assets/images/favicon/favicon-96x96.png" sizes="96x96">
+<link rel="icon" type="image/svg+xml" href="/assets/images/favicon/favicon.svg">
+<link rel="shortcut icon" href="/assets/images/favicon/favicon.ico">
+<link rel="apple-touch-icon" sizes="180x180" href="/assets/images/favicon/apple-touch-icon.png">
+<link rel="manifest" href="/assets/images/favicon/site.webmanifest">
+  </head>
+
+  <body class="layout--single" dir="ltr">
+    <nav class="skip-links">
+  <ul>
+    <li><a href="#site-nav" class="screen-reader-shortcut">Skip to primary navigation</a></li>
+    <li><a href="#main" class="screen-reader-shortcut">Skip to content</a></li>
+    <li><a href="#footer" class="screen-reader-shortcut">Skip to footer</a></li>
+  </ul>
+</nav>
+
+    
+
+<div class="masthead">
+  <div class="masthead__inner-wrap">
+    <div class="masthead__menu">
+      <nav id="site-nav" class="greedy-nav">
+        
+          <a class="site-logo" href="/"><img src="/assets/images/logo.svg" alt="Better Mistakes"></a>
+        
+        <a class="site-title" href="/">
+          Better Mistakes
+          <span class="site-subtitle">Trial.Error.Iteration.</span>
+        </a>
+        <ul class="visible-links">
+<li class="masthead__menu-item">
+              <a href="/posts/">Posts</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/categories/">Categories</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/tags/">Tags</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/about/">About</a>
+            </li>
+</ul>
+        
+        <button class="search__toggle" type="button">
+          <span class="visually-hidden">Toggle search</span>
+          <i class="fas fa-search"></i>
+        </button>
+        
+        <button class="greedy-nav__toggle hidden" type="button">
+          <span class="visually-hidden">Toggle menu</span>
+          <div class="navicon"></div>
+        </button>
+        <ul class="hidden-links hidden"></ul>
+      </nav>
+    </div>
+  </div>
+</div>
+
+
+    <div class="initial-content">
+      
+
+
+
+
+
+<div id="main" role="main">
+  
+  <div class="sidebar sticky">
+  
+
+
+<div itemscope itemtype="https://schema.org/Person" class="h-card">
+
+  
+    <div class="author__avatar">
+      <a href="https://bfmhno3.github.io/">
+        <img src="/assets/images/avatar.jpg" alt="bfmhno3" itemprop="image" class="u-photo">
+      </a>
+    </div>
+  
+
+  <div class="author__content">
+    <h3 class="author__name p-name" itemprop="name">
+      <a class="u-url" rel="me" href="https://bfmhno3.github.io/" itemprop="url">bfmhno3</a>
+    </h3>
+    
+      <div class="author__bio p-note" itemprop="description">
+        <p>Third-year university student majoring in energy engineering. Exploring the world of code and mathematics.</p>
+
+      </div>
+    
+  </div>
+
+  <div class="author__urls-wrapper">
+    <button class="btn btn--inverse">Follow</button>
+    <ul class="author__urls social-icons">
+      
+
+      
+        
+          
+            <li><a href="https://github.com/bfmhno3" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fab fa-fw fa-github" aria-hidden="true"></i><span class="label">GitHub</span></a></li>
+          
+        
+          
+            <li><a href="https://gitee.com/bfmhno3" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fa-solid fa-g" aria-hidden="true"></i><span class="label">Gitee</span></a></li>
+          
+        
+          
+            <li><a href="https://www.cnblogs.com/bfmhno3" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fa-solid fa-blog" aria-hidden="true"></i><span class="label">cnblogs</span></a></li>
+          
+        
+          
+            <li><a href="https://blog.csdn.net/B33336" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fa-solid fa-blog" aria-hidden="true"></i><span class="label">CSDN</span></a></li>
+          
+        
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      <!--
+  <li>
+    <a href="http://link-to-whatever-social-network.com/user/" itemprop="sameAs" rel="nofollow noopener noreferrer me">
+      <i class="fas fa-fw" aria-hidden="true"></i> Custom Social Profile Link
+    </a>
+  </li>
+-->
+    </ul>
+  </div>
+</div>
+
+  
+  </div>
+
+
+
+  <article class="page" itemscope itemtype="https://schema.org/CreativeWork">
+    <meta itemprop="headline" content="Notes of Effective CMake">
+    <meta itemprop="description" content="Notes on modern CMake best practices based on “Effective CMake”. Covers the philosophy of CMake as code, the importance of targets and properties, generator expressions, dependency management, testing, and static analysis integration.">
+    <meta itemprop="datePublished" content="2025-08-08T15:17:00+00:00">
+    
+
+    <div class="page__inner-wrap">
+      
+        <header>
+          <h1 id="page-title" class="page__title" itemprop="headline">
+            <a href="https://bfmhno3.github.io/note/notes-of-effective-cmake/" itemprop="url">Notes of Effective CMake
+</a>
+          </h1>
+          
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2025-08-08T15:17:00+00:00">August 8, 2025</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-clock" aria-hidden="true"></i>
+        
+          29 minute read
+        
+      </span>
+    
+  </p>
+
+
+        </header>
+      
+
+      <section class="page__content" itemprop="text">
+        
+          <aside class="sidebar__right sticky">
+            <nav class="toc">
+              <header><h4 class="nav__title">
+<i class="fas fa-file-alt"></i> On this page</h4></header>
+              <ul class="toc__menu">
+<li>
+<a href="#1-the-philosophy-of-modern-cmake">1. The Philosophy of Modern CMake</a><ul>
+<li><a href="#why-effective-cmake">Why “Effective CMake”?</a></li>
+<li><a href="#cmake-is-code">CMake is Code</a></li>
+</ul>
+</li>
+<li>
+<a href="#2-the-cmake-language-a-quick-tour">2. The CMake Language: A Quick Tour</a><ul>
+<li><a href="#organization">Organization</a></li>
+<li><a href="#commands">Commands</a></li>
+<li><a href="#variables">Variables</a></li>
+<li><a href="#comments">Comments</a></li>
+<li>
+<a href="#generator-expressions-the--syntax">Generator Expressions: The $&lt;...&gt; Syntax</a><ul><li><a href="#common-use-cases-and-examples">Common Use Cases and Examples</a></li></ul>
+</li>
+<li><a href="#custom-commands-function-vs-macro">Custom Commands: function() vs. macro()</a></li>
+</ul>
+</li>
+<li>
+<a href="#3-the-core-of-modern-cmake-targets-and-properties">3. The Core of Modern CMake: Targets and Properties</a><ul>
+<li><a href="#thinking-in-targets">Thinking in Targets</a></li>
+<li>
+<a href="#build-specifications-vs-usage-requirements">Build Specifications vs. Usage Requirements</a><ul><li><a href="#example">Example</a></li></ul>
+</li>
+<li><a href="#header-only-libraries">Header-Only Libraries</a></li>
+</ul>
+</li>
+<li>
+<a href="#4-working-with-dependencies">4. Working with Dependencies</a><ul>
+<li><a href="#finding-packages-with-find_package">Finding Packages with find_package()</a></li>
+<li><a href="#fetching-dependencies-at-configure-time-with-fetchcontent">Fetching Dependencies at Configure Time with FetchContent</a></li>
+<li><a href="#exporting-your-project-as-a-package">Exporting Your Project as a Package</a></li>
+</ul>
+</li>
+<li>
+<a href="#5-testing-with-ctest">5. Testing with CTest</a><ul><li>
+<a href="#basic-setup">Basic Setup</a><ul>
+<li><a href="#running-tests">Running Tests</a></li>
+<li><a href="#advanced-filtering-tests">Advanced: Filtering Tests</a></li>
+<li><a href="#advanced-testing-for-compile-failure">Advanced: Testing for Compile Failure</a></li>
+<li><a href="#advanced-driving-ctest-with-a-script">Advanced: Driving CTest with a Script</a></li>
+</ul>
+</li></ul>
+</li>
+<li>
+<a href="#6-cross-compiling-with-toolchain-files">6. Cross-Compiling with Toolchain Files</a><ul><li>
+<a href="#the-role-of-the-toolchain-file">The Role of the Toolchain File</a><ul>
+<li><a href="#example-toolchain-file">Example Toolchain File</a></li>
+<li><a href="#running-cross-compiled-tests">Running Cross-Compiled Tests</a></li>
+</ul>
+</li></ul>
+</li>
+<li><a href="#7-packaging-with-cpack">7. Packaging with CPack</a></li>
+<li>
+<a href="#8-static-analysis-integration">8. Static Analysis Integration</a><ul>
+<li><a href="#the-philosophy-of-handling-warnings">The Philosophy of Handling Warnings</a></li>
+<li><a href="#a-better-approach-treat-new-warnings-as-errors">A Better Approach: Treat New Warnings as Errors</a></li>
+<li><a href="#pull-out-all-the-stops-powerful-analysis-tools">Pull Out All the Stops: Powerful Analysis Tools</a></li>
+<li><a href="#modern-cmake-integration-via-target-properties">Modern CMake Integration via Target Properties</a></li>
+<li><a href="#best-practice-analyzing-header-files">Best Practice: Analyzing Header Files</a></li>
+</ul>
+</li>
+<li><a href="#reference">Reference</a></li>
+</ul>
+            </nav>
+          </aside>
+        
+        <h2 id="1-the-philosophy-of-modern-cmake">1. The Philosophy of Modern CMake</h2>
+
+<h3 id="why-effective-cmake">Why “Effective CMake”?</h3>
+
+<p>Just like with C++, the way you write CMake code significantly impacts your project’s maintainability, ease of use for others, and scalability. Adopting modern practices is key.</p>
+
+<h3 id="cmake-is-code">CMake is Code</h3>
+
+<p>Treat your <code class="language-plaintext highlighter-rouge">CMakeLists.txt</code> files with the same care as your source code. Apply principles like Don’t Repeat Yourself (DRY), keep it clean, and write comments where necessary.</p>
+
+<h2 id="2-the-cmake-language-a-quick-tour">2. The CMake Language: A Quick Tour</h2>
+
+<h3 id="organization">Organization</h3>
+
+<p>CMake code can be organized in three ways:</p>
+
+<ul>
+  <li>
+<strong>Directories (<code class="language-plaintext highlighter-rouge">CMakeLists.txt</code>)</strong>: The entry point for a project or sub-project. <code class="language-plaintext highlighter-rouge">add_subdirectory()</code> adds another directory (which must contain a <code class="language-plaintext highlighter-rouge">CMakeLists.txt</code>) to the build.</li>
+  <li>
+<strong>Scripts (<code class="language-plaintext highlighter-rouge">&lt;name&gt;.cmake</code>)</strong>: Executed with <code class="language-plaintext highlighter-rouge">cmake -P &lt;script&gt;.cmake</code>. They are useful for automation but cannot define build targets like executables or libraries. In other words, <em>not all commands are supported</em>.</li>
+  <li>
+<strong>Modules (<code class="language-plaintext highlighter-rouge">&lt;name&gt;.cmake</code>)</strong>: Reusable code included in your projects via <code class="language-plaintext highlighter-rouge">include()</code>. They are located in the <code class="language-plaintext highlighter-rouge">CMAKE_MODULE_PATH</code>.</li>
+</ul>
+
+<h3 id="commands">Commands</h3>
+
+<p>CMake commands are <strong>case-insensitive</strong>, but their arguments (including variable names) are <strong>case-sensitive</strong>.</p>
+
+<div class="language-cmake highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># command_name(ARGUMENT1 ARGUMENT2 ...)</span>
+<span class="nb">project</span><span class="p">(</span>MyProject VERSION 1.0<span class="p">)</span>
+</code></pre></div></div>
+
+<p class="notice--danger"><strong>Command invovations are not expressions</strong>, so you cannnot put a command invocation directly as an argument of another command or inside an if condition. They are not possible.</p>
+
+<h3 id="variables">Variables</h3>
+
+<div class="language-cmake highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Set a variable</span>
+<span class="nb">set</span><span class="p">(</span>MY_VARIABLE <span class="s2">"Hello"</span><span class="p">)</span>
+
+<span class="c1"># Reference a variable (dereference)</span>
+<span class="nb">message</span><span class="p">(</span>STATUS <span class="s2">"My variable is: </span><span class="si">${</span><span class="nv">MY_VARIABLE</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+<span class="c1"># Unset a variable</span>
+<span class="nb">unset</span><span class="p">(</span>MY_VARIABLE<span class="p">)</span>
+</code></pre></div></div>
+
+<blockquote class="notice--danger">
+  <p><img class="emoji" title=":exclamation:" alt=":exclamation:" src="https://github.githubassets.com/images/icons/emoji/unicode/2757.png" height="20" width="20"> <strong>IMPORTANT</strong></p>
+
+  <ul>
+    <li>In CMake, everything is a string. Lists are just strings separated by semicolons <code class="language-plaintext highlighter-rouge">;</code> (e.g., <code class="language-plaintext highlighter-rouge">"item1;item2;item3"</code>).</li>
+    <li>
+<strong>An unset or undefined variable expands to an empty string</strong>. This can be a common source of bugs! Use <code class="language-plaintext highlighter-rouge">if(DEFINED VAR_NAME)</code> to check if a variable is set.</li>
+    <li>CMake variables are not environment variables (unlink <code class="language-plaintext highlighter-rouge">Makefile</code>).</li>
+  </ul>
+</blockquote>
+
+<blockquote class="notice--warning">
+  <p><img class="emoji" title=":warning:" alt=":warning:" src="https://github.githubassets.com/images/icons/emoji/unicode/26a0.png" height="20" width="20"> <strong>WARNING</strong></p>
+
+  <p>Avoid custom variables in the arguments of project commands.</p>
+
+  <p>In modern CMake, what we need is targets and properties. See them later.</p>
+</blockquote>
+
+<h3 id="comments">Comments</h3>
+
+<div class="language-cmake highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># This is a single-line comment.</span>
+
+<span class="cm">#[=[
+This is a multi-line comment.
+It can contain other symbols and even # characters.
+#]=]</span>
+</code></pre></div></div>
+
+<h3 id="generator-expressions-the--syntax">Generator Expressions: The <code class="language-plaintext highlighter-rouge">$&lt;...&gt;</code> Syntax</h3>
+
+<p>Generator expressions, often called “genex,” are a powerful CMake feature that uses the <code class="language-plaintext highlighter-rouge">$&lt;...&gt;</code> syntax. They are <strong>not</strong> evaluated when CMake first reads your <code class="language-plaintext highlighter-rouge">CMakeLists.txt</code>. Instead, they are written into the native build files (like Makefiles or Visual Studio projects) and are evaluated <strong>during the build process</strong>.</p>
+
+<p>This delayed evaluation is crucial because it allows you to create build configurations that are aware of things that are only known at build time, such as the specific build type (<code class="language-plaintext highlighter-rouge">Debug</code>, <code class="language-plaintext highlighter-rouge">Release</code>), the compiler being used, or the language of a source file.</p>
+
+<blockquote class="notice--danger">
+  <p><img class="emoji" title=":exclamation:" alt=":exclamation:" src="https://github.githubassets.com/images/icons/emoji/unicode/2757.png" height="20" width="20"> <strong>IMPORTANT</strong></p>
+
+  <p>Think of generator expressions as placeholders that the final build tool (like Make, Ninja, or MSBuild) will fill in with the correct value at the right time. This is much more flexible than using <code class="language-plaintext highlighter-rouge">if()</code> statements in CMake, which are only evaluated once when you run <code class="language-plaintext highlighter-rouge">cmake</code>.</p>
+</blockquote>
+
+<h4 id="common-use-cases-and-examples">Common Use Cases and Examples</h4>
+
+<ol>
+  <li><strong>Conditional Compilation Definitions (<code class="language-plaintext highlighter-rouge">$&lt;CONFIG:...&gt;</code>)</strong></li>
+</ol>
+
+<p>This is the most common use case. You want to define a preprocessor macro differently for <code class="language-plaintext highlighter-rouge">Debug</code> and <code class="language-plaintext highlighter-rouge">Release</code> builds.</p>
+
+<div class="language-cmake highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># In Debug mode, VERBOSITY will be 2. In all other modes (e.g., Release), it will be 0.</span>
+<span class="nb">target_compile_definitions</span><span class="p">(</span>my_app PRIVATE
+    <span class="s2">"VERBOSITY=$&lt;IF:$&lt;CONFIG:Debug&gt;,2,0&gt;"</span>
+<span class="p">)</span>
+</code></pre></div></div>
+
+<p>The <code class="language-plaintext highlighter-rouge">$&lt;IF:condition,true_value,false_value&gt;</code> expression is evaluated at build time. If the configuration is <code class="language-plaintext highlighter-rouge">Debug</code>, it resolves to <code class="language-plaintext highlighter-rouge">VERBOSITY=2</code>; otherwise, it becomes <code class="language-plaintext highlighter-rouge">VERBOSITY=0</code>.</p>
+
+<ol>
+  <li><strong>Conditional Include Directories (<code class="language-plaintext highlighter-rouge">$&lt;BUILD_INTERFACE:...&gt;</code> and <code class="language-plaintext highlighter-rouge">$&lt;INSTALL_INTERFACE:...&gt;</code>)</strong></li>
+</ol>
+
+<p>A library often has different include paths when being built inside a project versus when it’s installed on a system.</p>
+
+<div class="language-cmake highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">target_include_directories</span><span class="p">(</span>my_lib PUBLIC
+    <span class="c1"># When my_lib is built as part of this project, use the source directory.</span>
+    $&lt;BUILD_INTERFACE:<span class="si">${</span><span class="nv">CMAKE_CURRENT_SOURCE_DIR</span><span class="si">}</span>/include&gt;
+
+    <span class="c1"># When an external project uses an installed version of my_lib, the path is just 'include'.</span>
+    $&lt;INSTALL_INTERFACE:include&gt;
+<span class="p">)</span>
+</code></pre></div></div>
+
+<p>This ensures your library is usable both during development and after deployment without any changes.</p>
+
+<ol>
+  <li><strong>Compiler-Specific Flags (<code class="language-plaintext highlighter-rouge">$&lt;CXX_COMPILER_ID:...&gt;</code>)</strong></li>
+</ol>
+
+<p>You can pass specific flags depending on the compiler being used (e.g., GCC, Clang, MSVC).</p>
+
+<div class="language-cmake highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Enable strong warnings, but use the correct flag for each compiler.</span>
+<span class="nb">set</span><span class="p">(</span>GCC_CLANG_WARNINGS <span class="s2">"-Wall -Wextra -Wpedantic"</span><span class="p">)</span>
+<span class="nb">set</span><span class="p">(</span>MSVC_WARNINGS <span class="s2">"/W4"</span><span class="p">)</span>
+
+<span class="nb">target_compile_options</span><span class="p">(</span>my_app PRIVATE
+    <span class="s2">"$&lt;IF:$&lt;CXX_COMPILER_ID:MSVC&gt;,</span><span class="si">${</span><span class="nv">MSVC_WARNINGS</span><span class="si">}</span><span class="s2">,</span><span class="si">${</span><span class="nv">GCC_CLANG_WARNINGS</span><span class="si">}</span><span class="s2">&gt;"</span>
+<span class="p">)</span>
+</code></pre></div></div>
+
+<ol>
+  <li><strong>Language-Specific Standards (<code class="language-plaintext highlighter-rouge">$&lt;COMPILE_LANGUAGE:...&gt;</code>)</strong></li>
+</ol>
+
+<p>If your target mixes C and C++ code, you can set standards for each language.</p>
+
+<div class="language-cmake highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">target_compile_features</span><span class="p">(</span>my_app PRIVATE
+    <span class="c1"># Set C++ standard to 17 for all C++ files.</span>
+    $&lt;COMPILE_LANGUAGE:CXX&gt;:cxx_std_17
+
+    <span class="c1"># Set C standard to 11 for all C files.</span>
+    $&lt;COMPILE_LANGUAGE:C&gt;:c_std_11
+<span class="p">)</span>
+</code></pre></div></div>
+
+<p>Generator expressions are a cornerstone of modern, robust, and portable CMake scripts. Mastering them allows you to write cleaner and more powerful <code class="language-plaintext highlighter-rouge">CMakeLists.txt</code> files.</p>
+
+<h3 id="custom-commands-function-vs-macro">Custom Commands: <code class="language-plaintext highlighter-rouge">function()</code> vs. <code class="language-plaintext highlighter-rouge">macro()</code>
+</h3>
+
+<p>You can create your own commands to reduce code duplication.</p>
+
+<ul>
+  <li>
+<strong><code class="language-plaintext highlighter-rouge">function()</code></strong>: Creates a new variable scope. To pass results back to the caller, you must use <code class="language-plaintext highlighter-rouge">set(... PARENT_SCOPE)</code>.</li>
+  <li>
+<strong><code class="language-plaintext highlighter-rouge">macro()</code></strong>: Does not create a new scope. It performs simple text replacement, much like a C preprocessor macro.</li>
+</ul>
+
+<blockquote class="notice--success">
+  <p><img class="emoji" title=":bulb:" alt=":bulb:" src="https://github.githubassets.com/images/icons/emoji/unicode/1f4a1.png" height="20" width="20"> <strong>TIP</strong></p>
+
+  <p><strong>Rule of Thumb:</strong></p>
+
+  <ul>
+    <li>Use <code class="language-plaintext highlighter-rouge">function()</code> by default to avoid polluting the caller’s scope with side effects.</li>
+    <li>Use <code class="language-plaintext highlighter-rouge">macro()</code> only when you need to wrap a command that has an output parameter or when you explicitly want side effects in the caller’s scope.</li>
+  </ul>
+</blockquote>
+
+<h2 id="3-the-core-of-modern-cmake-targets-and-properties">3. The Core of Modern CMake: Targets and Properties</h2>
+
+<p>Modern CMake revolves around <strong>targets</strong> and their <strong>properties</strong>. A target can be an executable, a library, or a custom target.</p>
+
+<blockquote class="notice--warning">
+  <p><img class="emoji" title=":warning:" alt=":warning:" src="https://github.githubassets.com/images/icons/emoji/unicode/26a0.png" height="20" width="20"> <strong>WARNING</strong></p>
+
+  <p>Avoid directory-level commands like <code class="language-plaintext highlighter-rouge">include_directories()</code>, <code class="language-plaintext highlighter-rouge">link_libraries()</code>, and <code class="language-plaintext highlighter-rouge">add_compile_options()</code>. They use global state and make dependencies hard to reason about. Always prefer the <code class="language-plaintext highlighter-rouge">target_*</code> equivalents.</p>
+</blockquote>
+
+<blockquote class="notice--warning">
+  <p><img class="emoji" title=":warning:" alt=":warning:" src="https://github.githubassets.com/images/icons/emoji/unicode/26a0.png" height="20" width="20"> <strong>WARNING</strong></p>
+
+  <p>Don’t use <code class="language-plaintext highlighter-rouge">file(GLOB)</code> in your <code class="language-plaintext highlighter-rouge">CMakeLists.txt</code> anymore.</p>
+</blockquote>
+
+<h3 id="thinking-in-targets">Thinking in Targets</h3>
+
+<p>Imagine targets as objects in an OOP language.</p>
+
+<ul>
+  <li>
+<strong>Constructor</strong>: <code class="language-plaintext highlighter-rouge">add_executable()</code>, <code class="language-plaintext highlighter-rouge">add_library()</code>
+</li>
+  <li>
+<strong>Member Functions</strong>: <code class="language-plaintext highlighter-rouge">target_sources()</code>, <code class="language-plaintext highlighter-rouge">target_include_directories()</code>, <code class="language-plaintext highlighter-rouge">target_link_libraries()</code>, etc.</li>
+  <li>
+<strong>Member Variables</strong>: Properties like <code class="language-plaintext highlighter-rouge">VERSION</code>, <code class="language-plaintext highlighter-rouge">SOURCES</code>, <code class="language-plaintext highlighter-rouge">INTERFACE_INCLUDE_DIRECTORIES</code>.</li>
+</ul>
+
+<div class="language-cmake highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Create a library target</span>
+<span class="nb">add_library</span><span class="p">(</span>my_lib STATIC my_lib.cpp my_lib.h<span class="p">)</span>
+
+<span class="c1"># Add properties to the target</span>
+<span class="nb">target_include_directories</span><span class="p">(</span>my_lib PUBLIC include<span class="p">)</span>
+<span class="nb">target_compile_features</span><span class="p">(</span>my_lib PUBLIC cxx_std_17<span class="p">)</span>
+</code></pre></div></div>
+
+<h3 id="build-specifications-vs-usage-requirements">Build Specifications vs. Usage Requirements</h3>
+
+<ul>
+  <li>
+<code class="language-plaintext highlighter-rouge">Non-INTERFACE_</code> properties define the build specification of a terget</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">INTERFACE_</code> properties define the usage requirements of a target.</li>
+</ul>
+
+<p>This is the most critical concept in modern CMake. When you link a library, the consumer needs to know its include directories, compile definitions, etc.</p>
+
+<ul>
+  <li>
+<strong><code class="language-plaintext highlighter-rouge">PRIVATE</code></strong>: The property is only for building this target. It is not passed on to consumers (<code class="language-plaintext highlighter-rouge">Non-INTERFACE_</code>).</li>
+  <li>
+<strong><code class="language-plaintext highlighter-rouge">INTERFACE</code></strong>: The property is <em>only</em> for consumers of this target. The target itself doesn’t use it for its own build. This is perfect for header-only libraries (<code class="language-plaintext highlighter-rouge">INTERFACE_</code>).</li>
+  <li>
+<strong><code class="language-plaintext highlighter-rouge">PUBLIC</code></strong>: The property is for both the target’s build (<code class="language-plaintext highlighter-rouge">PRIVATE</code>) and for its consumers (<code class="language-plaintext highlighter-rouge">INTERFACE</code>).</li>
+</ul>
+
+<h4 id="example">Example</h4>
+
+<div class="language-cmake highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># A logging library that uses spdlog internally</span>
+<span class="nb">add_library</span><span class="p">(</span>my_logger my_logger.cpp<span class="p">)</span>
+
+<span class="c1"># my_logger needs the spdlog headers to compile.</span>
+<span class="c1"># Anyone who uses my_logger does NOT need spdlog headers directly.</span>
+<span class="nb">target_include_directories</span><span class="p">(</span>my_logger
+    PRIVATE
+        <span class="si">${</span><span class="nv">spdlog_SOURCE_DIR</span><span class="si">}</span>/include
+<span class="p">)</span>
+
+<span class="c1"># Anyone who uses my_logger needs my_logger's own headers.</span>
+<span class="nb">target_include_directories</span><span class="p">(</span>my_logger
+    PUBLIC
+        $&lt;BUILD_INTERFACE:<span class="si">${</span><span class="nv">CMAKE_CURRENT_SOURCE_DIR</span><span class="si">}</span>/include&gt;
+        $&lt;INSTALL_INTERFACE:include&gt; <span class="c1"># Different path after installation</span>
+<span class="p">)</span>
+</code></pre></div></div>
+
+<h3 id="header-only-libraries">Header-Only Libraries</h3>
+
+<p>For libraries that are headers-only, create an <code class="language-plaintext highlighter-rouge">INTERFACE</code> library. It has no sources and only defines usage requirements.</p>
+
+<div class="language-cmake highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">add_library</span><span class="p">(</span>my_header_lib INTERFACE<span class="p">)</span>
+
+<span class="nb">target_include_directories</span><span class="p">(</span>my_header_lib INTERFACE
+    $&lt;BUILD_INTERFACE:<span class="si">${</span><span class="nv">CMAKE_CURRENT_SOURCE_DIR</span><span class="si">}</span>/include&gt;
+    $&lt;INSTALL_INTERFACE:include&gt;
+<span class="p">)</span>
+</code></pre></div></div>
+
+<blockquote class="notice--warning">
+  <p><img class="emoji" title=":warning:" alt=":warning:" src="https://github.githubassets.com/images/icons/emoji/unicode/26a0.png" height="20" width="20"> <strong>WARNING</strong></p>
+
+  <p>The library interface may change during installation. Use the <code class="language-plaintext highlighter-rouge">BUILD_INTERFACE</code> and <code class="language-plaintext highlighter-rouge">INSTALL_INTERFACE</code> generator expressions as filters</p>
+</blockquote>
+
+<h2 id="4-working-with-dependencies">4. Working with Dependencies</h2>
+
+<h3 id="finding-packages-with-find_package">Finding Packages with <code class="language-plaintext highlighter-rouge">find_package()</code>
+</h3>
+
+<p>This is the standard way to find and use external libraries that have been installed on the system or are part of the project.</p>
+
+<div class="language-cmake highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Find the Boost library, version 1.71 or newer.</span>
+<span class="c1"># It is REQUIRED; CMake will fail if it's not found.</span>
+<span class="nb">find_package</span><span class="p">(</span>Boost 1.71 REQUIRED COMPONENTS system thread<span class="p">)</span>
+
+<span class="c1"># If found, use the imported target provided by Boost</span>
+<span class="nb">if</span><span class="p">(</span>Boost_FOUND<span class="p">)</span>
+    <span class="nb">target_link_libraries</span><span class="p">(</span>my_app PRIVATE Boost::system Boost::thread<span class="p">)</span>
+<span class="nb">endif</span><span class="p">()</span>
+</code></pre></div></div>
+
+<blockquote class="notice--info">
+  <p><img class="emoji" title=":memo:" alt=":memo:" src="https://github.githubassets.com/images/icons/emoji/unicode/1f4dd.png" height="20" width="20"> <strong>Note</strong></p>
+
+  <p>Regardless of the mode/package used, a <code class="language-plaintext highlighter-rouge">&lt;PackageName&gt;_FOUND</code> variable will be set to indicate whether the package was found.</p>
+</blockquote>
+
+<blockquote class="notice--danger">
+  <p><img class="emoji" title=":exclamation:" alt=":exclamation:" src="https://github.githubassets.com/images/icons/emoji/unicode/2757.png" height="20" width="20"> <strong>IMPORTANT</strong></p>
+
+  <p>Always use the official, namespaced, imported targets (e.g., <code class="language-plaintext highlighter-rouge">Boost::system</code>, <code class="language-plaintext highlighter-rouge">Qt5::Core</code>, <code class="language-plaintext highlighter-rouge">GTest::GTest</code>). Never use the old-style <code class="language-plaintext highlighter-rouge">_LIBRARIES</code> and <code class="language-plaintext highlighter-rouge">_INCLUDE_DIRS</code> variables. Imported targets handle all dependency properties for you automatically.</p>
+</blockquote>
+
+<blockquote class="notice--danger">
+  <p><img class="emoji" title=":exclamation:" alt=":exclamation:" src="https://github.githubassets.com/images/icons/emoji/unicode/2757.png" height="20" width="20"> <strong>IMPORTANT</strong></p>
+
+  <p>Use a Find module for third party libraries <del>that are not built with CMake</del> that don’t support clients to use CMake. Also, report this as a bug to their authors.</p>
+</blockquote>
+
+<p>If you need to write a find module for a third-party library, report this as a bug to the authors. Because most people use CMake, it’s a problem that don’t support it.</p>
+
+<h3 id="fetching-dependencies-at-configure-time-with-fetchcontent">Fetching Dependencies at Configure Time with <code class="language-plaintext highlighter-rouge">FetchContent</code>
+</h3>
+
+<p>For dependencies that you want to download and build alongside your project, <code class="language-plaintext highlighter-rouge">FetchContent</code> is the modern, preferred approach. It’s great for ensuring all developers use the exact same version of a dependency.</p>
+
+<div class="language-cmake highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">include</span><span class="p">(</span>FetchContent<span class="p">)</span>
+
+<span class="c1"># Declare the dependency</span>
+<span class="nf">FetchContent_Declare</span><span class="p">(</span>
+    googletest
+    GIT_REPOSITORY https://github.com/google/googletest.git
+    GIT_TAG        release-1.12.1
+<span class="p">)</span>
+
+<span class="c1"># Make it available (downloads and adds it as a sub-project)</span>
+<span class="nf">FetchContent_MakeAvailable</span><span class="p">(</span>googletest<span class="p">)</span>
+
+<span class="c1"># Now you can link to it just like any other target in your project</span>
+<span class="nb">target_link_libraries</span><span class="p">(</span>my_tests PRIVATE GTest::GTest GTest::Main<span class="p">)</span>
+</code></pre></div></div>
+
+<blockquote class="notice--info">
+  <p><img class="emoji" title=":memo:" alt=":memo:" src="https://github.githubassets.com/images/icons/emoji/unicode/1f4dd.png" height="20" width="20"> <strong>Note</strong></p>
+
+  <p><code class="language-plaintext highlighter-rouge">FetchContent</code> is generally preferred over Git submodules because it gives the parent project more control and is easier to manage.</p>
+</blockquote>
+
+<h3 id="exporting-your-project-as-a-package">Exporting Your Project as a Package</h3>
+
+<p>When you want other projects to use your library with <code class="language-plaintext highlighter-rouge">find_package()</code>, you need to generate package configuration files.</p>
+
+<ol>
+  <li>
+<strong>Install Targets</strong>: Use <code class="language-plaintext highlighter-rouge">install(TARGETS ...)</code> to specify where your library files (<code class="language-plaintext highlighter-rouge">.a</code>, <code class="language-plaintext highlighter-rouge">.so</code>, <code class="language-plaintext highlighter-rouge">.dll</code>) and headers should be installed. Use the <code class="language-plaintext highlighter-rouge">EXPORT</code> keyword to associate them with a target export set.</li>
+  <li>
+<strong>Install Export Set</strong>: Use <code class="language-plaintext highlighter-rouge">install(EXPORT ...)</code> to create a <code class="language-plaintext highlighter-rouge">&lt;name&gt;Targets.cmake</code> file. This file contains the definitions of your imported targets (e.g., <code class="language-plaintext highlighter-rouge">MyLib::MyLib</code>).</li>
+  <li>
+<strong>Create Version and Config Files</strong>: Use <code class="language-plaintext highlighter-rouge">CMakePackageConfigHelpers</code> to generate a version file (<code class="language-plaintext highlighter-rouge">&lt;name&gt;ConfigVersion.cmake</code>) and write a config file (<code class="language-plaintext highlighter-rouge">&lt;name&gt;Config.cmake</code>). The config file is the entry point that <code class="language-plaintext highlighter-rouge">find_package</code> looks for.</li>
+</ol>
+
+<p>This process tells other projects how to use your library by defining an imported target like <code class="language-plaintext highlighter-rouge">YourProject::YourLib</code>.</p>
+
+<p>For example:</p>
+
+<div class="language-cmake highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># standard steps to build the library</span>
+<span class="nb">find_package</span><span class="p">(</span>Bar 2.0 REQUIRED<span class="p">)</span>
+<span class="nb">add_library</span><span class="p">(</span>Foo ...<span class="p">)</span>
+<span class="nb">target_link_libraries</span><span class="p">(</span>Foo PRIVATE Bar::Bar<span class="p">)</span>
+
+<span class="c1"># 1. Install targets</span>
+<span class="nb">install</span><span class="p">(</span>TARGETS Foo EXPORT FooTargets
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+    RUNTIME DESTINATION bin
+    INCLUDES DESTINATION include<span class="p">)</span>
+
+<span class="c1"># 2. Install Export Set</span>
+<span class="nb">install</span><span class="p">(</span>EXPORT FooTargets
+    FILE FooTargets.cmake
+    NAMESPACE Foo::
+    DESTINATION lib/cmake/Foo<span class="p">)</span>
+
+<span class="c1"># 3. Create Version file</span>
+<span class="nb">include</span><span class="p">(</span>CMakePackageConfigHelpers<span class="p">)</span>
+<span class="nf">write_basic_package_version_file</span><span class="p">(</span><span class="s2">"FooConfigVersion.cmake"</span>
+    VERSION <span class="si">${</span><span class="nv">Foo_VERSION</span><span class="si">}</span>
+    COMPATIBILITY SameMajorVersion
+    <span class="p">)</span>
+<span class="nb">install</span><span class="p">(</span>FILES <span class="s2">"FooConfig.cmake"</span> <span class="s2">"FooConfigVersion.cmake"</span>
+    DESTINATION lib/cmake/Foo<span class="p">)</span>
+</code></pre></div></div>
+
+<p>Create and write config files <code class="language-plaintext highlighter-rouge">FooConfig.cmake</code>:</p>
+
+<div class="language-cmake highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">include</span><span class="p">(</span>CMakeFindDependencyMacro<span class="p">)</span>
+<span class="nf">find_dependency</span><span class="p">(</span>Bar 2.0<span class="p">)</span>
+<span class="nb">include</span><span class="p">(</span><span class="s2">"$</span><span class="si">${</span><span class="nv">CMAKE_CURRENT_LIST_DIR</span><span class="si">}</span><span class="s2">/FooTargets.cmake"</span><span class="p">)</span>
+</code></pre></div></div>
+
+<h2 id="5-testing-with-ctest">5. Testing with CTest</h2>
+
+<p>CTest is CMake’s testing framework. It acts as a test driver, running test executables and reporting results.</p>
+
+<h3 id="basic-setup">Basic Setup</h3>
+
+<ol>
+  <li>
+<strong>Enable Testing</strong>: Add <code class="language-plaintext highlighter-rouge">enable_testing()</code> to your root <code class="language-plaintext highlighter-rouge">CMakeLists.txt</code>. This command should be called only once in the top-level project.</li>
+  <li>
+<strong>Add Tests</strong>: Use <code class="language-plaintext highlighter-rouge">add_test()</code> to define a test case. A test is typically an executable that returns 0 for success and non-zero for failure.</li>
+</ol>
+
+<div class="language-cmake highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># In your tests/CMakeLists.txt</span>
+<span class="nb">add_executable</span><span class="p">(</span>run_all_tests tests.cpp<span class="p">)</span>
+<span class="nb">target_link_libraries</span><span class="p">(</span>run_all_tests PRIVATE my_lib GTest::GTest GTest::Main<span class="p">)</span>
+
+<span class="c1"># Define a test named "MyLib.UnitTests" that runs the "run_all_tests" executable.</span>
+<span class="nb">add_test</span><span class="p">(</span>NAME MyLib.UnitTests COMMAND run_all_tests<span class="p">)</span>
+</code></pre></div></div>
+
+<blockquote class="notice--info">
+  <p><img class="emoji" title=":bulb:" alt=":bulb:" src="https://github.githubassets.com/images/icons/emoji/unicode/1f4a1.png" height="20" width="20"> <strong>TIP</strong></p>
+
+  <p>It’s a good practice to adopt a naming convention for your tests, like <code class="language-plaintext highlighter-rouge">Project.Component.TestType</code>. This makes filtering much easier.</p>
+</blockquote>
+
+<h4 id="running-tests">Running Tests</h4>
+
+<p>You can then run all tests from your build directory:</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Run all tests, with 4 parallel jobs and verbose output on failure</span>
+ctest <span class="nt">-j4</span> <span class="nt">--output-on-failure</span>
+</code></pre></div></div>
+
+<h4 id="advanced-filtering-tests">Advanced: Filtering Tests</h4>
+
+<p>You can run a subset of your tests using a regular expression with the <code class="language-plaintext highlighter-rouge">-R</code> flag.</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Run only the tests whose names start with "MyLib."</span>
+ctest <span class="nt">-R</span> <span class="s2">"^MyLib</span><span class="se">\\</span><span class="s2">."</span>
+</code></pre></div></div>
+
+<h4 id="advanced-testing-for-compile-failure">Advanced: Testing for Compile Failure</h4>
+
+<p>Sometimes, you want to ensure that certain code <em>fails</em> to compile (e.g., when testing <code class="language-plaintext highlighter-rouge">static_assert</code>). You can create a test for this.</p>
+
+<div class="language-cmake highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Create a library that is expected to fail compilation.</span>
+<span class="c1"># EXCLUDE_FROM_ALL prevents it from being built during a normal build.</span>
+<span class="nb">add_library</span><span class="p">(</span>foo_fail STATIC EXCLUDE_FROM_ALL foo_fail.cpp<span class="p">)</span>
+
+<span class="c1"># Add a test that tries to build this specific target.</span>
+<span class="c1"># The test "passes" if the build command fails.</span>
+<span class="nb">add_test</span><span class="p">(</span>NAME Foo.CompileFail
+    COMMAND <span class="si">${</span><span class="nv">CMAKE_COMMAND</span><span class="si">}</span> --build <span class="si">${</span><span class="nv">CMAKE_BINARY_DIR</span><span class="si">}</span> --target foo_fail
+<span class="p">)</span>
+
+<span class="c1"># We can even check for a specific error message in the build output.</span>
+<span class="c1"># The test passes if the build fails AND the output contains this regex.</span>
+<span class="nb">set_tests_properties</span><span class="p">(</span>Foo.CompileFail PROPERTIES
+    PASS_REGULAR_EXPRESSION <span class="s2">"static assert message"</span>
+    WILL_FAIL TRUE <span class="c1"># Informs CTest that a non-zero return code is expected (success)</span>
+<span class="p">)</span>
+</code></pre></div></div>
+
+<h4 id="advanced-driving-ctest-with-a-script">Advanced: Driving CTest with a Script</h4>
+
+<p>For complex testing scenarios, especially in CI/CD environments, you can use a CMake script to drive CTest.</p>
+
+<p><strong><code class="language-plaintext highlighter-rouge">build_and_test.cmake</code></strong></p>
+
+<div class="language-cmake highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># This script automates the configure, build, test, and submit steps.</span>
+<span class="nb">set</span><span class="p">(</span>CTEST_SOURCE_DIRECTORY <span class="s2">"/path/to/source"</span><span class="p">)</span>
+<span class="nb">set</span><span class="p">(</span>CTEST_BINARY_DIRECTORY <span class="s2">"/path/to/build"</span><span class="p">)</span>
+
+<span class="nb">set</span><span class="p">(</span>CTEST_CMAKE_GENERATOR <span class="s2">"Ninja"</span><span class="p">)</span> <span class="c1"># Specify the generator</span>
+
+<span class="nf">ctest_start</span><span class="p">(</span><span class="s2">"Continuous"</span><span class="p">)</span> <span class="c1"># Start a new CTest run</span>
+<span class="nf">ctest_configure</span><span class="p">()</span>         <span class="c1"># Run cmake</span>
+<span class="nf">ctest_build</span><span class="p">()</span>             <span class="c1"># Run cmake --build</span>
+<span class="nf">ctest_test</span><span class="p">()</span>              <span class="c1"># Run ctest</span>
+<span class="nf">ctest_submit</span><span class="p">()</span>            <span class="c1"># Submit results to a dashboard like CDash</span>
+</code></pre></div></div>
+
+<p>You would run this script from the command line:</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ctest <span class="nt">-S</span> build_and_test.cmake
+</code></pre></div></div>
+
+<p>This keeps CI-specific logic out of your main <code class="language-plaintext highlighter-rouge">CMakeLists.txt</code>.</p>
+
+<h2 id="6-cross-compiling-with-toolchain-files">6. Cross-Compiling with Toolchain Files</h2>
+
+<p>Cross-compiling is the process of building code on one machine (the <em>host</em>) that is intended to run on a different machine (the <em>target</em>), which may have a different architecture (e.g., building for ARM on an x86-64 host).</p>
+
+<p>CMake handles this through <strong>Toolchain Files</strong>. A toolchain file tells CMake how to find the correct compilers, linkers, and libraries for the target system.</p>
+
+<h3 id="the-role-of-the-toolchain-file">The Role of the Toolchain File</h3>
+
+<p>You specify the toolchain file when you first configure your project with <code class="language-plaintext highlighter-rouge">cmake</code>.</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Configure the project using the my-arm-toolchain.cmake file</span>
+cmake <span class="nt">-S</span> <span class="nb">.</span> <span class="nt">-B</span> build <span class="nt">-DCMAKE_TOOLCHAIN_FILE</span><span class="o">=</span>/path/to/my-arm-toolchain.cmake
+</code></pre></div></div>
+
+<blockquote class="notice--warning">
+  <p><img class="emoji" title=":warning:" alt=":warning:" src="https://github.githubassets.com/images/icons/emoji/unicode/26a0.png" height="20" width="20"> <strong>WARNING</strong></p>
+
+  <p>A toolchain file is for describing the <strong>environment</strong>, not for project logic. Avoid setting project options or variables in it. Its only job is to set up the compilers and search paths.</p>
+</blockquote>
+
+<h4 id="example-toolchain-file">Example Toolchain File</h4>
+
+<p>Here is an example of a toolchain file for cross-compiling to Windows from a Linux host using MinGW-w64.</p>
+
+<p><strong><code class="language-plaintext highlighter-rouge">mingw-toolchain.cmake</code></strong></p>
+
+<div class="language-cmake highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># The name of the target operating system</span>
+<span class="nb">set</span><span class="p">(</span>CMAKE_SYSTEM_NAME Windows<span class="p">)</span>
+
+<span class="c1"># Specify the cross-compilers</span>
+<span class="nb">set</span><span class="p">(</span>CMAKE_C_COMPILER   x86_64-w64-mingw32-gcc<span class="p">)</span>
+<span class="nb">set</span><span class="p">(</span>CMAKE_CXX_COMPILER x86_64-w64-mingw32-g++<span class="p">)</span>
+
+<span class="c1"># Where to find the target environment's headers and libraries</span>
+<span class="nb">set</span><span class="p">(</span>CMAKE_FIND_ROOT_PATH /usr/x86_64-w64-mingw32<span class="p">)</span>
+
+<span class="c1"># Adjust the search behavior for programs, libraries, and includes</span>
+<span class="nb">set</span><span class="p">(</span>CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER<span class="p">)</span>
+<span class="nb">set</span><span class="p">(</span>CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY<span class="p">)</span>
+<span class="nb">set</span><span class="p">(</span>CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY<span class="p">)</span>
+
+<span class="c1"># Set an emulator to run target executables on the host system</span>
+<span class="nb">set</span><span class="p">(</span>CMAKE_CROSSCOMPILING_EMULATOR <span class="s2">"wine64"</span><span class="p">)</span>
+</code></pre></div></div>
+
+<h4 id="running-cross-compiled-tests">Running Cross-Compiled Tests</h4>
+
+<p>You can’t directly run a target executable on the host machine. The <code class="language-plaintext highlighter-rouge">CMAKE_CROSSCOMPILING_EMULATOR</code> variable (set in the toolchain file) tells CTest how to run the tests. It specifies a program (like <code class="language-plaintext highlighter-rouge">wine</code> for Windows apps on Linux, or <code class="language-plaintext highlighter-rouge">qemu-arm</code> for ARM binaries) that can emulate the target environment.</p>
+
+<p>When you run <code class="language-plaintext highlighter-rouge">ctest</code>, it will automatically prefix test commands with the emulator:</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># CTest will effectively run:</span>
+wine64 my_test_executable.exe
+</code></pre></div></div>
+
+<p>This allows you to run your unit tests on the host machine even when cross-compiling.</p>
+
+<h2 id="7-packaging-with-cpack">7. Packaging with CPack</h2>
+
+<p>CPack is CMake’s packaging tool. It can create installers (NSIS, WiX), archives (<code class="language-plaintext highlighter-rouge">.zip</code>, <code class="language-plaintext highlighter-rouge">.tar.gz</code>), and Linux packages (<code class="language-plaintext highlighter-rouge">.deb</code>, <code class="language-plaintext highlighter-rouge">.rpm</code>).</p>
+
+<ol>
+  <li>
+<strong>Include CPack</strong>: Add <code class="language-plaintext highlighter-rouge">include(CPack)</code> to your root <code class="language-plaintext highlighter-rouge">CMakeLists.txt</code>.</li>
+  <li>
+<strong>Set CPack Variables</strong>: Configure package metadata by setting <code class="language-plaintext highlighter-rouge">CPACK_*</code> variables.</li>
+</ol>
+
+<div class="language-cmake highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">set</span><span class="p">(</span>CPACK_PACKAGE_NAME <span class="s2">"MyAwesomeApp"</span><span class="p">)</span>
+<span class="nb">set</span><span class="p">(</span>CPACK_PACKAGE_VERSION <span class="s2">"1.0.0"</span><span class="p">)</span>
+<span class="nb">set</span><span class="p">(</span>CPACK_GENERATOR <span class="s2">"ZIP;TGZ"</span><span class="p">)</span> <span class="c1"># Create a .zip and a .tar.gz</span>
+<span class="c1"># ... other variables</span>
+</code></pre></div></div>
+
+<p>Run CPack from your build directory to create the packages:</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>cpack
+</code></pre></div></div>
+
+<h2 id="8-static-analysis-integration">8. Static Analysis Integration</h2>
+
+<p>Integrating static analysis into the build process is a powerful way to enforce code quality and catch bugs early.</p>
+
+<h3 id="the-philosophy-of-handling-warnings">The Philosophy of Handling Warnings</h3>
+
+<p>A common piece of advice is to “treat warnings as errors,” typically by passing the <code class="language-plaintext highlighter-rouge">-Werror</code> flag to the compiler. However, this approach can be counterproductive and painful.</p>
+
+<p><strong>Why <code class="language-plaintext highlighter-rouge">-Werror</code> Causes Pain:</strong></p>
+
+<ul>
+  <li>
+<strong>Blocks Progress</strong>: You cannot enable <code class="language-plaintext highlighter-rouge">-Werror</code> until you have fixed every single existing warning in the codebase.</li>
+  <li>
+<strong>Hinders Upgrades</strong>: You cannot upgrade your compiler or increase the warning level (e.g., from <code class="language-plaintext highlighter-rouge">-Wall</code> to <code class="language-plaintext highlighter-rouge">-Wextra</code>) until you have fixed all the new warings that appear. This creates a significant barrier to modernization.</li>
+  <li>
+<strong>Makes Deprecation Difficult</strong>: You cannot mark your own internal APIs as <code class="language-plaintext highlighter-rouge">[[deprecated]]</code> as long as they are still in use, because this would generate a warning and fail the build. But once they are no longer used, you might as well just remove them.</li>
+</ul>
+
+<h3 id="a-better-approach-treat-new-warnings-as-errors">A Better Approach: Treat <em>New</em> Warnings as Errors</h3>
+
+<p>A more practical and agile strategy is to manage warnings in development cycles:</p>
+
+<ol>
+  <li>
+<strong>Allow New Warnings Temporarily</strong>: At the beginning of a development cycle (e.g., a new sprint), allow new warnings to be introduced. This is the time to upgrade compilers, update dependencies, or enable more aggressive warning flags.</li>
+  <li>
+<strong>Burn Down Warnings</strong>: During the cycle, the team’s goal is to fix all existing warnings and drive the count back down to zero.</li>
+  <li>
+<strong>Repeat</strong>: This iterative process allows for continuous improvement without bringing development to a halt.</li>
+</ol>
+
+<h3 id="pull-out-all-the-stops-powerful-analysis-tools">Pull Out All the Stops: Powerful Analysis Tools</h3>
+
+<p>Modern C++ has a rich ecosystem of static analysis tools that go far beyond compiler warnings. You should integrate them into your build.</p>
+
+<ul>
+  <li>
+<strong>clang-tidy</strong>: A Clang-based linter framework to diagnose and fix typical programming errors, style violations, and interface misuse.
+<strong>cpplint</strong>: An automated checker to ensure code adheres to Google’s C++ style guide.</li>
+  <li>
+<strong>include-what-you-use (IWYU)</strong>: A tool for analyzing <code class="language-plaintext highlighter-rouge">#include</code>s to ensure you include exactly what you use, which can improve compile times and code clarity.</li>
+  <li>
+<strong>clazy</strong>: A Clang plugin that finds Qt-specific antipatterns and performance issues.</li>
+</ul>
+
+<h3 id="modern-cmake-integration-via-target-properties">Modern CMake Integration via Target Properties</h3>
+
+<p>Modern CMake provides dedicated target properties to run these tools alongside the compiler.</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">&lt;LANG&gt;_CLANG_TIDY</code></li>
+  <li><code class="language-plaintext highlighter-rouge">&lt;LANG&gt;_CPPLINT</code></li>
+  <li><code class="language-plaintext highlighter-rouge">&lt;LANG&gt;_INCLUDE_WHAT_YOU_USE</code></li>
+  <li>
+<code class="language-plaintext highlighter-rouge">LINK_WHAT_YOU_USE</code> (Checks for unused library links)</li>
+</ul>
+
+<p>Where <code class="language-plaintext highlighter-rouge">&lt;LANG&gt;</code> is <code class="language-plaintext highlighter-rouge">C</code> or <code class="language-plaintext highlighter-rouge">CXX</code>. These properties are initialized by their corresponding <code class="language-plaintext highlighter-rouge">CMAKE_...</code> variables.</p>
+
+<div class="language-cmake highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Example of enabling clang-tidy and include-what-you-use</span>
+<span class="nb">set_target_properties</span><span class="p">(</span>my_app PROPERTIES
+    CXX_CLANG_TIDY <span class="s2">"clang-tidy;-checks=-*,readability-*,modernize-*"</span>
+    CXX_INCLUDE_WHAT_YOU_USE <span class="s2">"include-what-you-use;-Xiwyu;--mapping_file=/iwyu.imp"</span>
+<span class="p">)</span>
+</code></pre></div></div>
+
+<blockquote class="notice--danger">
+  <p><img class="emoji" title=":exclamation:" alt=":exclamation:" src="https://github.githubassets.com/images/icons/emoji/unicode/2757.png" height="20" width="20"> <strong>IMPORTANT</strong></p>
+
+  <p>The major advantage of this approach is that diagnostics from these tools are seamlessly integrated into your build output and appear directly in your IDE, just like regular compiler errors and warnings.</p>
+</blockquote>
+
+<h3 id="best-practice-analyzing-header-files">Best Practice: Analyzing Header Files</h3>
+
+<p>A common pitfall is that header files without an associated source file (.cpp) will not be analyzed.</p>
+
+<blockquote class="notice--info">
+  <p><img class="emoji" title=":bulb:" alt=":bulb:" src="https://github.githubassets.com/images/icons/emoji/unicode/1f4a1.png" height="20" width="20"> <strong>TIP</strong></p>
+
+  <p>For each header file, ensure there is an associated source file that <code class="language-plaintext highlighter-rouge">#include</code> it, preferably as the very first line. This source file can even be empty otherwise.</p>
+</blockquote>
+
+<p>You can use a simple script to create these missing source files:</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">#!/usr/bin/env bash</span>
+<span class="c"># Create an empty .cpp file for every .h file that doesn't have one.</span>
+<span class="k">for </span>fn <span class="k">in</span> <span class="sb">`</span><span class="nb">comm</span> <span class="nt">-23</span> <span class="se">\</span>
+            &lt;<span class="o">(</span><span class="nb">ls</span> <span class="k">*</span>.h | <span class="nb">cut</span> <span class="nt">-d</span> <span class="s1">'.'</span> <span class="nt">-f</span> 1 | <span class="nb">sort</span><span class="o">)</span> <span class="se">\</span>
+            &lt;<span class="o">(</span><span class="nb">ls</span> <span class="k">*</span>.c <span class="k">*</span>.cpp | <span class="nb">cut</span> <span class="nt">-d</span> <span class="s1">'.'</span> <span class="nt">-f</span> 1 | <span class="nb">sort</span><span class="o">)</span><span class="sb">`</span>
+<span class="k">do
+    </span><span class="nb">echo</span> <span class="s2">"#include </span><span class="se">\"</span><span class="nv">$fn</span><span class="s2">.h</span><span class="se">\"</span><span class="s2">"</span> <span class="o">&gt;&gt;</span> <span class="nv">$fn</span>.cpp
+<span class="k">done</span>
+</code></pre></div></div>
+
+<p>Enabling Analysis from Outside the Project</p>
+
+<p>To keep your <code class="language-plaintext highlighter-rouge">CMakeLists.txt</code> clean, you can enable and configure these tools from the command line during the configure step. This is ideal for CI/CD pipelines.</p>
+
+<h2 id="reference">Reference</h2>
+
+<ul>
+  <li><a href="https://www.youtube.com/watch?v=bsXLMQ6WgIk">Effective CMake: a random selectino of best practices</a></li>
+  <li><a href="https://cmake.org/documentation/">CMake Documentation and Community</a></li>
+</ul>
+
+        
+      </section>
+
+      <footer class="page__meta">
+        
+        
+  
+
+
+  
+
+  <p class="page__taxonomy">
+    <strong><i class="fas fa-fw fa-tags" aria-hidden="true"></i> Tags: </strong>
+    <span itemprop="keywords">
+    
+      <a href="/tags/cmake" class="page__taxonomy-item p-category" rel="tag">CMake</a>
+    
+    </span>
+  </p>
+
+
+
+
+  
+
+
+  
+
+  <p class="page__taxonomy">
+    <strong><i class="fas fa-fw fa-folder-open" aria-hidden="true"></i> Categories: </strong>
+    <span itemprop="keywords">
+    
+      <a href="/categories/note" class="page__taxonomy-item p-category" rel="tag">Note</a>
+    
+    </span>
+  </p>
+
+
+        
+
+  <p class="page__date"><strong><i class="fas fa-fw fa-calendar-alt" aria-hidden="true"></i> Updated:</strong> <time class="dt-published" datetime="2025-08-08T15:17:00+00:00">August 8, 2025</time></p>
+
+      </footer>
+
+      <section class="page__share">
+  <h4 class="page__share-title">Share on</h4>
+
+  <a href="https://x.com/intent/tweet?text=Notes+of+Effective+CMake%20https%3A%2F%2Fbfmhno3.github.io%2Fnote%2Fnotes-of-effective-cmake%2F" class="btn btn--x" aria-label="Share on X" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on X">
+    <i class="fab fa-fw fa-x-twitter" aria-hidden="true"></i><span> X</span>
+  </a>
+
+  <a href="https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fbfmhno3.github.io%2Fnote%2Fnotes-of-effective-cmake%2F" class="btn btn--facebook" aria-label="Share on Facebook" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on Facebook">
+    <i class="fab fa-fw fa-facebook" aria-hidden="true"></i><span> Facebook</span>
+  </a>
+
+  <a href="https://www.linkedin.com/shareArticle?mini=true&url=https://bfmhno3.github.io/note/notes-of-effective-cmake/" class="btn btn--linkedin" aria-label="Share on LinkedIn" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on LinkedIn">
+    <i class="fab fa-fw fa-linkedin" aria-hidden="true"></i><span> LinkedIn</span>
+  </a>
+
+  <a href="https://bsky.app/intent/compose?text=Notes+of+Effective+CMake%20https%3A%2F%2Fbfmhno3.github.io%2Fnote%2Fnotes-of-effective-cmake%2F" class="btn btn--bluesky" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on Bluesky">
+    <i class="fab fa-fw fa-bluesky" aria-hidden="true"></i><span> Bluesky</span>
+  </a>
+</section>
+
+
+      
+  <nav class="pagination">
+    
+      <a href="/note/visual-studio-project-management/" class="pagination--pager" title="Visual Studio C++ 工程实践指南">Previous</a>
+    
+    
+      <a href="/tutorial/deploy-overleaf-community-on-windows-with-docker-and-git-bash/" class="pagination--pager" title="在 Windows 上使用 Docker、Git Bash 和 overleaf-toolkit 部署 Overleaf 社区版">Next</a>
+    
+  </nav>
+
+
+    </div>
+
+    
+      
+        <div class="page__comments">
+  
+  
+      <h4 class="page__comments-title">Comments</h4>
+      <section id="giscus-comments"></section>
+    
+</div>
+
+      
+    
+  </article>
+
+  
+  
+    
+<div class="page__related">
+  
+  <h2 class="page__related-title">You May Also Enjoy</h2>
+  <div class="grid__wrapper">
+    
+      
+      
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc" itemprop="headline">
+      
+        <a href="/note/process-in-os/" rel="permalink">操作系统中的进程
+</a>
+      
+    </h2>
+    
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-01-26T22:10:00+00:00">January 26, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          4 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt" itemprop="description">教科书对于进程常定义通常极为简洁凝练，但其诞生是为了解决什么问题？本文通过回顾从 ENIAC 到分时系统的演进历史，探讨进程是如何为了填补人、I/O 与 CPU 之间的速度鸿沟而进化出来的。
+</p>
+  </article>
+</div>
+
+    
+      
+      
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc" itemprop="headline">
+      
+        <a href="/note/initialization-in-cpp/" rel="permalink">C++ 中的初始化列表和列表初始化
+</a>
+      
+    </h2>
+    
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-01-03T15:07:00+00:00">January 3, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          6 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt" itemprop="description">深入理解 C++ 中初始化列表与列表初始化的区别：前者解决对象生命周期与内存模型问题，后者统一初始化语法并提供类型安全保障。
+</p>
+  </article>
+</div>
+
+    
+      
+      
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc" itemprop="headline">
+      
+        <a href="/note/list-in-cpp/" rel="permalink">C++ 中的 list
+</a>
+      
+    </h2>
+    
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-01-03T13:05:00+00:00">January 3, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          2 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt" itemprop="description">深入理解 C++ 中的 std::list 双向链表容器，探讨其底层原理、独有优势（如头部操作、接合等）、迭代器特性，以及与 std::vector 的选择权衡。
+</p>
+  </article>
+</div>
+
+    
+      
+      
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc" itemprop="headline">
+      
+        <a href="/note/constructor-in-cpp/" rel="permalink">C++ 中的构造函数
+</a>
+      
+    </h2>
+    
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-01-03T13:05:00+00:00">January 3, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          5 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt" itemprop="description">深入理解 C++ 构造函数的本质：从资源管理到性能优化。涵盖默认构造、拷贝构造、移动构造，以及 RAII、explicit、constexpr 等关键机制。
+</p>
+  </article>
+</div>
+
+    
+  </div>
+</div>
+
+  
+  
+</div>
+
+      
+    </div>
+
+    
+      <div class="search-content">
+        <div class="search-content__inner-wrap">
+<form class="search-content__form" onkeydown="return event.key != 'Enter';" role="search">
+    <label class="sr-only" for="search">
+      Enter your search term...
+    </label>
+    <input type="search" id="search" class="search-input" tabindex="-1" placeholder="Enter your search term...">
+  </form>
+  <div id="results" class="results"></div>
+</div>
+
+      </div>
+    
+
+    <div id="footer" class="page__footer">
+      <footer>
+        <!-- start custom footer snippets -->
+
+<!-- end custom footer snippets -->
+        
+
+<div class="page__footer-follow">
+  <ul class="social-icons">
+    
+
+    
+      
+        
+          <li><a href="https://github.com/bfmhno3" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-github" aria-hidden="true"></i> GitHub</a></li>
+        
+      
+        
+          <li><a href="https://gitee.com/bfmhno3" rel="nofollow noopener noreferrer"><i class="fa-solid fa-g" aria-hidden="true"></i> Gitee</a></li>
+        
+      
+        
+          <li><a href="https://www.cnblogs.com/bfmhno3" rel="nofollow noopener noreferrer"><i class="fa-solid fa-blog" aria-hidden="true"></i> cnblogs</a></li>
+        
+      
+        
+          <li><a href="https://blog.csdn.net/B33336" rel="nofollow noopener noreferrer"><i class="fa-solid fa-blog" aria-hidden="true"></i> CSDN</a></li>
+        
+      
+    
+
+    
+      <li><a href="/feed.xml"><i class="fas fa-fw fa-rss-square" aria-hidden="true"></i> Feed</a></li>
+    
+  </ul>
+</div>
+
+
+<div class="page__footer-copyright">© 2026 <a href="https://bfmhno3.github.io">Better Mistakes</a>. Powered by <a href="https://jekyllrb.com" rel="nofollow">Jekyll</a> &amp; <a href="https://mademistakes.com/work/jekyll-themes/minimal-mistakes/" rel="nofollow">Minimal Mistakes</a>.</div>
+
+      </footer>
+    </div>
+
+    
+  <script src="/assets/js/main.min.js"></script>
+
+
+
+
+<script src="/assets/js/lunr/lunr.min.js"></script>
+<script src="/assets/js/lunr/lunr-store.js"></script>
+<script src="/assets/js/lunr/lunr-en.js"></script>
+
+
+
+
+  <!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-VS5B3CR1M6"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-VS5B3CR1M6', { 'anonymize_ip': false});
+</script>
+
+
+
+
+
+
+    <script>
+  'use strict';
+
+  (function () {
+    var commentContainer = document.querySelector('#giscus-comments');
+
+    if (!commentContainer) {
+      return;
+    }
+
+    var script = document.createElement('script');
+
+    script.setAttribute('src', 'https://giscus.app/client.js');
+    script.setAttribute('data-repo', 'bfmhno3/bfmhno3.github.io');
+    script.setAttribute('data-repo-id', 'R_kgDOQCQGxg');
+    script.setAttribute('data-category', 'General');
+    script.setAttribute('data-category-id', 'DIC_kwDOQCQGxs4CzG3a');
+    script.setAttribute('data-mapping', 'pathname');
+    script.setAttribute('data-strict', '0');
+    script.setAttribute('data-reactions-enabled', '1');
+    script.setAttribute('data-emit-metadata', '0');
+    script.setAttribute('data-input-position', 'bottom');
+    script.setAttribute('data-theme', 'transparent_dark');
+    script.setAttribute('data-lang',  'en');
+    
+    script.setAttribute('data-loading', 'lazy');
+    
+    script.setAttribute('crossorigin', 'anonymous');
+
+    script.setAttribute('async', '');
+
+    commentContainer.appendChild(script);
+  })();
+</script>
+
+  
+
+
+
+
+  </body>
+</html>

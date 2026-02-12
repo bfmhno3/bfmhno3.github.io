@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<!--
+  Minimal Mistakes Jekyll Theme 4.27.3 by Michael Rose
+  Copyright 2013-2025 Michael Rose - mademistakes.com | @mmistakes
+  Free for personal and commercial use under the MIT license
+  https://github.com/mmistakes/minimal-mistakes/blob/master/LICENSE
+--><html lang="en-US" class="no-js">
+  <head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta charset="utf-8">
+
+<!-- begin _includes/seo.html --><title>Visual Studio C++ 工程实践指南 - Better Mistakes</title>
+<meta name="description" content="详解 Visual Studio 解决方案与项目的组织结构、过滤器与路径配置技巧、常用宏的使用，以及静态库与动态库的引用方法，并介绍了 CMake 的集成支持，帮助开发者构建清晰规范的 C++。">
+
+
+  <meta name="author" content="bfmhno3">
+  
+  <meta property="article:author" content="bfmhno3">
+  
+
+
+<meta property="og:type" content="article">
+<meta property="og:locale" content="en_US">
+<meta property="og:site_name" content="Better Mistakes">
+<meta property="og:title" content="Visual Studio C++ 工程实践指南">
+<meta property="og:url" content="https://bfmhno3.github.io/note/visual-studio-project-management/">
+
+
+  <meta property="og:description" content="详解 Visual Studio 解决方案与项目的组织结构、过滤器与路径配置技巧、常用宏的使用，以及静态库与动态库的引用方法，并介绍了 CMake 的集成支持，帮助开发者构建清晰规范的 C++。">
+
+
+
+  <meta property="og:image" content="https://bfmhno3.github.io/assets/images/avatar.jpg">
+
+
+
+
+
+  <meta property="article:published_time" content="2025-07-29T17:50:00+00:00">
+
+
+
+
+
+  
+
+  
+
+
+<link rel="canonical" href="https://bfmhno3.github.io/note/visual-studio-project-management/">
+
+
+
+
+
+
+
+  <meta name="google-site-verification" content="UUnU8OnGqO_2FFdhrv7eEABM5p_cNPhM4Se6HB1KFSk">
+
+
+  <meta name="msvalidate.01" content="FC3BA97765A3C90F8CA771F70AE34FB8">
+
+
+
+
+
+<!-- end _includes/seo.html -->
+
+
+
+  <link href="/feed.xml" type="application/atom+xml" rel="alternate" title="Better Mistakes Feed">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script>
+  document.documentElement.className = document.documentElement.className.replace(/\bno-js\b/g, '') + ' js ';
+  window.enable_copy_code_button = true;
+</script>
+
+<!-- For all browsers -->
+<link rel="stylesheet" href="/assets/css/main.css">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@latest/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@latest/css/all.min.css"></noscript>
+
+
+
+    <link rel="icon" type="image/png" href="/assets/images/favicon/favicon-96x96.png" sizes="96x96">
+<link rel="icon" type="image/svg+xml" href="/assets/images/favicon/favicon.svg">
+<link rel="shortcut icon" href="/assets/images/favicon/favicon.ico">
+<link rel="apple-touch-icon" sizes="180x180" href="/assets/images/favicon/apple-touch-icon.png">
+<link rel="manifest" href="/assets/images/favicon/site.webmanifest">
+  <script>MathJax={"tex":{"inlineMath":[["$","$"],["\\(","\\)"]],"displayMath":[["$$","$$"],["\\[","\\]"]]},"svg":{"fontCache":"global"},"svg":{"fontCache":"global"}}</script><script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script><script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+
+  <body class="layout--single" dir="ltr">
+    <nav class="skip-links">
+  <ul>
+    <li><a href="#site-nav" class="screen-reader-shortcut">Skip to primary navigation</a></li>
+    <li><a href="#main" class="screen-reader-shortcut">Skip to content</a></li>
+    <li><a href="#footer" class="screen-reader-shortcut">Skip to footer</a></li>
+  </ul>
+</nav>
+
+    
+
+<div class="masthead">
+  <div class="masthead__inner-wrap">
+    <div class="masthead__menu">
+      <nav id="site-nav" class="greedy-nav">
+        
+          <a class="site-logo" href="/"><img src="/assets/images/logo.svg" alt="Better Mistakes"></a>
+        
+        <a class="site-title" href="/">
+          Better Mistakes
+          <span class="site-subtitle">Trial.Error.Iteration.</span>
+        </a>
+        <ul class="visible-links">
+<li class="masthead__menu-item">
+              <a href="/posts/">Posts</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/categories/">Categories</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/tags/">Tags</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/about/">About</a>
+            </li>
+</ul>
+        
+        <button class="search__toggle" type="button">
+          <span class="visually-hidden">Toggle search</span>
+          <i class="fas fa-search"></i>
+        </button>
+        
+        <button class="greedy-nav__toggle hidden" type="button">
+          <span class="visually-hidden">Toggle menu</span>
+          <div class="navicon"></div>
+        </button>
+        <ul class="hidden-links hidden"></ul>
+      </nav>
+    </div>
+  </div>
+</div>
+
+
+    <div class="initial-content">
+      
+
+
+
+
+
+<div id="main" role="main">
+  
+  <div class="sidebar sticky">
+  
+
+
+<div itemscope itemtype="https://schema.org/Person" class="h-card">
+
+  
+    <div class="author__avatar">
+      <a href="https://bfmhno3.github.io/">
+        <img src="/assets/images/avatar.jpg" alt="bfmhno3" itemprop="image" class="u-photo">
+      </a>
+    </div>
+  
+
+  <div class="author__content">
+    <h3 class="author__name p-name" itemprop="name">
+      <a class="u-url" rel="me" href="https://bfmhno3.github.io/" itemprop="url">bfmhno3</a>
+    </h3>
+    
+      <div class="author__bio p-note" itemprop="description">
+        <p>Third-year university student majoring in energy engineering. Exploring the world of code and mathematics.</p>
+
+      </div>
+    
+  </div>
+
+  <div class="author__urls-wrapper">
+    <button class="btn btn--inverse">Follow</button>
+    <ul class="author__urls social-icons">
+      
+
+      
+        
+          
+            <li><a href="https://github.com/bfmhno3" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fab fa-fw fa-github" aria-hidden="true"></i><span class="label">GitHub</span></a></li>
+          
+        
+          
+            <li><a href="https://gitee.com/bfmhno3" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fa-solid fa-g" aria-hidden="true"></i><span class="label">Gitee</span></a></li>
+          
+        
+          
+            <li><a href="https://www.cnblogs.com/bfmhno3" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fa-solid fa-blog" aria-hidden="true"></i><span class="label">cnblogs</span></a></li>
+          
+        
+          
+            <li><a href="https://blog.csdn.net/B33336" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fa-solid fa-blog" aria-hidden="true"></i><span class="label">CSDN</span></a></li>
+          
+        
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      <!--
+  <li>
+    <a href="http://link-to-whatever-social-network.com/user/" itemprop="sameAs" rel="nofollow noopener noreferrer me">
+      <i class="fas fa-fw" aria-hidden="true"></i> Custom Social Profile Link
+    </a>
+  </li>
+-->
+    </ul>
+  </div>
+</div>
+
+  
+  </div>
+
+
+
+  <article class="page" itemscope itemtype="https://schema.org/CreativeWork">
+    <meta itemprop="headline" content="Visual Studio C++ 工程实践指南">
+    <meta itemprop="description" content="详解 Visual Studio 解决方案与项目的组织结构、过滤器与路径配置技巧、常用宏的使用，以及静态库与动态库的引用方法，并介绍了 CMake 的集成支持，帮助开发者构建清晰规范的 C++。">
+    <meta itemprop="datePublished" content="2025-07-29T17:50:00+00:00">
+    
+
+    <div class="page__inner-wrap">
+      
+        <header>
+          <h1 id="page-title" class="page__title" itemprop="headline">
+            <a href="https://bfmhno3.github.io/note/visual-studio-project-management/" itemprop="url">Visual Studio C++ 工程实践指南
+</a>
+          </h1>
+          
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2025-07-29T17:50:00+00:00">July 29, 2025</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-clock" aria-hidden="true"></i>
+        
+          2 minute read
+        
+      </span>
+    
+  </p>
+
+
+        </header>
+      
+
+      <section class="page__content" itemprop="text">
+        
+          <aside class="sidebar__right sticky">
+            <nav class="toc">
+              <header><h4 class="nav__title">
+<i class="fas fa-file-alt"></i> On this page</h4></header>
+              <ul class="toc__menu">
+<li><a href="#%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88solution%E4%B8%8E%E9%A1%B9%E7%9B%AEproject">解决方案（Solution）与项目（Project）</a></li>
+<li>
+<a href="#%E8%BF%87%E6%BB%A4%E5%99%A8filter">过滤器（Filter）</a><ul><li><a href="#%E5%A6%82%E4%BD%95%E6%AD%A3%E7%A1%AE%E9%85%8D%E7%BD%AE%E5%8C%85%E5%90%AB%E7%9B%AE%E5%BD%95">如何正确配置包含目录？</a></li></ul>
+</li>
+<li>
+<a href="#%E5%AE%8Fmacro">宏（Macro）</a><ul><li><a href="#%E7%A4%BA%E4%BE%8B">示例</a></li></ul>
+</li>
+<li>
+<a href="#%E5%BA%93%E7%9A%84%E4%BD%BF%E7%94%A8">库的使用</a><ul>
+<li>
+<a href="#%E9%9D%99%E6%80%81%E5%BA%93static-librarylib">静态库（Static Library，.lib）</a><ul>
+<li><a href="#%E5%88%9B%E5%BB%BA">创建</a></li>
+<li>
+<a href="#%E4%BD%BF%E7%94%A8">使用</a><ul>
+<li><a href="#%E5%BC%95%E7%94%A8">引用</a></li>
+<li><a href="#%E6%89%8B%E5%8A%A8%E9%85%8D%E7%BD%AE%E4%B8%8D%E6%8E%A8%E8%8D%90">手动配置（不推荐）</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#%E5%8A%A8%E6%80%81%E9%93%BE%E6%8E%A5%E5%BA%93dynamic-link-librarydll">动态链接库（Dynamic Link Library，.dll）</a></li>
+</ul>
+</li>
+<li>
+<a href="#%E4%BD%BF%E7%94%A8-cmake-%E8%87%AA%E5%8A%A8%E7%94%9F%E6%88%90%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88">使用 CMake 自动生成解决方案</a><ul>
+<li><a href="#%E6%89%8B%E5%8A%A8%E9%85%8D%E7%BD%AE">手动配置</a></li>
+<li><a href="#%E5%8E%9F%E7%94%9F%E6%94%AF%E6%8C%81">原生支持</a></li>
+</ul>
+</li>
+<li><a href="#%E5%8F%82%E8%80%83%E8%B5%84%E6%96%99">参考资料</a></li>
+</ul>
+            </nav>
+          </aside>
+        
+        <h2 id="解决方案solution与项目project">解决方案（Solution）与项目（Project）</h2>
+
+<p>一个<strong>解决方案</strong>是用于组织和管理一个或多个相关联<strong>项目</strong>的容器。这套结构旨在将一个复杂的实际问题，分解成多个功能独立的<strong>模块</strong>（<strong>项目</strong>）来开发和管理。</p>
+
+<ul>
+  <li>
+<strong>解决方案</strong>（<code class="language-plaintext highlighter-rouge">.sln</code> 文件）：这是最高层级的组织单位，它定义了所包含的项目以及它们之间的依赖关系和构建配置。当你打开一个 <code class="language-plaintext highlighter-rouge">.sln</code> 文件时，Visual Studio 会加载整个工作区。</li>
+  <li>
+<strong>项目</strong>（<code class="language-plaintext highlighter-rouge">.vcxproj</code>、<code class="language-plaintext highlighter-rouge">csproj</code> 等文件）：每个项目对应一个独立的模块，最终会生成一个可执行文件（<code class="language-plaintext highlighter-rouge">.exe</code>）、一个静态库（<code class="language-plaintext highlighter-rouge">.lib</code>）或一个动态链接库（<code class="language-plaintext highlighter-rouge">.dll</code>）。</li>
+</ul>
+
+<p>需要注意的地方：</p>
+
+<ul>
+  <li>
+<strong>单一启动项目</strong>：在一个解决方案中，通常只有一个项目被设置为<strong>启动项目</strong>。<strong>启动项目</strong>是点击 “开始调试”（<kbd>F5</kbd>）时，Visual Studio 将会编译和运行的项目。可以在<strong>解决方案资源管理器</strong>中右键点击不同的项目，选择 “<strong>设为启动项目</strong>“。</li>
+  <li>“<strong>将解决方案和项目放在同一目录中</strong>”：
+    <ul>
+      <li>勾选：解决方案文件（<code class="language-plaintext highlighter-rouge">.sln</code>）和项目文件（例如 <code class="language-plaintext highlighter-rouge">.vcxproj</code>）会存放在同一个文件夹中。这对于只有一个或少数几个项目的简单解决方案来说，目录结构更扁平、更清晰。</li>
+      <li>不勾选（默认）：Visual Studio 会创建一个顶层文件夹来存放解决方案文件（<code class="language-plaintext highlighter-rouge">.sln</code>），然后在该文件夹下为每一个项目再创建一个独立的子文件夹。当解决方案包含多个项目时，这种结构更加有条理，是<strong>更推荐的做法</strong>。</li>
+    </ul>
+  </li>
+</ul>
+
+<h2 id="过滤器filter">过滤器（Filter）</h2>
+
+<p><strong>过滤器</strong>（<em>Filter</em>）是 Visual Studio 解决方案资源管理器中的一个<strong>虚拟文件夹结构</strong>。它的主要作用是帮助开发者组织和分类源文件、头文件等，使项目看起来更整洁，所有的代码文件（源文件和头文件）都应该加入过滤器中。开发者可以自由地创建、重命名或删除过滤器，这<strong>不会</strong>影响磁盘上文件的实际位置。</p>
+
+<p>而对于编译器（例如 MSVC、GCC 等）在编译代码时，只关心真实的目录结构，而非<strong>过滤器</strong>中的配置。所以当编译器报错 “无法打开源文件” 或 “找不到头文件” 之类的错误时，问题几乎总是出在<strong>项目属性</strong>的路径配置上，而不是解决方案资源管理器的过滤器结构。</p>
+
+<h3 id="如何正确配置包含目录">如何正确配置包含目录？</h3>
+
+<p>当项目需要引入外部头文件（例如来自另一个项目货第三方库）时，必须明确告知编译器去哪里查找这些文件。</p>
+
+<ol>
+  <li>在<strong>解决方案资源管理器</strong>中右键点击项目，选择<strong>属性</strong>。</li>
+  <li>确保顶部的<strong>配置</strong>和<strong>平台</strong>设置正确。</li>
+  <li>导航到 <strong>C/C++</strong> $\rightarrow$ <strong>常规</strong>。</li>
+  <li>在<strong>附加包含目录</strong>字段中，添加所需头文件所在的<strong>真实目录路径</strong>。</li>
+</ol>
+
+<p>在 Visual Studio 中选择的目录会被设置为<strong>绝对路径</strong>，当<strong>解决方案</strong>发生移动，或者发送给合作者时，就会导致错误。这可以通过 Visual Studio 中提供的<strong>宏</strong>来解决。</p>
+
+<h2 id="宏macro">宏（Macro）</h2>
+
+<p>Visual Studio 提供了一系列预定义的<strong>宏</strong>（<em>Macro</em>），这些宏会在构建时被动态地解析为具体的路径。</p>
+
+<p>常用宏变量：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>宏</th>
+      <th>描述</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">$(SolutionDir)</code></td>
+      <td>解决方案文件（<code class="language-plaintext highlighter-rouge">.sln</code>）所在的目录</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">$(ProjectDir)</code></td>
+      <td>当前项目文件（<code class="language-plaintext highlighter-rouge">.vcxproj</code>）所在的目录</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">$(OutDir)</code></td>
+      <td>最终输出文件（如 <code class="language-plaintext highlighter-rouge">.exe</code>、<code class="language-plaintext highlighter-rouge">.dll</code>）的存放目录</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">$(IntDir)</code></td>
+      <td>编译过程中产生的中间文件（如 <code class="language-plaintext highlighter-rouge">.obj</code>）的存放目录</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">$(Configuration)</code></td>
+      <td>当前的构建配置名称，如 <code class="language-plaintext highlighter-rouge">Debug</code> 或 <code class="language-plaintext highlighter-rouge">Release</code>
+</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">$(Platform)</code></td>
+      <td>当前的构建平台名称，如 <code class="language-plaintext highlighter-rouge">x64</code> 或 <code class="language-plaintext highlighter-rouge">Win32</code>
+</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="示例">示例</h3>
+
+<p>假设解决方案目录结构如下：</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>MySolution/
+├── MySolution.sln
+├── ProjectA/
+│   └── ProjectA.vcxproj
+└── Libraries/
+    └── MyLib/
+        └── include/
+            └── my_header.h
+</code></pre></div></div>
+
+<p>如果 <code class="language-plaintext highlighter-rouge">ProjectA</code> 需要包含 <code class="language-plaintext highlighter-rouge">my_header.h</code>，则可以在 <code class="language-plaintext highlighter-rouge">ProjectA</code> 的 “附加包含目录” 中设置为：<code class="language-plaintext highlighter-rouge">$(SolutionDir)\Libraries\MyLib\include</code>。</p>
+
+<p>这样一来，即使将整个 <code class="language-plaintext highlighter-rouge">MySolution</code> 文件夹移动到其他位置，这个相对路径依然有效。</p>
+
+<h2 id="库的使用">库的使用</h2>
+
+<h3 id="静态库static-librarylib">静态库（Static Library，<code class="language-plaintext highlighter-rouge">.lib</code>）</h3>
+
+<p>静态库是在<strong>链接阶段</strong>被并入到目标程序中的。最终生成的可执行文件会包含静态库的所有代码，因此文件体积较大，但运行时不依赖外部文件。</p>
+
+<h4 id="创建">创建</h4>
+
+<p>在解决方案中右键点击 “解决方案” $\rightarrow$ 添加 $\rightarrow$ 新建项目 $\rightarrow$ 静态库</p>
+
+<h4 id="使用">使用</h4>
+
+<h5 id="引用">引用</h5>
+
+<ul>
+  <li>在需要使用此库的项目上，右键点击<strong>引用</strong>
+</li>
+  <li>选择<strong>添加引用</strong>，然后在弹出的对话框中勾选所需的静态库项目</li>
+</ul>
+
+<p>这是推荐的方式，原因如下：</p>
+
+<ul>
+  <li>它会自动设置<strong>链接器</strong>的输入，确保链接器能够找到库文件</li>
+  <li>它会自动创建<strong>项目依赖项</strong>，保证在编译主项目之前，静态库项目总是被优先编译</li>
+  <li>它还会自动将静态库的头文件目录添加到主项目的<strong>附加包含目录</strong>中，让开发者能够直接 <code class="language-plaintext highlighter-rouge">#include</code>
+</li>
+</ul>
+
+<h5 id="手动配置不推荐">手动配置（不推荐）</h5>
+
+<p>如果引用的库是一个已经编译好、非解决方案内的 <code class="language-plaintext highlighter-rouge">.lib</code> 文件，则需要手动配置：</p>
+
+<ol>
+  <li>
+<strong>附加库目录</strong>：在项目属性的<strong>链接器</strong> $\rightarrow$ <strong>常规</strong>中，添加 <code class="language-plaintext highlighter-rouge">.lib</code> 文件所在的目录。</li>
+  <li>
+<strong>附加依赖项</strong>：在项目属性的<strong>链接器</strong> $\rightarrow$ <strong>输入</strong>中，添加 <code class="language-plaintext highlighter-rouge">.lib</code> 文件的具体名称（例如 <code class="language-plaintext highlighter-rouge">libtest.lib</code>）</li>
+</ol>
+
+<h3 id="动态链接库dynamic-link-librarydll">动态链接库（Dynamic Link Library，<code class="language-plaintext highlighter-rouge">.dll</code>）</h3>
+
+<p>动态库是程序<strong>运行时</strong>由操作系统加载到内存中的。多个程序可以共享同一个 DLL，从而节省磁盘空间和内存。项目生成时会同时产生一个 <code class="language-plaintext highlighter-rouge">.dll</code> 文件（运行时需要）和一个 <code class="language-plaintext highlighter-rouge">.lib</code> 文件（链接时需要）。</p>
+
+<p>注意事项：</p>
+
+<ul>
+  <li>导出与导入：从 DLL 中暴露函数或类给其他项目使用，需要使用 <code class="language-plaintext highlighter-rouge">__declspec(dllexport)</code> 关键字。而在使用该 DLL 的项目中，则需要使用 <code class="language-plaintext highlighter-rouge">__declspc(dllimport)</code> 来声明这些函数或类。</li>
+  <li>运行时环境：当运行依赖于 DLL 的程序时，操作系统必须能够找到这个 <code class="language-plaintext highlighter-rouge">.dll</code> 文件。通常由以下几种方式：
+    <ol>
+      <li>将 <code class="language-plaintext highlighter-rouge">.dll</code> 文件放置在与可执行文件（<code class="language-plaintext highlighter-rouge">.exe</code>）相同的目录下</li>
+      <li>将 <code class="language-plaintext highlighter-rouge">.dll</code> 文件所在的目录添加到系统的 <code class="language-plaintext highlighter-rouge">PATH</code> 环境变量中。</li>
+      <li>在 Visual Studio 中进行调试时，它通常会自动处理好路径问题。</li>
+    </ol>
+  </li>
+</ul>
+
+<h2 id="使用-cmake-自动生成解决方案">使用 CMake 自动生成解决方案</h2>
+
+<p>对于跨平台项目或大型复杂项目，直接使用 Visual Studio 的项目文件进行管理可能会变得非常繁琐。CMake 是一个强大的、开源的构建系统生成工具，它可以根据简单的配置文件（<code class="language-plaintext highlighter-rouge">CMakeLists.txt</code>）自动生成适用与多种平台和 IDE 的原生构建环境，包括 Visual Studio 的 <code class="language-plaintext highlighter-rouge">.sln</code> 和 <code class="language-plaintext highlighter-rouge">.vcxproj</code> 文件。</p>
+
+<h3 id="手动配置">手动配置</h3>
+
+<ol>
+  <li>为项目的根目录以及各个子模块（库、可执行文件）编写 <code class="language-plaintext highlighter-rouge">CMakeLists.txt</code> 文件。</li>
+  <li>创建一个独立的构建目录（通常命名为 <code class="language-plaintext highlighter-rouge">build</code>），以保持源码树的干净。</li>
+  <li>在 <code class="language-plaintext highlighter-rouge">build</code> 目录中运行 CMake，指令通常为 <code class="language-plaintext highlighter-rouge">cmake ..</code>，它会查找上一级目录的 <code class="language-plaintext highlighter-rouge">CMakeLists.txt</code> 并生成构建文件。</li>
+  <li>最后，用 Visual Studio 打开在 <code class="language-plaintext highlighter-rouge">build</code> 中生成的 <code class="language-plaintext highlighter-rouge">.sln</code> 文件。</li>
+</ol>
+
+<h3 id="原生支持">原生支持</h3>
+
+<p>从 Visual Studio 2017 开始，Visual Studio 提供了对 CMake 的原生集成支持。</p>
+
+<p>可以直接用 Visual Studio 打开一个包含 <code class="language-plaintext highlighter-rouge">CMakeLists.txt</code> 的文件节哀，而无需手动运行 <code class="language-plaintext highlighter-rouge">cmake</code> 命令和打开生成的 <code class="language-plaintext highlighter-rouge">.sln</code> 文件。Visual Studio 会自动在后台完成这一切，并提供完整的智能提示、构建和调试支持。</p>
+
+<p>这对于使用 CMake 的项目来说，是目前最便捷的开发方式。</p>
+
+<h2 id="参考资料">参考资料</h2>
+
+<ol>
+  <li><a href="https://www.bilibili.com/video/BV1S541137P2?spm_id_from=333.788.videopod.episodes&vd_source=aece08350e40b390e044f67307ffd650">工程课代表——Visual Studio 工程实践开发</a></li>
+</ol>
+
+        
+      </section>
+
+      <footer class="page__meta">
+        
+        
+  
+
+
+  
+
+  <p class="page__taxonomy">
+    <strong><i class="fas fa-fw fa-tags" aria-hidden="true"></i> Tags: </strong>
+    <span itemprop="keywords">
+    
+      <a href="/tags/visual-studio" class="page__taxonomy-item p-category" rel="tag">Visual Studio</a>
+    
+    </span>
+  </p>
+
+
+
+
+  
+
+
+  
+
+  <p class="page__taxonomy">
+    <strong><i class="fas fa-fw fa-folder-open" aria-hidden="true"></i> Categories: </strong>
+    <span itemprop="keywords">
+    
+      <a href="/categories/note" class="page__taxonomy-item p-category" rel="tag">Note</a>
+    
+    </span>
+  </p>
+
+
+        
+
+  <p class="page__date"><strong><i class="fas fa-fw fa-calendar-alt" aria-hidden="true"></i> Updated:</strong> <time class="dt-published" datetime="2025-07-29T17:50:00+00:00">July 29, 2025</time></p>
+
+      </footer>
+
+      <section class="page__share">
+  <h4 class="page__share-title">Share on</h4>
+
+  <a href="https://x.com/intent/tweet?text=Visual+Studio+C%2B%2B+%E5%B7%A5%E7%A8%8B%E5%AE%9E%E8%B7%B5%E6%8C%87%E5%8D%97%20https%3A%2F%2Fbfmhno3.github.io%2Fnote%2Fvisual-studio-project-management%2F" class="btn btn--x" aria-label="Share on X" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on X">
+    <i class="fab fa-fw fa-x-twitter" aria-hidden="true"></i><span> X</span>
+  </a>
+
+  <a href="https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fbfmhno3.github.io%2Fnote%2Fvisual-studio-project-management%2F" class="btn btn--facebook" aria-label="Share on Facebook" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on Facebook">
+    <i class="fab fa-fw fa-facebook" aria-hidden="true"></i><span> Facebook</span>
+  </a>
+
+  <a href="https://www.linkedin.com/shareArticle?mini=true&url=https://bfmhno3.github.io/note/visual-studio-project-management/" class="btn btn--linkedin" aria-label="Share on LinkedIn" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on LinkedIn">
+    <i class="fab fa-fw fa-linkedin" aria-hidden="true"></i><span> LinkedIn</span>
+  </a>
+
+  <a href="https://bsky.app/intent/compose?text=Visual+Studio+C%2B%2B+%E5%B7%A5%E7%A8%8B%E5%AE%9E%E8%B7%B5%E6%8C%87%E5%8D%97%20https%3A%2F%2Fbfmhno3.github.io%2Fnote%2Fvisual-studio-project-management%2F" class="btn btn--bluesky" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on Bluesky">
+    <i class="fab fa-fw fa-bluesky" aria-hidden="true"></i><span> Bluesky</span>
+  </a>
+</section>
+
+
+      
+  <nav class="pagination">
+    
+      <a href="/tutorial/vmware-keyboard-lag-fix/" class="pagination--pager" title="VMware Workstation 17.x 中的虚拟机按键反应迟钝解决办法">Previous</a>
+    
+    
+      <a href="/note/notes-of-effective-cmake/" class="pagination--pager" title="Notes of Effective CMake">Next</a>
+    
+  </nav>
+
+
+    </div>
+
+    
+      
+        <div class="page__comments">
+  
+  
+      <h4 class="page__comments-title">Comments</h4>
+      <section id="giscus-comments"></section>
+    
+</div>
+
+      
+    
+  </article>
+
+  
+  
+    
+<div class="page__related">
+  
+  <h2 class="page__related-title">You May Also Enjoy</h2>
+  <div class="grid__wrapper">
+    
+      
+      
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc" itemprop="headline">
+      
+        <a href="/note/process-in-os/" rel="permalink">操作系统中的进程
+</a>
+      
+    </h2>
+    
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-01-26T22:10:00+00:00">January 26, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          4 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt" itemprop="description">教科书对于进程常定义通常极为简洁凝练，但其诞生是为了解决什么问题？本文通过回顾从 ENIAC 到分时系统的演进历史，探讨进程是如何为了填补人、I/O 与 CPU 之间的速度鸿沟而进化出来的。
+</p>
+  </article>
+</div>
+
+    
+      
+      
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc" itemprop="headline">
+      
+        <a href="/note/initialization-in-cpp/" rel="permalink">C++ 中的初始化列表和列表初始化
+</a>
+      
+    </h2>
+    
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-01-03T15:07:00+00:00">January 3, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          6 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt" itemprop="description">深入理解 C++ 中初始化列表与列表初始化的区别：前者解决对象生命周期与内存模型问题，后者统一初始化语法并提供类型安全保障。
+</p>
+  </article>
+</div>
+
+    
+      
+      
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc" itemprop="headline">
+      
+        <a href="/note/list-in-cpp/" rel="permalink">C++ 中的 list
+</a>
+      
+    </h2>
+    
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-01-03T13:05:00+00:00">January 3, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          2 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt" itemprop="description">深入理解 C++ 中的 std::list 双向链表容器，探讨其底层原理、独有优势（如头部操作、接合等）、迭代器特性，以及与 std::vector 的选择权衡。
+</p>
+  </article>
+</div>
+
+    
+      
+      
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc" itemprop="headline">
+      
+        <a href="/note/constructor-in-cpp/" rel="permalink">C++ 中的构造函数
+</a>
+      
+    </h2>
+    
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-01-03T13:05:00+00:00">January 3, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          5 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt" itemprop="description">深入理解 C++ 构造函数的本质：从资源管理到性能优化。涵盖默认构造、拷贝构造、移动构造，以及 RAII、explicit、constexpr 等关键机制。
+</p>
+  </article>
+</div>
+
+    
+  </div>
+</div>
+
+  
+  
+</div>
+
+      
+    </div>
+
+    
+      <div class="search-content">
+        <div class="search-content__inner-wrap">
+<form class="search-content__form" onkeydown="return event.key != 'Enter';" role="search">
+    <label class="sr-only" for="search">
+      Enter your search term...
+    </label>
+    <input type="search" id="search" class="search-input" tabindex="-1" placeholder="Enter your search term...">
+  </form>
+  <div id="results" class="results"></div>
+</div>
+
+      </div>
+    
+
+    <div id="footer" class="page__footer">
+      <footer>
+        <!-- start custom footer snippets -->
+
+<!-- end custom footer snippets -->
+        
+
+<div class="page__footer-follow">
+  <ul class="social-icons">
+    
+
+    
+      
+        
+          <li><a href="https://github.com/bfmhno3" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-github" aria-hidden="true"></i> GitHub</a></li>
+        
+      
+        
+          <li><a href="https://gitee.com/bfmhno3" rel="nofollow noopener noreferrer"><i class="fa-solid fa-g" aria-hidden="true"></i> Gitee</a></li>
+        
+      
+        
+          <li><a href="https://www.cnblogs.com/bfmhno3" rel="nofollow noopener noreferrer"><i class="fa-solid fa-blog" aria-hidden="true"></i> cnblogs</a></li>
+        
+      
+        
+          <li><a href="https://blog.csdn.net/B33336" rel="nofollow noopener noreferrer"><i class="fa-solid fa-blog" aria-hidden="true"></i> CSDN</a></li>
+        
+      
+    
+
+    
+      <li><a href="/feed.xml"><i class="fas fa-fw fa-rss-square" aria-hidden="true"></i> Feed</a></li>
+    
+  </ul>
+</div>
+
+
+<div class="page__footer-copyright">© 2026 <a href="https://bfmhno3.github.io">Better Mistakes</a>. Powered by <a href="https://jekyllrb.com" rel="nofollow">Jekyll</a> &amp; <a href="https://mademistakes.com/work/jekyll-themes/minimal-mistakes/" rel="nofollow">Minimal Mistakes</a>.</div>
+
+      </footer>
+    </div>
+
+    
+  <script src="/assets/js/main.min.js"></script>
+
+
+
+
+<script src="/assets/js/lunr/lunr.min.js"></script>
+<script src="/assets/js/lunr/lunr-store.js"></script>
+<script src="/assets/js/lunr/lunr-en.js"></script>
+
+
+
+
+  <!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-VS5B3CR1M6"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-VS5B3CR1M6', { 'anonymize_ip': false});
+</script>
+
+
+
+
+
+
+    <script>
+  'use strict';
+
+  (function () {
+    var commentContainer = document.querySelector('#giscus-comments');
+
+    if (!commentContainer) {
+      return;
+    }
+
+    var script = document.createElement('script');
+
+    script.setAttribute('src', 'https://giscus.app/client.js');
+    script.setAttribute('data-repo', 'bfmhno3/bfmhno3.github.io');
+    script.setAttribute('data-repo-id', 'R_kgDOQCQGxg');
+    script.setAttribute('data-category', 'General');
+    script.setAttribute('data-category-id', 'DIC_kwDOQCQGxs4CzG3a');
+    script.setAttribute('data-mapping', 'pathname');
+    script.setAttribute('data-strict', '0');
+    script.setAttribute('data-reactions-enabled', '1');
+    script.setAttribute('data-emit-metadata', '0');
+    script.setAttribute('data-input-position', 'bottom');
+    script.setAttribute('data-theme', 'transparent_dark');
+    script.setAttribute('data-lang',  'en');
+    
+    script.setAttribute('data-loading', 'lazy');
+    
+    script.setAttribute('crossorigin', 'anonymous');
+
+    script.setAttribute('async', '');
+
+    commentContainer.appendChild(script);
+  })();
+</script>
+
+  
+
+
+
+
+  </body>
+</html>
