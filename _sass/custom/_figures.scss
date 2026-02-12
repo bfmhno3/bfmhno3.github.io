@@ -1,0 +1,19 @@
+.centered-75-figure {
+  width: 75%;
+  
+  // 居中显示
+  margin-left: auto;
+  margin-right: auto;
+  display: block;
+
+  // 确保里面的图片占满 figure 的宽度
+  img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  figcaption {
+    text-align: center;
+  }
+}
