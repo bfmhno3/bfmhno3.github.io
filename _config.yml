@@ -205,6 +205,11 @@ sass:
 permalink: /:categories/:title/
 time_zone: "Asia/Shanghai"
 
+collections:
+  portfolio:
+    output: true
+    permalink: /:collection/:title/
+
 # Pagination with jeykyll-paginate
 # paginate: 5 # amount of posts to show
 # paginate_path: /page:num/
@@ -344,3 +349,11 @@ defaults:
     values:
       layout: single
       author_profile: true
+  # _portfolio
+  - scope:
+      path: ""
+      type: portfolio
+    values:
+      layout: single
+      author_profile: true
+      share: true
