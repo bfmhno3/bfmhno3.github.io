@@ -1,0 +1,1374 @@
+<!DOCTYPE html>
+<!--
+  Minimal Mistakes Jekyll Theme 4.28.0 by Michael Rose
+  Copyright 2013-2026 Michael Rose - mademistakes.com | @mmistakes
+  Copyright 2024-2026 iBug - ibugone.com | @iBug
+  Free for personal and commercial use under the MIT license
+  https://github.com/mmistakes/minimal-mistakes/blob/master/LICENSE
+--><html lang="en-US" class="no-js">
+  <head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+<meta charset="utf-8">
+
+
+<!-- begin _includes/seo.html --><title>C++ 中的 stack - Better Mistakes</title>
+<meta name="description" content="本文从本质需求出发解释栈（LIFO）为何存在，串联函数调用、递归、撤销与括号匹配等典型场景，并结合 C++ STL 的 std::stack 用法、异常安全设计与底层容器选择，最后配合多道题目示例完成从概念到实战的闭环。">
+
+
+  <meta name="author" content="bfmhno3">
+  
+  <meta property="article:author" content="bfmhno3">
+  
+
+
+<meta property="og:type" content="article">
+<meta property="og:locale" content="en_US">
+<meta property="og:site_name" content="Better Mistakes">
+<meta property="og:title" content="C++ 中的 stack">
+<meta property="og:url" content="https://bfmhno3.github.io/note/stack-in-cpp/">
+
+
+  <meta property="og:description" content="本文从本质需求出发解释栈（LIFO）为何存在，串联函数调用、递归、撤销与括号匹配等典型场景，并结合 C++ STL 的 std::stack 用法、异常安全设计与底层容器选择，最后配合多道题目示例完成从概念到实战的闭环。">
+
+
+
+  <meta property="og:image" content="https://bfmhno3.github.io/assets/images/avatar.jpg">
+  
+
+
+
+
+
+
+
+  <meta property="article:published_time" content="2026-02-19T02:45:00+00:00">
+
+
+
+
+
+  
+
+  
+
+
+<link rel="canonical" href="https://bfmhno3.github.io/note/stack-in-cpp/">
+
+
+
+
+
+
+
+  <meta name="google-site-verification" content="UUnU8OnGqO_2FFdhrv7eEABM5p_cNPhM4Se6HB1KFSk">
+
+
+  <meta name="msvalidate.01" content="FC3BA97765A3C90F8CA771F70AE34FB8">
+
+
+
+
+
+<!-- end _includes/seo.html -->
+
+
+
+  <link href="/feed.xml" type="application/atom+xml" rel="alternate" title="Better Mistakes Feed">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script>
+  document.documentElement.className = document.documentElement.className.replace(/\bno-js\b/g, '') + ' js ';
+  window.enable_copy_code_button = true;
+</script>
+
+<!-- For all browsers -->
+<link rel="stylesheet" href="/assets/css/main.css">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@latest/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@latest/css/all.min.css"></noscript>
+
+
+
+    <link rel="icon" type="image/png" href="/assets/images/favicon/favicon-96x96.png" sizes="96x96">
+<link rel="icon" type="image/svg+xml" href="/assets/images/favicon/favicon.svg">
+<link rel="shortcut icon" href="/assets/images/favicon/favicon.ico">
+<link rel="apple-touch-icon" sizes="180x180" href="/assets/images/favicon/apple-touch-icon.png">
+<link rel="manifest" href="/assets/images/favicon/site.webmanifest">
+  <script>MathJax={"tex":{"inlineMath":[["$","$"],["\\(","\\)"]],"displayMath":[["$$","$$"],["\\[","\\]"]]},"svg":{"fontCache":"global"},"svg":{"fontCache":"global"}}</script><script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script><script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+
+  <body class="layout--single" dir="ltr">
+    
+<nav class="skip-links" aria-label="Skip links">
+  <ul>
+    <li><a href="#site-nav" class="screen-reader-shortcut">Skip to primary navigation</a></li>
+    <li><a href="#main" class="screen-reader-shortcut">Skip to content</a></li>
+    <li><a href="#footer" class="screen-reader-shortcut">Skip to footer</a></li>
+  </ul>
+</nav>
+
+    
+
+
+<div class="masthead">
+  <div class="masthead__inner-wrap">
+    <div class="masthead__menu">
+      <nav id="site-nav" class="greedy-nav" aria-label="Primary navigation">
+        
+          <a class="site-logo" href="/"><img src="/assets/images/logo.svg" alt="Better Mistakes"></a>
+        
+        <a class="site-title" href="/">
+          Better Mistakes
+          <span class="site-subtitle">Trial.Error.Iteration.</span>
+        </a>
+        <ul class="visible-links">
+<li class="masthead__menu-item">
+              <a href="/posts/">Posts</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/categories/">Categories</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/tags/">Tags</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/portfolio/">Portfolio</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/about/">About</a>
+            </li>
+</ul>
+        
+        <button class="search__toggle" type="button">
+          <span class="visually-hidden">Toggle search</span>
+          <i class="fas fa-search"></i>
+        </button>
+        
+        <button class="greedy-nav__toggle hidden" type="button">
+          <span class="visually-hidden">Toggle menu</span>
+          <div class="navicon"></div>
+        </button>
+        <ul class="hidden-links hidden"></ul>
+      </nav>
+    </div>
+  </div>
+</div>
+
+
+    <div class="initial-content">
+      
+
+
+
+
+
+
+
+<div id="main" role="main">
+  
+
+  <div class="sidebar sticky">
+  
+
+
+
+<div itemscope itemtype="https://schema.org/Person" class="h-card">
+
+  
+    <div class="author__avatar">
+      <a href="https://bfmhno3.github.io/">
+        <img src="/assets/images/avatar.jpg" alt="bfmhno3" itemprop="image" class="u-photo">
+      </a>
+    </div>
+  
+
+  <div class="author__content">
+    <h3 class="author__name p-name" itemprop="name">
+      <a class="u-url" rel="me" href="https://bfmhno3.github.io/" itemprop="url">bfmhno3</a>
+    </h3>
+    
+      <div class="author__bio p-note" itemprop="description">
+        <p>Third-year university student majoring in energy engineering. Exploring the world of code and mathematics.</p>
+
+      </div>
+    
+  </div>
+
+  <div class="author__urls-wrapper">
+    <button class="btn btn--inverse">Follow</button>
+    <ul class="author__urls social-icons">
+      
+
+      
+        
+          
+            <li><a href="https://github.com/bfmhno3" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fab fa-fw fa-github" aria-hidden="true"></i><span class="label">GitHub</span></a></li>
+          
+        
+          
+            <li><a href="https://gitee.com/bfmhno3" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fa-solid fa-g" aria-hidden="true"></i><span class="label">Gitee</span></a></li>
+          
+        
+          
+            <li><a href="https://www.cnblogs.com/bfmhno3" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fa-solid fa-blog" aria-hidden="true"></i><span class="label">cnblogs</span></a></li>
+          
+        
+          
+            <li><a href="https://blog.csdn.net/B33336" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fa-solid fa-blog" aria-hidden="true"></i><span class="label">CSDN</span></a></li>
+          
+        
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      <!--
+  <li>
+    <a href="http://link-to-whatever-social-network.com/user/" itemprop="sameAs" rel="nofollow noopener noreferrer me">
+      <i class="fas fa-fw" aria-hidden="true"></i> Custom Social Profile Link
+    </a>
+  </li>
+-->
+    </ul>
+  </div>
+</div>
+
+  
+  
+  </div>
+
+
+
+  <article class="page h-entry" itemscope itemtype="https://schema.org/CreativeWork">
+    <meta itemprop="headline" content="C++ 中的 stack">
+    <meta itemprop="description" content="本文从本质需求出发解释栈（LIFO）为何存在，串联函数调用、递归、撤销与括号匹配等典型场景，并结合 C++ STL 的 std::stack 用法、异常安全设计与底层容器选择，最后配合多道题目示例完成从概念到实战的闭环。">
+    <meta itemprop="datePublished" content="2026-02-19T02:45:00+00:00">
+    
+
+    <div class="page__inner-wrap">
+      
+        <header>
+          <h1 id="page-title" class="page__title p-name" itemprop="headline">
+            <a href="https://bfmhno3.github.io/note/stack-in-cpp/" itemprop="url">C++ 中的 stack
+</a>
+          </h1>
+          
+
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-02-19T02:45:00+00:00">February 19, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-clock" aria-hidden="true"></i>
+        
+          10 minute read
+        
+      </span>
+    
+  </p>
+
+
+        </header>
+      
+
+      <section class="page__content e-content" itemprop="text">
+        
+          <aside class="sidebar__right sticky">
+            <nav class="toc" aria-label="Table of contents">
+              <header><h4 class="nav__title">
+<i class="fas fa-file-alt"></i> On this page</h4></header>
+              <ul class="toc__menu">
+<li>
+<a href="#1-%E4%BB%80%E4%B9%88%E6%98%AF%E6%A0%88">1. 什么是栈？</a><ul>
+<li><a href="#11-%E6%A0%B8%E5%BF%83%E5%AE%9A%E4%B9%89lifo">1.1 核心定义：LIFO</a></li>
+<li><a href="#12-%E4%B8%BA%E4%BB%80%E4%B9%88%E5%AE%83%E6%98%AF-%E5%8F%97%E9%99%90-%E7%9A%84">1.2 为什么它是 “受限” 的？</a></li>
+</ul>
+</li>
+<li>
+<a href="#2-%E4%B8%BA%E4%BB%80%E4%B9%88%E9%9C%80%E8%A6%81%E6%A0%88">2. 为什么需要栈？</a><ul>
+<li><a href="#21-%E5%87%BD%E6%95%B0%E8%B0%83%E7%94%A8the-call-stack">2.1 函数调用（The Call Stack）</a></li>
+<li><a href="#22-%E9%80%92%E5%BD%92recursion">2.2 递归（Recursion）</a></li>
+<li><a href="#23-%E7%8A%B6%E6%80%81%E6%92%A4%E9%94%80undo%E4%B8%8E%E5%8E%86%E5%8F%B2%E5%9B%9E%E6%BA%AF">2.3 状态撤销（Undo）与历史回溯</a></li>
+<li><a href="#24-%E7%AC%A6%E5%8F%B7%E5%8C%B9%E9%85%8D%E4%B8%8E%E8%AF%AD%E6%B3%95%E8%A7%A3%E6%9E%90">2.4 符号匹配与语法解析</a></li>
+</ul>
+</li>
+<li>
+<a href="#3-c-stl-%E4%B8%AD%E7%9A%84-stdstack">3. C++ STL 中的 std::stack</a><ul>
+<li><a href="#31-%E4%BB%80%E4%B9%88%E6%98%AF-%E5%AE%B9%E5%99%A8%E9%80%82%E9%85%8D%E5%99%A8">3.1 什么是 “容器适配器”？</a></li>
+<li><a href="#32-%E6%A0%B8%E5%BF%83%E8%AF%AD%E6%B3%95%E4%B8%8E%E6%93%8D%E4%BD%9C">3.2 核心语法与操作</a></li>
+<li><a href="#33-%E4%B8%BA%E4%BB%80%E4%B9%88-c-%E7%9A%84-pop-%E4%B8%8D%E8%BF%94%E5%9B%9E%E5%85%83%E7%B4%A0">3.3 为什么 C++ 的 pop() 不返回元素？</a></li>
+</ul>
+</li>
+<li>
+<a href="#4-%E7%AE%97%E6%B3%95%E9%A2%98%E5%AE%9E%E6%88%98">4. 算法题实战</a><ul>
+<li><a href="#41-%E6%B4%9B%E8%B0%B7b3614%E6%A8%A1%E6%9D%BF%E6%A0%88">4.1 洛谷：B3614【模板】栈</a></li>
+<li><a href="#42-%E5%8A%9B%E6%89%A320-%E6%9C%89%E6%95%88%E7%9A%84%E6%8B%AC%E5%8F%B7">4.2 力扣：20. 有效的括号</a></li>
+<li><a href="#43-%E6%B4%9B%E8%B0%B7%E6%B7%B1%E5%9F%BA15%E4%B9%A09%E9%AA%8C%E8%AF%81%E6%A0%88%E5%BA%8F%E5%88%97">4.3 洛谷：【深基15.习9】验证栈序列</a></li>
+<li><a href="#44-%E6%B4%9B%E8%B0%B7p1449-%E5%90%8E%E7%BC%80%E8%A1%A8%E8%BE%BE%E5%BC%8F">4.4 洛谷：P1449 后缀表达式</a></li>
+<li><a href="#45-%E6%B4%9B%E8%B0%B7p1241-%E6%8B%AC%E5%8F%B7%E5%BA%8F%E5%88%97">4.5 洛谷：P1241 括号序列</a></li>
+</ul>
+</li>
+<li>
+<a href="#5-%E8%BF%9B%E9%98%B6%E7%9F%A5%E8%AF%86%E5%BA%95%E5%B1%82%E5%AE%B9%E5%99%A8%E7%9A%84%E9%80%89%E6%8B%A9">5. 进阶知识（底层容器的选择）</a><ul><li><a href="#51-%E4%B8%BA%E4%BB%80%E4%B9%88%E9%BB%98%E8%AE%A4%E7%94%A8-stddeque-%E8%80%8C%E4%B8%8D%E6%98%AF-stdvector">5.1 为什么默认用 std::deque 而不是 std::vector？</a></li></ul>
+</li>
+<li><a href="#%E5%8F%82%E8%80%83%E8%B5%84%E6%96%99">参考资料</a></li>
+</ul>
+            </nav>
+          </aside>
+        
+        <p>要真正理解<strong>栈</strong>这种结构，意味着我们要剥离事物表象，追究其最本质的问题，即<strong>我们到底面临什么样的数据处理需求，才导致了 “栈” 这种结构的诞生？</strong></p>
+
+<p>我们不需要把栈仅仅看作是教科书上的定义，而是把它看作是<strong>为了解决特定时序问题而设计的一种 “受限” 模型</strong>。</p>
+
+<h2 id="1-什么是栈">1. 什么是栈？</h2>
+
+<p>从本质上来说，计算机处理任务通常有两种模式：</p>
+
+<ol>
+  <li>
+<strong>并行/随机</strong>：所有任务都在桌面上铺开，想拿哪个拿哪个（类似数组或哈希表）。</li>
+  <li>
+<strong>嵌套/依赖</strong>：任务 B 必须依赖任务 A 的环境，任务 C 又依赖 B。要完成 A，必须先挂起 A 去做 B；要做 B，必须先挂起 B 去做 C。</li>
+</ol>
+
+<p><strong>栈</strong>（Stack）就是为了解决第二种模式而诞生的。</p>
+
+<h3 id="11-核心定义lifo">1.1 核心定义：LIFO</h3>
+
+<p>栈是一种<strong>线性表</strong>，但它是一种受限的线性表。它的核心逻辑是<strong>后进先出</strong>（Last In, First Out - LIFO）。</p>
+
+<p>你可以把它想象成<strong>叠盘子</strong>：</p>
+
+<ul>
+  <li>压入（Push）：你只能把新盘子放在最上面。</li>
+  <li>弹出（Pop）：你只能取走最上面的盘子。</li>
+  <li>查看（Top/Peek）：你只能看到最上面盘子的花纹，无法直接看到底部的盘子。</li>
+</ul>
+
+<figure class=" centered-75-figure"><a href="/assets/images/a_stack_of_plates.jpg" class="image-popup" title="生活中的栈模型：想要拿到底部的盘子，必须先移走顶部的盘子
+"><img src="/assets/images/a_stack_of_plates.jpg" alt="餐厅里的一摞盘子，展示了后进先出的物理结构"></a><figcaption>
+      生活中的栈模型：想要拿到底部的盘子，必须先移走顶部的盘子
+
+    </figcaption></figure>
+
+<h3 id="12-为什么它是-受限-的">1.2 为什么它是 “受限” 的？</h3>
+
+<p>数组（Array）允许你访问 <code class="language-plaintext highlighter-rouge">index[0]</code> 也可以访问 <code class="language-plaintext highlighter-rouge">index[100]</code>。栈为什么要把这种能力 “阉割” 掉？</p>
+
+<p>答案就是<strong>为了强制秩序</strong>。</p>
+
+<p>通过限制 “只能操作顶部”，栈强制程序员必须按照严格的 “原路返回” 逻辑来处理数据，从而消除了随机访问带来的复杂性和潜在错误。</p>
+
+<h2 id="2-为什么需要栈">2. 为什么需要栈？</h2>
+
+<p>如果计算机世界没有栈，很多基础逻辑就会崩塌。我们需要栈，是因为它是<strong>保存上下文</strong>（Context）和<strong>实现回朔</strong>（Backtacking）最自然的模型。</p>
+
+<h3 id="21-函数调用the-call-stack">2.1 函数调用（The Call Stack）</h3>
+
+<p>这是栈存在最底层、也最不可或缺的原因。</p>
+
+<p>从本质上来说，CPU 在执行代码时是个高度专注的执行机器，它完全依赖程序计数器（PC, Program Counter）来决定下一步跑哪条指令。当代码从 <code class="language-plaintext highlighter-rouge">main()</code> 跳转到 <code class="language-plaintext highlighter-rouge">func_a()</code> 时，本质上是强行修改了 PC 寄存器的值。随之而来的致命问题是：当 <code class="language-plaintext highlighter-rouge">func_a()</code> 跑完，CPU 怎么知道该跳回 <code class="language-plaintext highlighter-rouge">main()</code> 里的哪一行继续执行？</p>
+
+<p>你可能会想，用一个专门的寄存器（比如链接寄存器 LR）把返回地址保存起来不就行了？</p>
+
+<p>在只有单层调用的情况下，这确实可行。但现实是，代码中充满了<strong>嵌套调用</strong>：<code class="language-plaintext highlighter-rouge">main()</code> 调用了 <code class="language-plaintext highlighter-rouge">func_a()</code>，而 <code class="language-plaintext highlighter-rouge">func_a()</code> 中又调用了 <code class="language-plaintext highlighter-rouge">func_b()</code>。如果只依赖单一寄存器，当调起 <code class="language-plaintext highlighter-rouge">func_b()</code> 时，新的返回地址回无情地覆盖掉之前 <code class="language-plaintext highlighter-rouge">func_a()</code> 的返回地址。等到 <code class="language-plaintext highlighter-rouge">func_b()</code> 执行结束，程序就再也找不到回 <code class="language-plaintext highlighter-rouge">main()</code> 的路了。</p>
+
+<p>此外，函数不仅需要记住 “从哪儿来”，还要保护好自己的 “现场”。每个函数都有自己的局部变量，执行时还会征用各种通用寄存器。在跳入下一个函数前，当前的这些状态（Context）必须被原封不动地保存下来。</p>
+
+<p>由于函数调用的逻辑是绝对的 “嵌套与回溯”——最后被调用的 <code class="language-plaintext highlighter-rouge">func_b()</code> 必须最先执行完毕并交出控制权，<code class="language-plaintext highlighter-rouge">func_a()</code> 才能继续，做后才轮到最外层的 <code class="language-plaintext highlighter-rouge">main()</code>。这种 “<strong>后出发的先结束，先出发的最后兜底</strong>” 的生命周期，与 LIFO (Last-In, First-Out) 结构严丝合缝。</p>
+
+<p>所有，系统在内存中专门开辟了<strong>调用栈</strong>（Call Stack）。每次进入新函数，就把它的返回地址、局部变量和寄存器状态打包成一个<strong>栈帧</strong>（Stack Frame）压入栈顶；函数一结束，就将栈顶<strong>弹出</strong>，完美恢复上一层函数的现场。没有栈，现代编程语言的函数嵌套和递归机制就根本无法实现。</p>
+
+<figure class=" centered-75-figure"><a href="/assets/images/call_stack_layout.svg" class="image-popup" title="调用栈示例：如果子程序 DrawSquare 调用了 DrawLine，DrawLine 的栈帧就会被压入栈顶（如图中绿色部分所示）。栈指针（Stack Pointer）始终指向最新的栈顶位置
+"><img src="/assets/images/call_stack_layout.svg" alt="调用栈内存布局示意图：展示了DrawLine子程序位于栈顶，DrawSquare位于下方"></a><figcaption>
+      调用栈示例：如果子程序 <code class="language-plaintext highlighter-rouge">DrawSquare</code> 调用了 <code class="language-plaintext highlighter-rouge">DrawLine</code>，<code class="language-plaintext highlighter-rouge">DrawLine</code> 的栈帧就会被压入栈顶（如图中绿色部分所示）。栈指针（Stack Pointer）始终指向最新的栈顶位置
+
+    </figcaption></figure>
+
+<h3 id="22-递归recursion">2.2 递归（Recursion）</h3>
+
+<p>既然函数调用依赖栈来保存上下文，那么<strong>递归</strong>可以说是把栈的这种特性压榨到了机制。</p>
+
+<figure class=" centered-75-figure"><a href="/assets/images/recursive_drawing_of_a_sierpinski_triangle_through_turtle_graphics.gif" class="image-popup" title="使用海龟绘图（Turtle Graphics）递归绘制谢尔宾斯基三角形（Sierpinski triangle）的过程
+"><img src="/assets/images/recursive_drawing_of_a_sierpinski_triangle_through_turtle_graphics.gif" alt="使用海龟绘图递归绘制谢尔宾斯基三角形的动画"></a><figcaption>
+      使用海龟绘图（Turtle Graphics）递归绘制谢尔宾斯基三角形（Sierpinski triangle）的过程
+
+    </figcaption></figure>
+
+<p>从人类的思维来看，递归是<strong>自己调用自己</strong>，但在 CPU 和内存眼里，根本没有 “同一个函数” 的概念。对于计算机而言，不管是 <code class="language-plaintext highlighter-rouge">func_a()</code> 调用 <code class="language-plaintext highlighter-rouge">func)b()</code>，还是 <code class="language-plaintext highlighter-rouge">func_a()</code> 调用 <code class="language-plaintext highlighter-rouge">func_a()</code>，动作是完全一样的——仅仅是 PC（程序计数器）指针跳转，并在内存中开辟一个新的栈帧。</p>
+
+<p>假设我们在写一个计算阶乘的递归函数（<code class="language-plaintext highlighter-rouge">fact(n)</code>）。当 <code class="language-plaintext highlighter-rouge">func(3)</code> 内部调用 <code class="language-plaintext highlighter-rouge">fact(2)</code> 时，此时的局部变量 <code class="language-plaintext highlighter-rouge">n=3</code> 必须被冻结并保护起来。如果没有栈 <code class="language-plaintext highlighter-rouge">fact(2)</code> 内部的变量就会直接覆盖掉原来 <code class="language-plaintext highlighter-rouge">n=3</code> 的内存空间。等到递归触底反弹时，程序根本想不起最初传入的参数是什么。</p>
+
+<p>得益于栈的 LIFO 机制，每一次自我调用，系统都会把当前的参数、局部变量和返回地址像叠盘子一样<strong>压入</strong>（Push）栈中。不管向下深挖了多少层，每一层的数据都被独立且安全地封存在自己的栈帧里。当遇到终止条件（Base Case）开始回归时，栈再一层层<strong>弹出</strong>（Pop），精准地恢复每一层的现场。可以说，<strong>栈时递归能够成立的物理载体</strong>。</p>
+
+<p>当然，如果嵌套层数过深导致栈空间耗尽，就会引发经典的 Stack Overflow 栈溢出。</p>
+
+<h3 id="23-状态撤销undo与历史回溯">2.3 状态撤销（Undo）与历史回溯</h3>
+
+<p>你在编辑器里敲击键盘，后者在设计软件中画图，想要按下 <kbd>Ctrl</kbd> + <kbd>Z</kbd> 撤销刚刚的失误。</p>
+
+<p>人类的时间是线性向前的，但 “撤销” 操作要求我们能够<strong>逆转时间</strong>。这种逆转不是随机的，而是必须严格遵守 “最近发生的事情，最先被抹去” 的自然法则。你最后敲下的那一个字符，必须是第一个被删除的。</p>
+
+<p>所以，这里的历史记录被抽象成了一个栈：</p>
+
+<ul>
+  <li>
+<strong>入栈</strong>（Push）：每当你执行一个操作（比如输入字符、改变颜色、移动光标），系统就会把这个动作的 “状态快照” 或 “增量数据” 打包，压入历史记录栈的栈顶。</li>
+  <li>
+<strong>出栈</strong>（Pop）：当年你触发撤销（Undo）时，系统直接从栈顶取回最后一次保存的状态，并将其弹出，界面随之恢复到上一个时刻。</li>
+</ul>
+
+<p>没有栈这种 “后进先出” 的模型，系统就无法建立起具有时间顺序的后悔药机制。<strong>任何需要 “原路” 返回的场景</strong>（比如浏览器的 “后退” 按钮、迷宫算法的回溯路径），其背后的灵魂数据机构都是栈。</p>
+
+<h3 id="24-符号匹配与语法解析">2.4 符号匹配与语法解析</h3>
+
+<p>编译器在编译代码时，或者解析器在处理一段复杂公式时，需要检查代码中的 <code class="language-plaintext highlighter-rouge">{ [ ( ) ] }</code> 括号是否成对闭合、合法嵌套。</p>
+
+<p>编译器阅读代码的顺序是从左到右的单向扫描。但在代码的世界里，<strong>最晚开启的作用于，必须最早被关闭</strong>。这种一种典型的 LIFO 结构需求。</p>
+
+<p>面对一长串括号，系统处理的算法极其优雅，完全依赖栈来实现：</p>
+
+<ol>
+  <li>
+<strong>扫描与入栈</strong>：逐个字符读取，只要遇到 “左括号”（如 <code class="language-plaintext highlighter-rouge">{</code>、<code class="language-plaintext highlighter-rouge">[</code>、<code class="language-plaintext highlighter-rouge">(</code>），不管三七二十一，直接压入栈中。这代表着进入了一个新的层级，正在等待它的结束。</li>
+  <li>
+<strong>匹配与出栈</strong>：一旦遇到 “右括号”（如 <code class="language-plaintext highlighter-rouge">)</code>、<code class="language-plaintext highlighter-rouge">]</code>、<code class="language-plaintext highlighter-rouge">}</code>），此时立刻去查看<strong>栈顶</strong>元素。如果栈顶正好是能与它匹配的左括号，说明当前最内层的逻辑闭环了，于是将栈顶弹出，继续往下走。</li>
+</ol>
+
+<figure class=" centered-75-figure"><a href="/assets/images/parentheses_matching.webp" class="image-popup" title="利用栈进行括号匹配的逻辑：左括号入栈，右括号消栈，最后栈空则合法
+"><img src="/assets/images/parentheses_matching.webp" alt="栈用于括号匹配的流程图"></a><figcaption>
+      利用栈进行括号匹配的逻辑：左括号入栈，右括号消栈，最后栈空则合法
+
+    </figcaption></figure>
+
+<p>如果遇到右括号时栈是空的（说明没有多余的左括号等待闭合），或者栈顶的左括号类型不匹配（比如 <code class="language-plaintext highlighter-rouge">{</code> 遇到了 <code class="language-plaintext highlighter-rouge">]</code>），那么编译器就可以立刻抛出 <code class="language-plaintext highlighter-rouge">Syntax Error</code>（语法错误）。当整个文件扫描完，如果栈里面还有残留的左括号，说明有作用域没关上。</p>
+
+<p>利用栈，编译器不仅能判断对错，还能精准定位到哪一层的括号出了问题。</p>
+
+<h2 id="3-c-stl-中的-stdstack">3. C++ STL 中的 <code class="language-plaintext highlighter-rouge">std::stack</code>
+</h2>
+
+<p>在 C++ 标准模板库（STL）中，<code class="language-plaintext highlighter-rouge">std::stack</code> 被设计得非常精妙。它不是一个从零开始写的容器，而是一个<strong>容器适配器</strong>（Container Adapter）。</p>
+
+<h3 id="31-什么是-容器适配器">3.1 什么是 “容器适配器”？</h3>
+
+<p><code class="language-plaintext highlighter-rouge">std::stack</code> 本身不直接管理内存，它更像是一个外壳。它内部包裹着另一个真正的容器（比如 <code class="language-plaintext highlighter-rouge">std::vector</code>、<code class="language-plaintext highlighter-rouge">std::deque</code> 后 <code class="language-plaintext highlighter-rouge">std::list</code>）。</p>
+
+<p>它屏蔽了底层容器的随机访问结构（如 <code class="language-plaintext highlighter-rouge">[]</code>），只暴露 <code class="language-plaintext highlighter-rouge">push</code>、<code class="language-plaintext highlighter-rouge">pop</code>、<code class="language-plaintext highlighter-rouge">top</code> 等接口，从而强制你遵守栈的规则。</p>
+
+<h3 id="32-核心语法与操作">3.2 核心语法与操作</h3>
+
+<p>在使用前需包含头文件：</p>
+
+<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include</span> <span class="cpf">&lt;stack&gt;</span><span class="cp">
+</span></code></pre></div></div>
+
+<p>基本操作（时间复杂度均为 $O(1)$）。</p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: center">操作</th>
+      <th style="text-align: left">函数</th>
+      <th style="text-align: left">描述</th>
+      <th style="text-align: left">注意事项</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: center">入栈</td>
+      <td style="text-align: left"><code class="language-plaintext highlighter-rouge">push(val)</code></td>
+      <td style="text-align: left">将元素拷贝到栈顶</td>
+      <td style="text-align: left">设计拷贝/移动构造</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">原地构造</td>
+      <td style="text-align: left"><code class="language-plaintext highlighter-rouge">emplace(args)</code></td>
+      <td style="text-align: left">在栈顶直接构造元素</td>
+      <td style="text-align: left">
+<strong>推荐</strong>，比 <code class="language-plaintext highlighter-rouge">push</code> 更高效，省去拷贝</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">出栈</td>
+      <td style="text-align: left"><code class="language-plaintext highlighter-rouge">pop()</code></td>
+      <td style="text-align: left">移除栈顶元素</td>
+      <td style="text-align: left">
+<strong>返回值为 <code class="language-plaintext highlighter-rouge">void</code></strong>，不返回被移除的元素</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">查看</td>
+      <td style="text-align: left"><code class="language-plaintext highlighter-rouge">top()</code></td>
+      <td style="text-align: left">返回栈顶元素的引用</td>
+      <td style="text-align: left">如果栈为空调用此函数回导致未定义行为（通常崩溃）</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">判空</td>
+      <td style="text-align: left"><code class="language-plaintext highlighter-rouge">empty()</code></td>
+      <td style="text-align: left">栈为空返回 <code class="language-plaintext highlighter-rouge">true</code>
+</td>
+      <td style="text-align: left">操作前务必检查</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">大小</td>
+      <td style="text-align: left"><code class="language-plaintext highlighter-rouge">size()</code></td>
+      <td style="text-align: left">返回元素数量</td>
+      <td style="text-align: left">-</td>
+    </tr>
+  </tbody>
+</table>
+
+<figure class=" centered-75-figure"><a href="/assets/images/a_stack_runtime_with_push_and_pop_operations.svg" class="image-popup" title="Push 操作将元素压入栈顶，Pop 操作移除栈顶元素，两者都不能触及栈底
+"><img src="/assets/images/a_stack_runtime_with_push_and_pop_operations.svg" alt="栈的 Push 和 Pop 操作示意图"></a><figcaption>
+      Push 操作将元素压入栈顶，Pop 操作移除栈顶元素，两者都不能触及栈底
+
+    </figcaption></figure>
+
+<h3 id="33-为什么-c-的-pop-不返回元素">3.3 为什么 C++ 的 <code class="language-plaintext highlighter-rouge">pop()</code> 不返回元素？</h3>
+
+<p>在很多其他语言（如 Java, Python）中，<code class="language-plaintext highlighter-rouge">pop()</code> 会移除并返回栈顶元素。但在 C++ STL 中，<code class="language-plaintext highlighter-rouge">pop()</code> 是 <code class="language-plaintext highlighter-rouge">void</code>，你需要先 <code class="language-plaintext highlighter-rouge">top()</code> 获取值，再 <code class="language-plaintext highlighter-rouge">pop()</code> 移除。</p>
+
+<p>究其原因是<strong>异常安全</strong>（Exception Safety）。</p>
+
+<p>如果 <code class="language-plaintext highlighter-rouge">pop()</code> 函数即移除元素又返回元素（按值返回），在返回过程中如果发生了<strong>拷贝构造异常</strong>（比如内存不足），那么这个元素即从栈里丢了，又没能成功交给调用者，导致数据永久丢失。</p>
+
+<p>将 <code class="language-plaintext highlighter-rouge">top()</code> 和 <code class="language-plaintext highlighter-rouge">pop()</code> 分离是 C++ 追求安全的体现。</p>
+
+<h2 id="4-算法题实战">4. 算法题实战</h2>
+
+<p>点击题目即可跳转。</p>
+
+<h3 id="41-洛谷b3614模板栈">4.1 <a href="https://www.luogu.com.cn/problem/B3614">洛谷：B3614【模板】栈</a>
+</h3>
+
+<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include</span> <span class="cpf">&lt;iostream&gt;</span><span class="cp">
+#include</span> <span class="cpf">&lt;cstdint&gt;</span><span class="cp">
+#include</span> <span class="cpf">&lt;string&gt;</span><span class="cp">
+</span>
+<span class="k">using</span> <span class="k">namespace</span> <span class="n">std</span><span class="p">;</span>
+
+<span class="k">const</span> <span class="kt">uint64_t</span> <span class="n">N</span> <span class="o">=</span> <span class="mf">10e6</span> <span class="o">+</span> <span class="mi">1</span><span class="p">;</span>
+<span class="kt">uint64_t</span> <span class="n">stk</span><span class="p">[</span><span class="n">N</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">};</span>
+<span class="kt">uint64_t</span> <span class="n">top_idx</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="c1">// 栈顶指针，指向栈顶元素的下一个位置</span>
+
+<span class="kt">int</span> <span class="n">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">uint64_t</span> <span class="n">t</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="n">cin</span> <span class="o">&gt;&gt;</span> <span class="n">t</span><span class="p">;</span> <span class="c1">// 数据组数</span>
+
+    <span class="k">while</span> <span class="p">(</span><span class="n">t</span><span class="o">--</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">top_idx</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="c1">// 每组数据都清空栈</span>
+        <span class="kt">uint64_t</span> <span class="n">n</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="c1">// 操作的次数</span>
+        <span class="n">cin</span> <span class="o">&gt;&gt;</span> <span class="n">n</span><span class="p">;</span>
+
+        <span class="k">while</span> <span class="p">(</span><span class="n">n</span><span class="o">--</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">string</span> <span class="n">operation</span><span class="p">;</span>
+            <span class="kt">uint64_t</span> <span class="n">x</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+            <span class="n">cin</span> <span class="o">&gt;&gt;</span> <span class="n">operation</span><span class="p">;</span>
+
+            <span class="k">if</span> <span class="p">(</span><span class="s">"push"</span> <span class="o">==</span> <span class="n">operation</span><span class="p">)</span> <span class="p">{</span>
+                <span class="n">cin</span> <span class="o">&gt;&gt;</span> <span class="n">x</span><span class="p">;</span>
+                <span class="n">stk</span><span class="p">[</span><span class="n">top_idx</span><span class="o">++</span><span class="p">]</span> <span class="o">=</span> <span class="n">x</span><span class="p">;</span>
+            <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="s">"pop"</span> <span class="o">==</span> <span class="n">operation</span><span class="p">)</span> <span class="p">{</span>
+                <span class="k">if</span> <span class="p">(</span><span class="mi">0</span> <span class="o">==</span> <span class="n">top_idx</span><span class="p">)</span> <span class="p">{</span>
+                    <span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"Empty"</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span><span class="p">;</span>
+                <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+                    <span class="o">--</span><span class="n">top_idx</span><span class="p">;</span>
+                <span class="p">}</span>
+            <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="s">"query"</span> <span class="o">==</span> <span class="n">operation</span><span class="p">)</span> <span class="p">{</span>
+                <span class="k">if</span> <span class="p">(</span><span class="mi">0</span> <span class="o">==</span> <span class="n">top_idx</span><span class="p">)</span> <span class="p">{</span>
+                    <span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"Anguei!"</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span><span class="p">;</span>
+                <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+                    <span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="n">stk</span><span class="p">[</span><span class="n">top_idx</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span><span class="p">;</span>
+                <span class="p">}</span>
+            <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="s">"size"</span> <span class="o">==</span> <span class="n">operation</span><span class="p">)</span> <span class="p">{</span>
+                <span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="n">top_idx</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span><span class="p">;</span>
+            <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+                <span class="k">continue</span><span class="p">;</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h3 id="42-力扣20-有效的括号">4.2 <a href="https://leetcode.cn/problems/valid-parentheses/description/">力扣：20. 有效的括号</a>
+</h3>
+
+<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">class</span> <span class="nc">Solution</span> <span class="p">{</span>
+<span class="nl">public:</span>
+    <span class="kt">bool</span> <span class="n">isValid</span><span class="p">(</span><span class="n">string</span> <span class="n">s</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">std</span><span class="o">::</span><span class="n">stack</span><span class="o">&lt;</span><span class="kt">char</span><span class="o">&gt;</span> <span class="n">stk</span><span class="p">;</span>
+        
+        <span class="k">for</span> <span class="p">(</span><span class="k">const</span> <span class="kt">char</span><span class="o">&amp;</span> <span class="n">c</span> <span class="o">:</span> <span class="n">s</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">if</span> <span class="p">(</span><span class="sc">'('</span> <span class="o">==</span> <span class="n">c</span> <span class="o">||</span> <span class="sc">'['</span> <span class="o">==</span> <span class="n">c</span> <span class="o">||</span> <span class="sc">'{'</span> <span class="o">==</span> <span class="n">c</span><span class="p">)</span> <span class="p">{</span>
+                <span class="n">stk</span><span class="p">.</span><span class="n">push</span><span class="p">(</span><span class="n">c</span><span class="p">);</span>
+            <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+                <span class="k">if</span> <span class="p">(</span><span class="n">stk</span><span class="p">.</span><span class="n">empty</span><span class="p">())</span> <span class="p">{</span>
+                    <span class="k">return</span> <span class="nb">false</span><span class="p">;</span>
+                <span class="p">}</span>
+
+                <span class="kt">char</span> <span class="n">top</span> <span class="o">=</span> <span class="n">stk</span><span class="p">.</span><span class="n">top</span><span class="p">();</span>
+
+                <span class="k">if</span> <span class="p">(</span><span class="sc">')'</span> <span class="o">==</span> <span class="n">c</span> <span class="o">&amp;&amp;</span> <span class="sc">'('</span> <span class="o">!=</span> <span class="n">top</span><span class="p">)</span> <span class="p">{</span>
+                    <span class="k">return</span> <span class="nb">false</span><span class="p">;</span>
+                <span class="p">}</span>
+
+                <span class="k">if</span> <span class="p">(</span><span class="sc">']'</span> <span class="o">==</span> <span class="n">c</span> <span class="o">&amp;&amp;</span> <span class="sc">'['</span> <span class="o">!=</span> <span class="n">top</span><span class="p">)</span> <span class="p">{</span>
+                    <span class="k">return</span> <span class="nb">false</span><span class="p">;</span>
+                <span class="p">}</span>
+
+                <span class="k">if</span> <span class="p">(</span><span class="sc">'}'</span> <span class="o">==</span> <span class="n">c</span> <span class="o">&amp;&amp;</span> <span class="sc">'{'</span> <span class="o">!=</span> <span class="n">top</span><span class="p">)</span> <span class="p">{</span>
+                    <span class="k">return</span> <span class="nb">false</span><span class="p">;</span>
+                <span class="p">}</span>
+
+                <span class="n">stk</span><span class="p">.</span><span class="n">pop</span><span class="p">();</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+
+        <span class="k">return</span> <span class="n">stk</span><span class="p">.</span><span class="n">empty</span><span class="p">();</span>
+    <span class="p">}</span>
+<span class="p">};</span>
+</code></pre></div></div>
+
+<h3 id="43-洛谷深基15习9验证栈序列">4.3 <a href="https://www.luogu.com.cn/problem/P4387">洛谷：【深基15.习9】验证栈序列</a>
+</h3>
+
+<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include</span> <span class="cpf">&lt;iostream&gt;</span><span class="cp">
+#include</span> <span class="cpf">&lt;vector&gt;</span><span class="cp">
+#include</span> <span class="cpf">&lt;stack&gt;</span><span class="cp">
+</span>
+<span class="k">constexpr</span> <span class="kt">int</span> <span class="n">N</span> <span class="o">=</span> <span class="mi">1000000</span> <span class="o">+</span> <span class="mi">1</span><span class="p">;</span>
+
+<span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">pushed</span><span class="p">(</span><span class="n">N</span><span class="p">);</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">popped</span><span class="p">(</span><span class="n">N</span><span class="p">);</span>
+
+    <span class="kt">int</span> <span class="n">q</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">cin</span> <span class="o">&gt;&gt;</span> <span class="n">q</span><span class="p">;</span>
+
+    <span class="k">while</span> <span class="p">(</span><span class="n">q</span><span class="o">--</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kt">int</span> <span class="n">n</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+        <span class="n">std</span><span class="o">::</span><span class="n">cin</span> <span class="o">&gt;&gt;</span> <span class="n">n</span><span class="p">;</span>
+
+        <span class="c1">// 读取入栈序列</span>
+        <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">n</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">std</span><span class="o">::</span><span class="n">cin</span> <span class="o">&gt;&gt;</span> <span class="n">pushed</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+        <span class="p">}</span>
+
+        <span class="c1">// 读取出栈序列</span>
+        <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">n</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">std</span><span class="o">::</span><span class="n">cin</span> <span class="o">&gt;&gt;</span> <span class="n">popped</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+        <span class="p">}</span>
+
+        <span class="c1">// 模拟验证</span>
+        <span class="n">std</span><span class="o">::</span><span class="n">stack</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">stk</span><span class="p">;</span>
+        <span class="kt">int</span> <span class="n">popped_idx</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+
+        <span class="c1">// 依次入栈</span>
+        <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">n</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">stk</span><span class="p">.</span><span class="n">push</span><span class="p">(</span><span class="n">pushed</span><span class="p">[</span><span class="n">i</span><span class="p">]);</span>
+
+            <span class="k">while</span> <span class="p">(</span><span class="n">popped_idx</span> <span class="o">&lt;</span> <span class="n">n</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="n">stk</span><span class="p">.</span><span class="n">empty</span><span class="p">()</span> <span class="o">&amp;&amp;</span> <span class="n">stk</span><span class="p">.</span><span class="n">top</span><span class="p">()</span> <span class="o">==</span> <span class="n">popped</span><span class="p">[</span><span class="n">popped_idx</span><span class="p">])</span> <span class="p">{</span>
+                <span class="n">stk</span><span class="p">.</span><span class="n">pop</span><span class="p">();</span>
+                <span class="n">popped_idx</span><span class="o">++</span><span class="p">;</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+
+        <span class="c1">// 判断</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">stk</span><span class="p">.</span><span class="n">empty</span><span class="p">())</span> <span class="p">{</span>
+            <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"Yes"</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+            <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"No"</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h3 id="44-洛谷p1449-后缀表达式">4.4 <a href="https://www.luogu.com.cn/problem/P1449">洛谷：P1449 后缀表达式</a>
+</h3>
+
+<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include</span> <span class="cpf">&lt;iostream&gt;</span><span class="cp">
+#include</span> <span class="cpf">&lt;stack&gt;</span><span class="cp">
+#include</span> <span class="cpf">&lt;string&gt;</span><span class="cp">
+</span>
+<span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">stack</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">stk</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">expression</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">num_str</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">num</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">result</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+
+    <span class="n">std</span><span class="o">::</span><span class="n">cin</span> <span class="o">&gt;&gt;</span> <span class="n">expression</span><span class="p">;</span>
+
+    <span class="k">for</span> <span class="p">(</span><span class="k">const</span> <span class="kt">char</span><span class="o">&amp;</span> <span class="n">ch</span> <span class="o">:</span> <span class="n">expression</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">ch</span> <span class="o">==</span> <span class="sc">'@'</span><span class="p">)</span> <span class="k">break</span><span class="p">;</span>
+    
+        <span class="k">if</span> <span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">isdigit</span><span class="p">(</span><span class="k">static_cast</span><span class="o">&lt;</span><span class="kt">unsigned</span> <span class="kt">char</span><span class="o">&gt;</span><span class="p">(</span><span class="n">ch</span><span class="p">)))</span> <span class="p">{</span>
+            <span class="n">num_str</span> <span class="o">+=</span> <span class="n">ch</span><span class="p">;</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">ch</span> <span class="o">==</span> <span class="sc">'.'</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">num_str</span><span class="p">.</span><span class="n">empty</span><span class="p">())</span> <span class="p">{</span>
+                <span class="n">stk</span><span class="p">.</span><span class="n">push</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">stoi</span><span class="p">(</span><span class="n">num_str</span><span class="p">));</span>
+                <span class="n">num_str</span><span class="p">.</span><span class="n">clear</span><span class="p">();</span>
+            <span class="p">}</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+            <span class="kt">int</span> <span class="n">a</span> <span class="o">=</span> <span class="n">stk</span><span class="p">.</span><span class="n">top</span><span class="p">();</span> <span class="n">stk</span><span class="p">.</span><span class="n">pop</span><span class="p">();</span>
+            <span class="kt">int</span> <span class="n">b</span> <span class="o">=</span> <span class="n">stk</span><span class="p">.</span><span class="n">top</span><span class="p">();</span> <span class="n">stk</span><span class="p">.</span><span class="n">pop</span><span class="p">();</span>
+            <span class="kt">int</span> <span class="n">result</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+            <span class="k">switch</span> <span class="p">(</span><span class="n">ch</span><span class="p">)</span> <span class="p">{</span>
+                <span class="k">case</span> <span class="sc">'+'</span><span class="p">:</span> <span class="n">result</span> <span class="o">=</span> <span class="n">b</span> <span class="o">+</span> <span class="n">a</span><span class="p">;</span> <span class="k">break</span><span class="p">;</span>
+                <span class="k">case</span> <span class="sc">'-'</span><span class="p">:</span> <span class="n">result</span> <span class="o">=</span> <span class="n">b</span> <span class="o">-</span> <span class="n">a</span><span class="p">;</span> <span class="k">break</span><span class="p">;</span>
+                <span class="k">case</span> <span class="sc">'*'</span><span class="p">:</span> <span class="n">result</span> <span class="o">=</span> <span class="n">b</span> <span class="o">*</span> <span class="n">a</span><span class="p">;</span> <span class="k">break</span><span class="p">;</span>
+                <span class="k">case</span> <span class="sc">'/'</span><span class="p">:</span> <span class="n">result</span> <span class="o">=</span> <span class="n">b</span> <span class="o">/</span> <span class="n">a</span><span class="p">;</span> <span class="k">break</span><span class="p">;</span>
+            <span class="p">}</span>
+            <span class="n">stk</span><span class="p">.</span><span class="n">push</span><span class="p">(</span><span class="n">result</span><span class="p">);</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="n">result</span> <span class="o">=</span> <span class="n">stk</span><span class="p">.</span><span class="n">top</span><span class="p">();</span>
+
+    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="n">result</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h3 id="45-洛谷p1241-括号序列">4.5 <a href="https://www.luogu.com.cn/problem/P1241">洛谷：P1241 括号序列</a>
+</h3>
+
+<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include</span> <span class="cpf">&lt;iostream&gt;</span><span class="cp">
+#include</span> <span class="cpf">&lt;string&gt;</span><span class="cp">
+#include</span> <span class="cpf">&lt;stack&gt;</span><span class="cp">
+#include</span> <span class="cpf">&lt;vector&gt;</span><span class="cp">
+</span>
+<span class="kt">bool</span> <span class="nf">is_match</span><span class="p">(</span><span class="kt">char</span> <span class="n">left</span><span class="p">,</span> <span class="kt">char</span> <span class="n">right</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="p">(</span><span class="sc">'('</span> <span class="o">==</span> <span class="n">left</span> <span class="o">&amp;&amp;</span> <span class="sc">')'</span> <span class="o">==</span> <span class="n">right</span><span class="p">)</span> <span class="o">||</span> <span class="p">(</span><span class="sc">'['</span> <span class="o">==</span> <span class="n">left</span> <span class="o">&amp;&amp;</span> <span class="sc">']'</span> <span class="o">==</span> <span class="n">right</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="n">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">expression</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">cin</span> <span class="o">&gt;&gt;</span> <span class="n">expression</span><span class="p">;</span>
+
+    <span class="n">std</span><span class="o">::</span><span class="n">stack</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">stk</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">bool</span><span class="o">&gt;</span> <span class="n">matched</span><span class="p">(</span><span class="n">expression</span><span class="p">.</span><span class="n">size</span><span class="p">(),</span> <span class="nb">false</span><span class="p">);</span>
+
+    <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="k">static_cast</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="p">(</span><span class="n">expression</span><span class="p">.</span><span class="n">size</span><span class="p">());</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kt">char</span> <span class="n">ch</span> <span class="o">=</span> <span class="n">expression</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+        <span class="k">if</span> <span class="p">(</span><span class="sc">'('</span> <span class="o">==</span> <span class="n">ch</span> <span class="o">||</span> <span class="sc">'['</span> <span class="o">==</span> <span class="n">ch</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">stk</span><span class="p">.</span><span class="n">push</span><span class="p">(</span><span class="n">i</span><span class="p">);</span>
+            <span class="k">continue</span><span class="p">;</span>
+        <span class="p">}</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">stk</span><span class="p">.</span><span class="n">empty</span><span class="p">()</span> <span class="o">&amp;&amp;</span> <span class="n">is_match</span><span class="p">(</span><span class="n">expression</span><span class="p">[</span><span class="n">stk</span><span class="p">.</span><span class="n">top</span><span class="p">()],</span> <span class="n">ch</span><span class="p">))</span> <span class="p">{</span>
+            <span class="n">matched</span><span class="p">[</span><span class="n">stk</span><span class="p">.</span><span class="n">top</span><span class="p">()]</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
+            <span class="n">matched</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
+            <span class="n">stk</span><span class="p">.</span><span class="n">pop</span><span class="p">();</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="k">static_cast</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="p">(</span><span class="n">expression</span><span class="p">.</span><span class="n">size</span><span class="p">());</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">matched</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="p">{</span>
+            <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="n">expression</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+            <span class="k">continue</span><span class="p">;</span>
+        <span class="p">}</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="sc">'('</span> <span class="o">==</span> <span class="n">expression</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">||</span> <span class="sc">')'</span> <span class="o">==</span> <span class="n">expression</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="p">{</span>
+            <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"()"</span><span class="p">;</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+            <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"[]"</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+    
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h2 id="5-进阶知识底层容器的选择">5. 进阶知识（底层容器的选择）</h2>
+
+<p><a href="https://en.cppreference.com/w/cpp/container/stack.html"><code class="language-plaintext highlighter-rouge">std::stack</code></a> 是一个模板类（定义在头文件 <code class="language-plaintext highlighter-rouge">&lt;stack&gt;</code>），定义如下：</p>
+
+<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">template</span><span class="o">&lt;</span><span class="k">class</span> <span class="nc">T</span><span class="p">,</span> <span class="k">class</span> <span class="nc">Container</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">deque</span><span class="o">&lt;</span><span class="n">T</span><span class="p">&gt;</span><span class="o">&gt;</span>
+<span class="k">class</span> <span class="nc">stack</span><span class="p">;</span>
+</code></pre></div></div>
+
+<p>注意第二个参数 <code class="language-plaintext highlighter-rouge">Container</code>。默认情况下，C++ 使用 <code class="language-plaintext highlighter-rouge">std::deque</code>（双端队列）作为底层容器，而不是 <code class="language-plaintext highlighter-rouge">std::vector</code>。</p>
+
+<h3 id="51-为什么默认用-stddeque-而不是-stdvector">5.1 为什么默认用 <code class="language-plaintext highlighter-rouge">std::deque</code> 而不是 <code class="language-plaintext highlighter-rouge">std::vector</code>？</h3>
+
+<ol>
+  <li>
+<strong>扩容代价</strong>：<code class="language-plaintext highlighter-rouge">std::vector</code> 在内存不足扩容时，需要把所有元素搬运到新内存块，代价较大。<code class="language-plaintext highlighter-rouge">std::deque</code> 是分段内存，扩容时只需分配新段，不需要搬运旧数据。</li>
+  <li>
+<strong>内存效率</strong>：对于大量进出的栈操作，<code class="language-plaintext highlighter-rouge">std::deque</code> 的内存回收和分配策略通常比 <code class="language-plaintext highlighter-rouge">std::vector</code> 更平滑。</li>
+</ol>
+
+<figure class=" centered-75-figure"><a href="/assets/images/double_ended_queue_in_stl.png" class="image-popup" title="std::deque 的内部结构：由中控器（Map）管理的一系列分段连续内存缓冲区，非常适合两端操作
+"><img src="/assets/images/double_ended_queue_in_stl.png" alt="STL 中双端队列 deque 的内部结构示意图"></a><figcaption>
+      std::deque 的内部结构：由中控器（Map）管理的一系列分段连续内存缓冲区，非常适合两端操作
+
+    </figcaption></figure>
+
+<p>当然，如果你确定需要极致的连续内存性能，也可以手动指定：</p>
+
+<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">std</span><span class="o">::</span><span class="n">stack</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&gt;</span> <span class="n">stk</span><span class="p">;</span>
+</code></pre></div></div>
+
+<h2 id="参考资料">参考资料</h2>
+
+<ol>
+  <li><a href="https://en.wikipedia.org/wiki/Stack_(abstract_data_type)">Wikipedia: Stack (abstract data type)</a></li>
+  <li><a href="https://en.wikipedia.org/wiki/Call_stack">Wikipedia: Call stack</a></li>
+  <li><a href="https://en.wikipedia.org/wiki/Recursion_(computer_science)">Wikipedia: Recursion (computer science)</a></li>
+  <li><a href="https://medium.com/@goyalarchana17/scala-interview-series-valid-parentheses-in-a-string-ac7002c79642">Medium: Valid Parentheses in a String</a></li>
+  <li><a href="https://stackoverflow.com/questions/1436020/whats-the-difference-between-deque-and-list-stl-containers">StackOverflow: Difference between deque and list</a></li>
+  <li><a href="https://cppreference.com/w/cpp/container/stack">cppreference.com: std::stack</a></li>
+</ol>
+
+        
+      </section>
+
+      <footer class="page__meta">
+        
+        
+
+  
+    
+
+
+
+  
+
+  <p class="page__taxonomy">
+    <strong><i class="fas fa-fw fa-tags" aria-hidden="true"></i> Tags: </strong>
+    <span itemprop="keywords">
+    
+      <a href="/tags/c" class="page__taxonomy-item p-category" rel="tag">C++</a>
+    
+    </span>
+  </p>
+
+
+  
+
+  
+    
+
+
+
+  
+
+  <p class="page__taxonomy">
+    <strong><i class="fas fa-fw fa-folder-open" aria-hidden="true"></i> Categories: </strong>
+    <span itemprop="keywords">
+    
+      <a href="/categories/note" class="page__taxonomy-item p-category" rel="tag">Note</a>
+    
+    </span>
+  </p>
+
+
+  
+
+
+        
+
+
+  <p class="page__date"><strong><i class="fas fa-fw fa-calendar-alt" aria-hidden="true"></i> Updated:</strong> <time class="dt-published" datetime="2026-02-19T02:45:00+00:00">February 19, 2026</time></p>
+
+
+      </footer>
+
+      
+<section class="page__share">
+  <h4 class="page__share-title">Share on</h4>
+
+  <a href="https://x.com/intent/tweet?text=C%2B%2B+%E4%B8%AD%E7%9A%84+stack%20https%3A%2F%2Fbfmhno3.github.io%2Fnote%2Fstack-in-cpp%2F" class="btn btn--x" aria-label="Share on X" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on X">
+    <i class="fab fa-fw fa-x-twitter" aria-hidden="true"></i><span> X</span>
+  </a>
+
+  <a href="https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fbfmhno3.github.io%2Fnote%2Fstack-in-cpp%2F" class="btn btn--facebook" aria-label="Share on Facebook" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on Facebook">
+    <i class="fab fa-fw fa-facebook" aria-hidden="true"></i><span> Facebook</span>
+  </a>
+
+  <a href="https://www.linkedin.com/shareArticle?mini=true&url=https://bfmhno3.github.io/note/stack-in-cpp/" class="btn btn--linkedin" aria-label="Share on LinkedIn" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on LinkedIn">
+    <i class="fab fa-fw fa-linkedin" aria-hidden="true"></i><span> LinkedIn</span>
+  </a>
+
+  <a href="https://bsky.app/intent/compose?text=C%2B%2B+%E4%B8%AD%E7%9A%84+stack%20https%3A%2F%2Fbfmhno3.github.io%2Fnote%2Fstack-in-cpp%2F" class="btn btn--bluesky" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on Bluesky">
+    <i class="fab fa-fw fa-bluesky" aria-hidden="true"></i><span> Bluesky</span>
+  </a>
+</section>
+
+
+      
+
+  <nav class="pagination" aria-label="Post pagination">
+    
+      <a href="/note/process-in-os/" class="pagination--pager" title="操作系统中的进程">Previous</a>
+    
+    
+      <a href="/tutorial/wsl2-image-migration-guide/" class="pagination--pager" title="如何将 WSL2 镜像无损迁移至非系统盘">Next</a>
+    
+  </nav>
+
+
+    </div>
+
+    
+      
+        
+<div class="page__comments">
+  
+  
+      <h4 class="page__comments-title">Comments</h4>
+      <section id="giscus-comments"></section>
+    
+</div>
+
+      
+    
+  </article>
+
+  
+  
+    
+
+<div class="page__related">
+  
+  <h2 class="page__related-title">You May Also Enjoy</h2>
+  <div class="grid__wrapper">
+    
+      
+      
+
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc p-name" itemprop="headline">
+      
+        <a class="u-url" href="/tutorial/wsl2-image-migration-guide/" rel="permalink">如何将 WSL2 镜像无损迁移至非系统盘
+</a>
+      
+    </h2>
+    
+
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-03-14T05:16:00+00:00">March 14, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          3 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt p-summary" itemprop="description">详细记录在 Windows 11 环境下，将默认安装在 C 盘的 WSL2 Ubuntu 镜像无损迁移至其他数据盘的完整过程，包含导出、导入、默认用户配置及原实例清理，有效释放系统盘空间。
+</p>
+  </article>
+</div>
+
+    
+      
+      
+
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc p-name" itemprop="headline">
+      
+        <a class="u-url" href="/note/process-in-os/" rel="permalink">操作系统中的进程
+</a>
+      
+    </h2>
+    
+
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-01-26T22:10:00+00:00">January 26, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          3 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt p-summary" itemprop="description">在计算机科学的教科书中，关于进程（Process）的定义往往只有冷冰冰的一句话：
+
+
+  进程是程序的一次执行过程。
+
+
+这句话虽然准确，但它掩盖了太多细节。对于初学者而言，这更像是一个黑盒。为什么要有进程？为什么不能直接操作物理地址？所谓的上下文切换到底切换了什么？
+
+要真正理解进程，我们不能只看定义，而必须回...</p>
+  </article>
+</div>
+
+    
+      
+      
+
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc p-name" itemprop="headline">
+      
+        <a class="u-url" href="/note/initialization-in-cpp/" rel="permalink">C++ 中的初始化列表和列表初始化
+</a>
+      
+    </h2>
+    
+
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-01-03T15:07:00+00:00">January 3, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          6 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt p-summary" itemprop="description">深入理解 C++ 中初始化列表与列表初始化的区别：前者解决对象生命周期与内存模型问题，后者统一初始化语法并提供类型安全保障。
+</p>
+  </article>
+</div>
+
+    
+      
+      
+
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc p-name" itemprop="headline">
+      
+        <a class="u-url" href="/note/list-in-cpp/" rel="permalink">C++ 中的 list
+</a>
+      
+    </h2>
+    
+
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-01-03T13:05:00+00:00">January 3, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          2 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt p-summary" itemprop="description">在现代 C++ 开发中，虽然 std::vector 足以应付绝大多数的场景，但是在某些特定场景下，std::list 依旧是不可替代的神器。
+
+核心概念与底层原理
+
+
+  头文件：#include &lt;list&gt;
+  本质：双向链表（Doubly Linked List）
+  内存模型：非连续内存。每...</p>
+  </article>
+</div>
+
+    
+  </div>
+</div>
+
+  
+  
+</div>
+
+      
+    </div>
+
+    
+      <div class="search-content">
+        
+<div class="search-content__inner-wrap">
+<form class="search-content__form" onkeydown="return event.key != 'Enter';" role="search">
+    <label class="sr-only" for="search">
+      Enter your search term...
+    </label>
+    <input type="search" id="search" class="search-input" tabindex="-1" placeholder="Enter your search term...">
+  </form>
+  <div id="results" class="results"></div>
+</div>
+
+      </div>
+    
+
+    <div id="footer" class="page__footer">
+      <footer>
+        <!-- start custom footer snippets -->
+
+<!-- end custom footer snippets -->
+        
+
+
+<div class="page__footer-follow">
+  <ul class="social-icons">
+    
+
+    
+      
+        
+          <li><a href="https://github.com/bfmhno3" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-github" aria-hidden="true"></i> GitHub</a></li>
+        
+      
+        
+          <li><a href="https://gitee.com/bfmhno3" rel="nofollow noopener noreferrer"><i class="fa-solid fa-g" aria-hidden="true"></i> Gitee</a></li>
+        
+      
+        
+          <li><a href="https://www.cnblogs.com/bfmhno3" rel="nofollow noopener noreferrer"><i class="fa-solid fa-blog" aria-hidden="true"></i> cnblogs</a></li>
+        
+      
+        
+          <li><a href="https://blog.csdn.net/B33336" rel="nofollow noopener noreferrer"><i class="fa-solid fa-blog" aria-hidden="true"></i> CSDN</a></li>
+        
+      
+    
+
+    
+      <li><a href="/feed.xml"><i class="fas fa-fw fa-square-rss" aria-hidden="true"></i> Feed</a></li>
+    
+  </ul>
+</div>
+
+
+<div class="page__footer-copyright">© 2026 <a href="https://bfmhno3.github.io">Better Mistakes</a>. Powered by <a href="https://jekyllrb.com" rel="nofollow">Jekyll</a> &amp; <a href="https://mademistakes.com/work/jekyll-themes/minimal-mistakes/" rel="nofollow">Minimal Mistakes</a>.</div>
+
+      </footer>
+    </div>
+
+    
+
+  <script src="/assets/js/main.min.js"></script>
+
+
+
+
+
+<script src="/assets/js/lunr/lunr.min.js"></script>
+<script src="/assets/js/lunr/lunr-store.js"></script>
+<script src="/assets/js/lunr/lunr-en.js"></script>
+
+
+
+
+
+  <!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-VS5B3CR1M6"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-VS5B3CR1M6', { 'anonymize_ip': false});
+</script>
+
+
+
+
+
+
+
+    <script>
+  'use strict';
+
+  (function () {
+    var commentContainer = document.querySelector('#giscus-comments');
+
+    if (!commentContainer) {
+      return;
+    }
+
+    var script = document.createElement('script');
+
+    script.setAttribute('src', 'https://giscus.app/client.js');
+    script.setAttribute('data-repo', 'bfmhno3/bfmhno3.github.io');
+    script.setAttribute('data-repo-id', 'R_kgDOQCQGxg');
+    script.setAttribute('data-category', 'General');
+    script.setAttribute('data-category-id', 'DIC_kwDOQCQGxs4CzG3a');
+    script.setAttribute('data-mapping', 'pathname');
+    script.setAttribute('data-strict', '0');
+    script.setAttribute('data-reactions-enabled', '1');
+    script.setAttribute('data-emit-metadata', '0');
+    script.setAttribute('data-input-position', 'bottom');
+    script.setAttribute('data-theme', 'transparent_dark');
+    script.setAttribute('data-lang',  'en');
+    
+    script.setAttribute('data-loading', 'lazy');
+    
+    script.setAttribute('crossorigin', 'anonymous');
+
+    script.setAttribute('async', '');
+
+    commentContainer.appendChild(script);
+  })();
+</script>
+
+  
+
+
+
+
+  </body>
+</html>
