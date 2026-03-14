@@ -171,6 +171,8 @@ wsl --unregister Ubuntu-24.04
 
 迁移安装最大的好处就是能显著减小 C 盘的存储压力。不过，如果你的物理磁盘总容量本身较小（比如只有 512GB 单盘），笔者依然更推荐直接重装系统并只保留一个 C 盘分区，统一管理存储空间。
 
+此外，根据[微软官方文档的建议](https://bfmhno3.github.io/tutorial/wsl2-image-migration-guide/)，为了获得最佳的文件 I/O 性能，进行 Linux 相关的开发时，请务必将项目文件直接存储在 WSL 的 Linux 文件系统（如 `~` 目录下），而不是跨文件系统存储在 Windows 盘符（如 `/mnt/c`）中。
+
 ## 参考资料
 
 1. [Installing Ubuntu on /mnt/d with WSL](https://superuser.com/questions/1701175/installing-ubuntu-on-mnt-d-with-wsl)
