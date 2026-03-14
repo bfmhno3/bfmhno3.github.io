@@ -14,7 +14,7 @@ tags:
 
 随着开发环境的日益庞大，默认安装在 `C:\` 盘的 WSL2 (Windows Subsystem for Linux) 镜像体积也会不断膨胀。本文将分享如何通过命令行操作，将 WSL 迁移至 `E:\` 盘乃至其他盘符，彻底释放系统盘空间。
 
-### 0.1 笔者环境
+### 1.1 笔者环境
 
 |名称|版本|
 |:---:|:---|
@@ -139,7 +139,7 @@ sudo nano /etc/wsl.conf
 default=<your_linux_username>
 ```
 
-保存并退出：依次按下 <kdb>Ctrl</kdb> + <kdb>X</kdb>，输入 <kbd>Y</kdb> 确认保存，最后按 <kdb>Enter</kdb> 退出。
+保存并退出：依次按下 <kbd>Ctrl</kbd> + <kbd>X</kbd>，输入 <kbd>Y</kbd> 确认保存，最后按 <kbd>Enter</kbd> 退出。
 
 退出当前 WSL 会话，并在 Windows 终端中重启改实例使配置生效：
 
