@@ -1,0 +1,1845 @@
+<!DOCTYPE html>
+<!--
+  Minimal Mistakes Jekyll Theme 4.28.0 by Michael Rose
+  Copyright 2013-2026 Michael Rose - mademistakes.com | @mmistakes
+  Copyright 2024-2026 iBug - ibugone.com | @iBug
+  Free for personal and commercial use under the MIT license
+  https://github.com/mmistakes/minimal-mistakes/blob/master/LICENSE
+--><html lang="en-US" class="no-js">
+  <head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+<meta charset="utf-8">
+
+
+<!-- begin _includes/seo.html --><title>ARMv7-A 指令体系全解：数据处理、访存、分支与同步 - Better Mistakes</title>
+<meta name="description" content="以 I.MX6ULL（ARM Cortex-A7）为背景，从物理本质出发，系统梳理 ARMv7-A 指令集的核心要点：定长 32 位指令结构与条件执行机制、16 个核心寄存器的 AAPCS 调用规范，以及数据处理、内存访问、分支控制、系统状态和原子同步五大类指令的功能与应用场景。">
+
+
+  <meta name="author" content="bfmhno3">
+  
+  <meta property="article:author" content="bfmhno3">
+  
+
+
+<meta property="og:type" content="article">
+<meta property="og:locale" content="en_US">
+<meta property="og:site_name" content="Better Mistakes">
+<meta property="og:title" content="ARMv7-A 指令体系全解：数据处理、访存、分支与同步">
+<meta property="og:url" content="https://bfmhno3.github.io/note/armv7-a-isa/">
+
+
+  <meta property="og:description" content="以 I.MX6ULL（ARM Cortex-A7）为背景，从物理本质出发，系统梳理 ARMv7-A 指令集的核心要点：定长 32 位指令结构与条件执行机制、16 个核心寄存器的 AAPCS 调用规范，以及数据处理、内存访问、分支控制、系统状态和原子同步五大类指令的功能与应用场景。">
+
+
+
+  <meta property="og:image" content="https://bfmhno3.github.io/assets/images/avatar.jpg">
+  
+
+
+
+
+
+
+
+  <meta property="article:published_time" content="2026-04-05T08:20:00+00:00">
+
+
+
+
+
+  
+
+  
+
+
+<link rel="canonical" href="https://bfmhno3.github.io/note/armv7-a-isa/">
+
+
+
+
+
+
+
+  <meta name="google-site-verification" content="UUnU8OnGqO_2FFdhrv7eEABM5p_cNPhM4Se6HB1KFSk">
+
+
+  <meta name="msvalidate.01" content="FC3BA97765A3C90F8CA771F70AE34FB8">
+
+
+
+
+
+<!-- end _includes/seo.html -->
+
+
+
+  <link href="/feed.xml" type="application/atom+xml" rel="alternate" title="Better Mistakes Feed">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script>
+  document.documentElement.className = document.documentElement.className.replace(/\bno-js\b/g, '') + ' js ';
+  window.enable_copy_code_button = true;
+</script>
+
+<!-- For all browsers -->
+<link rel="stylesheet" href="/assets/css/main.css">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@latest/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@latest/css/all.min.css"></noscript>
+
+
+
+    <link rel="icon" type="image/png" href="/assets/images/favicon/favicon-96x96.png" sizes="96x96">
+<link rel="icon" type="image/svg+xml" href="/assets/images/favicon/favicon.svg">
+<link rel="shortcut icon" href="/assets/images/favicon/favicon.ico">
+<link rel="apple-touch-icon" sizes="180x180" href="/assets/images/favicon/apple-touch-icon.png">
+<link rel="manifest" href="/assets/images/favicon/site.webmanifest">
+  <script>MathJax={"tex":{"inlineMath":[["$","$"],["\\(","\\)"]],"displayMath":[["$$","$$"],["\\[","\\]"]]},"svg":{"fontCache":"global"},"svg":{"fontCache":"global"}}</script><script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script><script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+
+  <body class="layout--single" dir="ltr">
+    
+<nav class="skip-links" aria-label="Skip links">
+  <ul>
+    <li><a href="#site-nav" class="screen-reader-shortcut">Skip to primary navigation</a></li>
+    <li><a href="#main" class="screen-reader-shortcut">Skip to content</a></li>
+    <li><a href="#footer" class="screen-reader-shortcut">Skip to footer</a></li>
+  </ul>
+</nav>
+
+    
+
+
+<div class="masthead">
+  <div class="masthead__inner-wrap">
+    <div class="masthead__menu">
+      <nav id="site-nav" class="greedy-nav" aria-label="Primary navigation">
+        
+          <a class="site-logo" href="/"><img src="/assets/images/logo.svg" alt="Better Mistakes"></a>
+        
+        <a class="site-title" href="/">
+          Better Mistakes
+          <span class="site-subtitle">Trial.Error.Iteration.</span>
+        </a>
+        <ul class="visible-links">
+<li class="masthead__menu-item">
+              <a href="/posts/">Posts</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/categories/">Categories</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/tags/">Tags</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/portfolio/">Portfolio</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/about/">About</a>
+            </li>
+</ul>
+        
+        <button class="search__toggle" type="button">
+          <span class="visually-hidden">Toggle search</span>
+          <i class="fas fa-search"></i>
+        </button>
+        
+        <button class="greedy-nav__toggle hidden" type="button">
+          <span class="visually-hidden">Toggle menu</span>
+          <div class="navicon"></div>
+        </button>
+        <ul class="hidden-links hidden"></ul>
+      </nav>
+    </div>
+  </div>
+</div>
+
+
+    <div class="initial-content">
+      
+
+
+
+
+
+
+
+<div id="main" role="main">
+  
+
+  <div class="sidebar sticky">
+  
+
+
+
+<div itemscope itemtype="https://schema.org/Person" class="h-card">
+
+  
+    <div class="author__avatar">
+      <a href="https://bfmhno3.github.io/">
+        <img src="/assets/images/avatar.jpg" alt="bfmhno3" itemprop="image" class="u-photo">
+      </a>
+    </div>
+  
+
+  <div class="author__content">
+    <h3 class="author__name p-name" itemprop="name">
+      <a class="u-url" rel="me" href="https://bfmhno3.github.io/" itemprop="url">bfmhno3</a>
+    </h3>
+    
+      <div class="author__bio p-note" itemprop="description">
+        <p>Third-year university student majoring in energy engineering. Exploring the world of code and mathematics.</p>
+
+      </div>
+    
+  </div>
+
+  <div class="author__urls-wrapper">
+    <button class="btn btn--inverse">Follow</button>
+    <ul class="author__urls social-icons">
+      
+
+      
+        
+          
+            <li><a href="https://github.com/bfmhno3" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fab fa-fw fa-github" aria-hidden="true"></i><span class="label">GitHub</span></a></li>
+          
+        
+          
+            <li><a href="https://gitee.com/bfmhno3" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fa-solid fa-g" aria-hidden="true"></i><span class="label">Gitee</span></a></li>
+          
+        
+          
+            <li><a href="https://www.cnblogs.com/bfmhno3" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fa-solid fa-blog" aria-hidden="true"></i><span class="label">cnblogs</span></a></li>
+          
+        
+          
+            <li><a href="https://blog.csdn.net/B33336" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fa-solid fa-blog" aria-hidden="true"></i><span class="label">CSDN</span></a></li>
+          
+        
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      <!--
+  <li>
+    <a href="http://link-to-whatever-social-network.com/user/" itemprop="sameAs" rel="nofollow noopener noreferrer me">
+      <i class="fas fa-fw" aria-hidden="true"></i> Custom Social Profile Link
+    </a>
+  </li>
+-->
+    </ul>
+  </div>
+</div>
+
+  
+  
+  </div>
+
+
+
+  <article class="page h-entry" itemscope itemtype="https://schema.org/CreativeWork">
+    <meta itemprop="headline" content="ARMv7-A 指令体系全解：数据处理、访存、分支与同步">
+    <meta itemprop="description" content="以 I.MX6ULL（ARM Cortex-A7）为背景，从物理本质出发，系统梳理 ARMv7-A 指令集的核心要点：定长 32 位指令结构与条件执行机制、16 个核心寄存器的 AAPCS 调用规范，以及数据处理、内存访问、分支控制、系统状态和原子同步五大类指令的功能与应用场景。">
+    <meta itemprop="datePublished" content="2026-04-05T08:20:00+00:00">
+    
+
+    <div class="page__inner-wrap">
+      
+        <header>
+          <h1 id="page-title" class="page__title p-name" itemprop="headline">
+            <a href="https://bfmhno3.github.io/note/armv7-a-isa/" itemprop="url">ARMv7-A 指令体系全解：数据处理、访存、分支与同步
+</a>
+          </h1>
+          
+
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-04-05T08:20:00+00:00">April 5, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-clock" aria-hidden="true"></i>
+        
+          13 minute read
+        
+      </span>
+    
+  </p>
+
+
+        </header>
+      
+
+      <section class="page__content e-content" itemprop="text">
+        
+          <aside class="sidebar__right sticky">
+            <nav class="toc" aria-label="Table of contents">
+              <header><h4 class="nav__title">
+<i class="fas fa-file-alt"></i> On this page</h4></header>
+              <ul class="toc__menu">
+<li>
+<a href="#1-%E7%89%A9%E7%90%86%E6%9C%AC%E8%B4%A8">1. 物理本质</a><ul><li><a href="#11-%E6%A0%B8%E5%BF%83%E5%B7%AE%E5%BC%82%E6%9D%A1%E4%BB%B6%E6%89%A7%E8%A1%8Cconditional-execution">1.1 核心差异：条件执行（Conditional Execution）</a></li></ul>
+</li>
+<li>
+<a href="#2-%E5%AF%84%E5%AD%98%E5%99%A8%E6%A8%A1%E5%9E%8B">2. 寄存器模型</a><ul>
+<li><a href="#21-%E4%B8%BA%E4%BB%80%E4%B9%88%E8%A6%81%E5%8C%BA%E5%88%86%E8%B0%83%E7%94%A8%E8%80%85%E4%BF%9D%E5%AD%98%E5%92%8C%E8%A2%AB%E8%B0%83%E7%94%A8%E8%80%85%E4%BF%9D%E5%AD%98">2.1 为什么要区分调用者保存和被调用者保存？</a></li>
+<li><a href="#22-r12ip%E6%98%AF%E5%B9%B2%E4%BB%80%E4%B9%88%E7%9A%84">2.2 R12（IP）是干什么的？</a></li>
+<li><a href="#23-r15pc%E4%B8%BA%E4%BB%80%E4%B9%88%E6%9C%89-8-%E7%8E%B0%E8%B1%A1">2.3 R15（PC）为什么有 +8 现象？</a></li>
+</ul>
+</li>
+<li>
+<a href="#3-%E6%8C%87%E4%BB%A4%E9%9B%86%E8%AE%B2%E8%A7%A3">3. 指令集讲解</a><ul>
+<li>
+<a href="#31-%E6%95%B0%E6%8D%AE%E5%A4%84%E7%90%86%E6%8C%87%E4%BB%A4data-processing">3.1 数据处理指令（Data Processing）</a><ul>
+<li><a href="#311-%E7%AE%97%E6%9C%AF%E7%B1%BB">3.1.1 算术类</a></li>
+<li><a href="#312-%E9%80%BB%E8%BE%91%E7%B1%BB">3.1.2 逻辑类</a></li>
+<li><a href="#313-%E6%95%B0%E6%8D%AE%E6%90%AC%E8%BF%90">3.1.3 数据搬运</a></li>
+<li><a href="#314-%E6%AF%94%E8%BE%83%E6%8C%87%E4%BB%A4">3.1.4 比较指令</a></li>
+<li><a href="#315-%E6%A1%B6%E5%BD%A2%E7%A7%BB%E4%BD%8D%E5%99%A8barrel-shifter">3.1.5 桶形移位器（Barrel Shifter）</a></li>
+</ul>
+</li>
+<li>
+<a href="#32-%E5%86%85%E5%AD%98%E8%AE%BF%E9%97%AE%E6%8C%87%E4%BB%A4memory-access">3.2 内存访问指令（Memory Access）</a><ul>
+<li><a href="#321-%E5%8D%95%E5%AF%84%E5%AD%98%E5%99%A8">3.2.1 单寄存器</a></li>
+<li><a href="#322-%E5%AF%BB%E5%9D%80%E6%A8%A1%E5%BC%8F">3.2.2 寻址模式</a></li>
+<li>
+<a href="#323-%E5%A4%9A%E5%AF%84%E5%AD%98%E5%99%A8">3.2.3 多寄存器</a><ul><li><a href="#%E5%90%8E%E7%BC%80%E6%A8%A1%E5%BC%8F">后缀模式</a></li></ul>
+</li>
+</ul>
+</li>
+<li><a href="#33-%E5%88%86%E6%94%AF%E4%B8%8E%E6%8E%A7%E5%88%B6%E6%B5%81branch--control">3.3 分支与控制流（Branch &amp; Control）</a></li>
+<li>
+<a href="#34-%E7%B3%BB%E7%BB%9F%E4%B8%8E%E7%8A%B6%E6%80%81%E6%8C%87%E4%BB%A4system--status">3.4 系统与状态指令（System &amp; Status）</a><ul>
+<li><a href="#341-%E7%8A%B6%E6%80%81%E5%AF%84%E5%AD%98%E5%99%A8%E8%AE%BF%E9%97%AE">3.4.1 状态寄存器访问</a></li>
+<li><a href="#342-%E5%BC%82%E5%B8%B8%E4%B8%8E%E4%B8%AD%E6%96%AD%E7%94%9F%E6%88%90">3.4.2 异常与中断生成</a></li>
+<li><a href="#343-%E5%8D%8F%E5%A4%84%E7%90%86%E5%99%A8%E6%8C%87%E4%BB%A4">3.4.3 协处理器指令</a></li>
+<li><a href="#344-%E5%86%85%E5%AD%98%E5%B1%8F%E9%9A%9Cmemory-barriers">3.4.4 内存屏障（Memory Barriers）</a></li>
+</ul>
+</li>
+<li><a href="#35-%E5%90%8C%E6%AD%A5%E4%B8%8E%E5%8E%9F%E5%AD%90%E6%93%8D%E4%BD%9Csynchronization">3.5 同步与原子操作（Synchronization）</a></li>
+</ul>
+</li>
+</ul>
+            </nav>
+          </aside>
+        
+        <p>I.MX6ULL 的核心是 ARM Cortex-A7，它基于 ARMv7-A 架构。</p>
+
+<p>要真正理解指令集，就不能只是背诵汇编手册，而是要回答一个核心问题：如果不看代码，只看电路，CPU 在做什么？</p>
+
+<p>本质上，每一条指令都是对 CPU 内部寄存器状态或外部<strong>总线</strong>（内存/外设）的一次<strong>原子操作</strong>。</p>
+
+<div class="notice--info">
+  <p><strong>总线</strong>（Bus）通俗理解就是主板上的 “高速公路”。它的硬件本质则是一组并排的导线，通过这组导线，连接 CPU 内部各部分或连接 CPU 和外设。</p>
+
+  <p>总线分为<strong>数据总线</strong>（传数据）、<strong>地址总线</strong>（告诉内存我要读哪一个单元）和<strong>控制总线</strong>（读还是写）。</p>
+</div>
+
+<div class="notice--info">
+  <p><strong>原子操作</strong>（Atomic Operation）通俗理解就是，要么做完，要么完全不做，中间绝不允许被打断的操作。</p>
+
+  <p>在 ARM 中，单条读写指令通常是原子的，但 “读-改-写” 三步操作默认不是原子的，需要特殊指令（<code class="language-plaintext highlighter-rouge">ldrex</code> / <code class="language-plaintext highlighter-rouge">strex</code>） 保证。</p>
+</div>
+
+<h2 id="1-物理本质">1. 物理本质</h2>
+
+<p>在 ARM 状态下（Cortex-A7 上电默认状态），每一条指令都是严格的 32 位（4 字节）二进制码。</p>
+
+<p>与 x86（变长指令）不同，ARM 的定长指令让译码器设计更加简洁高效。一条典型的 ARM 指令在物理电路上被切割为以下结构：</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Instruction <span class="o">=</span> <span class="o">[</span>Codition Code <span class="o">(</span>4 bits<span class="o">)]</span> + <span class="o">[</span>OpCode &amp; Flags] + <span class="o">[</span>Operands <span class="o">(</span>Registers/Immediates<span class="o">)]</span>
+</code></pre></div></div>
+
+<h3 id="11-核心差异条件执行conditional-execution">1.1 核心差异：条件执行（Conditional Execution）</h3>
+
+<p>这是 ARM 架构最吸引人的设计之一。几乎每一条指令的高 4 位（Bits 31-28）都是条件码。这意味着：<strong>任何指令都可以是条件跳转指令的变体</strong>。</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>条件后缀</th>
+      <th>标志位要求（CPSR）</th>
+      <th>解释</th>
+      <th>汇编举例</th>
+      <th>C 语言映射</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>eq</td>
+      <td><code class="language-plaintext highlighter-rouge">Z == 1</code></td>
+      <td>Equal（相等）</td>
+      <td>
+<code class="language-plaintext highlighter-rouge">addeq r0, r1, r2</code><br>（如果相等，则相加）</td>
+      <td><code class="language-plaintext highlighter-rouge">if (a == b)</code></td>
+    </tr>
+    <tr>
+      <td>ne</td>
+      <td><code class="language-plaintext highlighter-rouge">Z == 0</code></td>
+      <td>Not Equal（不想等）</td>
+      <td>
+<code class="language-plaintext highlighter-rouge">movne r0, #1</code><br>（如果不等，则赋值）</td>
+      <td><code class="language-plaintext highlighter-rouge">if (a != b)</code></td>
+    </tr>
+    <tr>
+      <td>al</td>
+      <td>Ignored</td>
+      <td>Always（默认）</td>
+      <td>
+<code class="language-plaintext highlighter-rouge">add r0, r1, r2</code><br>（指令不写后缀默认就是 AL）</td>
+      <td>（无条件执行）</td>
+    </tr>
+    <tr>
+      <td>gt/lt</td>
+      <td> </td>
+      <td>大于 / 小于</td>
+      <td><code class="language-plaintext highlighter-rouge">subgt ...</code></td>
+      <td>
+<code class="language-plaintext highlighter-rouge">&gt;</code> 或 <code class="language-plaintext highlighter-rouge">&lt;</code>
+</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="2-寄存器模型">2. 寄存器模型</h2>
+
+<p>在执行指令前，必须知道指令操作的对象。I.MX6ULL 是 Load/Store 架构。</p>
+
+<ul>
+  <li>原则：ALU（算术逻辑单元）只能处理<strong>通用寄存器</strong>中的数据。</li>
+  <li>即不能对内存里的变量做运算，必须：搬运到寄存器 $\rightarrow$ 计算 $\rightarrow$ 搬回内存。</li>
+</ul>
+
+<p>I.MX6ULL 有 16 个核心寄存器（R0-R15）：</p>
+
+<ul>
+  <li>R0-R12：通用寄存器。</li>
+  <li>R13（SP）：栈指针（当前的内存栈顶）。</li>
+  <li>R14（LR）：链接寄存器（保存函数调用的返回地址）。</li>
+  <li>R15（PC）：程序计数器（指向当前正在取指的地址）。<strong>修改 PC 就是跳转</strong>。</li>
+</ul>
+
+<p>在 ARM 开发中，寄存器最重要的属性是它的 AAPCS 角色（ARM Architecture Procedure Call Standard）。这决定了编译器如何使用它们。</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>寄存器</th>
+      <th>别名</th>
+      <th>硬件功能</th>
+      <th>AAPCS</th>
+      <th>谁负责保存？</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>R0</td>
+      <td>a1</td>
+      <td>通用</td>
+      <td>参数 1 / 返回值</td>
+      <td>调用者（Caller）</td>
+    </tr>
+    <tr>
+      <td>R1</td>
+      <td>a2</td>
+      <td>通用</td>
+      <td>参数 2 / 返回值（64 位时）</td>
+      <td>调用者（Caller）</td>
+    </tr>
+    <tr>
+      <td>R2</td>
+      <td>a3</td>
+      <td>通用</td>
+      <td>参数 3</td>
+      <td>调用者（Caller）</td>
+    </tr>
+    <tr>
+      <td>R3</td>
+      <td>a4</td>
+      <td>通用</td>
+      <td>参数 4</td>
+      <td>调用者（Caller）</td>
+    </tr>
+    <tr>
+      <td>R4</td>
+      <td>v1</td>
+      <td>通用</td>
+      <td>局部变量</td>
+      <td>被调用者（Callee）</td>
+    </tr>
+    <tr>
+      <td>R5</td>
+      <td>v2</td>
+      <td>通用</td>
+      <td>局部变量</td>
+      <td>被调用者（Callee）</td>
+    </tr>
+    <tr>
+      <td>R6</td>
+      <td>v3</td>
+      <td>通用</td>
+      <td>局部变量</td>
+      <td>被调用者（Callee）</td>
+    </tr>
+    <tr>
+      <td>R7</td>
+      <td>v4</td>
+      <td>通用</td>
+      <td>局部变量（在 Thumb 模式下常用做栈帧指针）</td>
+      <td>被调用者（Callee）</td>
+    </tr>
+    <tr>
+      <td>R8</td>
+      <td>v5</td>
+      <td>通用</td>
+      <td>局部变量</td>
+      <td>被调用者（Callee）</td>
+    </tr>
+    <tr>
+      <td>R9</td>
+      <td>v6/SB</td>
+      <td>通用</td>
+      <td>局部变量（静态基址，平台相关）</td>
+      <td>被调用者（Callee）</td>
+    </tr>
+    <tr>
+      <td>R10</td>
+      <td>v7</td>
+      <td>通用</td>
+      <td>局部变量</td>
+      <td>被调用者（Callee）</td>
+    </tr>
+    <tr>
+      <td>R11</td>
+      <td>v8/FP</td>
+      <td>通用</td>
+      <td>帧指针（Frame Pointer）</td>
+      <td>被调用者（Callee）</td>
+    </tr>
+    <tr>
+      <td>R12</td>
+      <td>IP</td>
+      <td>通用</td>
+      <td>过程调用中间寄存器（Intra-Procedure-call scratch）</td>
+      <td>调用者（Caller）</td>
+    </tr>
+    <tr>
+      <td>R13</td>
+      <td>SP</td>
+      <td>栈指针</td>
+      <td>指向当前栈顶（Stach Pointer）</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>R14</td>
+      <td>LR</td>
+      <td>链接寄存器</td>
+      <td>保存函数返回地址（Link Register）</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>R15</td>
+      <td>PC</td>
+      <td>程序计数器</td>
+      <td>指向取指地址（Program Counter）</td>
+      <td>-</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>除此之外还有两个非常重要的特殊状态寄存器 CPSR 和 SPSR。</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>寄存器</th>
+      <th>全称</th>
+      <th>解释</th>
+      <th>关键位域</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>CPSR</td>
+      <td>Current Program Status Register</td>
+      <td>当前程序状态寄存器</td>
+      <td>N, Z, C, V（条件标志位）<br>I, F（中断屏蔽位）<br>Mode（运行模式位：User, SVC, IRQ 等）</td>
+    </tr>
+    <tr>
+      <td>SPSR</td>
+      <td>Saved Program Status Register</td>
+      <td>备份程序状态寄存器</td>
+      <td>仅在异常模式下存在<br>当中断发生时，硬件自动把 CPSR 里的值拷贝到 SPSR<br>当中断返回时，再从 SPSR 恢复到 CPSR</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>ARMv7-A 实际上不止上述的 18 个寄存器，还有<strong>影子寄存器</strong>（Banked Registers）。</p>
+
+<h3 id="21-为什么要区分调用者保存和被调用者保存">2.1 为什么要区分调用者保存和被调用者保存？</h3>
+
+<p>简单来说，这是 ARM 官方制定的规范，叫做 AAPCS（Procedure Call Standard for the ARM Architecture，ARM 架构过程调用标准）。ARM 公司不仅设计 CPU 硬件架构，还定义了软件应如何与这些硬件交互的 ABI（Application Binary Interface，应用程序二进制接口）。</p>
+
+<p>制定这一规范的核心目的在于<strong>统一标准</strong>。它确保了二进制层面的兼容性——无论代码是使用 GCC 还是 ARM Compiler 编译的，只要遵循 AAPCS，它们就能无缝协作。你无需担心不同编译器在参数传递或堆栈管理上的差异，从而可以放心地调用第三方提供的预编译库。</p>
+
+<p>当 Caller 调用 Callee 时，参数通过 R0-R3 传递。调用结束后，返回值通常保存在 R0 或 R0-R1 中。这就带来了一个问题：Callee 执行时不可避免地会使用寄存器，Caller 如何确保自己的数据不被覆盖？</p>
+
+<p>AAPCS 为此制定了明确的规范：</p>
+
+<ul>
+  <li>
+<strong>易失性寄存器</strong>（Volatile Registers, R0-R3, R12）：AAPCS 规定 Callee 可以随意修改它们。因此，如果 Caller 在 R0-R3 中存放了重要数据且在调用后仍需要使用，Caller 必须自己负责在调用前将它们压栈保存（Caller-saved）。</li>
+  <li>
+<strong>非易失性寄存器</strong>（Non-volatile Registers, R4-R11）：AAPCS 规定 Callee 必须保证函数返回时，这些寄存器的值与进入函数时完全一致。如果 Callee 内部需要使用 R4-R11，Callee 必须负责先将其压栈保存，并在返回前恢复（Callee-saved）。这样 Caller 就可以放心地将关键数据放在这里，无需担心被篡改。</li>
+</ul>
+
+<p>上述规则解决了函数间的协作问题，但<strong>中断</strong>（Interrupt）打破了这种默契。中断是异步突发的，主程序（Caller）根本不知道何时会被打断，因此无法预先保存 R0-R3 等易失性寄存器。</p>
+
+<p>为了解决这个问题，ARM Cortex-M 架构引入了<strong>硬件压栈</strong>（Hardware Stacking）机制。当 CPU 响应中断时，硬件会自动将 Caller 上下文（包括 R0-R3、R12、LR、PC 和 xPSR）。这一过程无需软件干预。</p>
+
+<p>因此，进入中断服务函数（ISR）后，寄存器已经被硬件保护好了。ISR 此时只需像普通函数一样，遵守 AAPCS 规则处理 R4-R11（即如果用到则保存）即可。这种硬件机制极大降低了中断延迟，也简化了软件设计。</p>
+
+<h3 id="22-r12ip是干什么的">2.2 R12（IP）是干什么的？</h3>
+
+<p>它是一个被很多人容易忽略的寄存器，主要用于链接器（Linker）插入的代码。当你的程序非常大，<code class="language-plaintext highlighter-rouge">bl target</code> 跳转的目标太远（超过 $\pm 32\text{MB}$）时，<code class="language-plaintext highlighter-rouge">bl</code> 指令够不着。此时，链接器会自动插入一段小代码（Veneer/Trampoline），先跳转到 R12 指向的中转站，再由 R12 赋值给 PC 进行长跳转。</p>
+
+<h3 id="23-r15pc为什么有-8-现象">2.3 R15（PC）为什么有 +8 现象？</h3>
+
+<p>在 ARM 状态（32 位指令）下，读取 PC 的值，通常是当前指令地址 + 8。这则是因为 CPU 的流水线（Pipeline）设计，当 CPU 执行当前指令时，取指单元已经在取下下条指令了（当前指令地址 +8 地址处）。</p>
+
+<h2 id="3-指令集讲解">3. 指令集讲解</h2>
+
+<h3 id="31-数据处理指令data-processing">3.1 数据处理指令（Data Processing）</h3>
+
+<p class="notice--info"><strong>核心逻辑</strong>：ALU 运算，结果写回寄存器，并可选更新 CPSR（如果指令后加 <code class="language-plaintext highlighter-rouge">s</code>，如 <code class="language-plaintext highlighter-rouge">adds</code>）</p>
+
+<h4 id="311-算术类">3.1.1 算术类</h4>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: center">指令</th>
+      <th>解释</th>
+      <th>汇编举例</th>
+      <th>C 语言映射</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: center">
+<code class="language-plaintext highlighter-rouge">add</code><br>(Add)</td>
+      <td>加法。</td>
+      <td>
+<code class="language-plaintext highlighter-rouge">add r0, r1, r2</code><br>(<code class="language-plaintext highlighter-rouge">R0 = R1 + R2</code>)</td>
+      <td><code class="language-plaintext highlighter-rouge">a = b + c;</code></td>
+    </tr>
+    <tr>
+      <td style="text-align: center">
+<code class="language-plaintext highlighter-rouge">sub</code><br>(Subtract)</td>
+      <td>减法。</td>
+      <td>
+<code class="language-plaintext highlighter-rouge">sub r0, r1, #1</code><br>(<code class="language-plaintext highlighter-rouge">R0 = R1 - 1</code>)</td>
+      <td><code class="language-plaintext highlighter-rouge">a = b - 1;</code></td>
+    </tr>
+    <tr>
+      <td style="text-align: center">
+<code class="language-plaintext highlighter-rouge">rsb</code><br>(Reverse Substract)</td>
+      <td>逆向减法。<br>用于 R0 = 常数 - Rx 的场景。</td>
+      <td>
+<code class="language-plaintext highlighter-rouge">rsb r0, r1, #0</code><br>(<code class="language-plaintext highlighter-rouge">R0 = 0 - R1</code>)</td>
+      <td><code class="language-plaintext highlighter-rouge">a = -b;</code></td>
+    </tr>
+    <tr>
+      <td style="text-align: center">
+<code class="language-plaintext highlighter-rouge">adc</code><br>(Add with Carry)</td>
+      <td>带进位加法。<br>用于实现 64 位加法的高 32 位运算。</td>
+      <td>
+<code class="language-plaintext highlighter-rouge">adc r0, r1, r2</code><br>(<code class="language-plaintext highlighter-rouge">R0 = R1 + R2 + Carry</code>)</td>
+      <td>
+<code class="language-plaintext highlighter-rouge">(long long )a + (long long)b</code> 的高位部分</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">
+<code class="language-plaintext highlighter-rouge">sbc</code><br>(Subtract with Carry)</td>
+      <td>带借位减法。<br>用于 64 位减法。</td>
+      <td>
+<code class="language-plaintext highlighter-rouge">sbc r0, r1, r2</code><br>(<code class="language-plaintext highlighter-rouge">R0 = R1 - R2 - !Carry</code>)</td>
+      <td>64 位减法的高位部分</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">
+<code class="language-plaintext highlighter-rouge">mul</code><br>(Multiply)</td>
+      <td>32 位乘法（结果取低 32 位）</td>
+      <td>
+<code class="language-plaintext highlighter-rouge">mul r0, r1, r2</code><br>(<code class="language-plaintext highlighter-rouge">R0 = R1 * R2</code>)</td>
+      <td><code class="language-plaintext highlighter-rouge">int a = b * c;</code></td>
+    </tr>
+    <tr>
+      <td style="text-align: center">
+<code class="language-plaintext highlighter-rouge">mla</code><br>(Multiply Accumulate)</td>
+      <td>乘法运算。<br>DSP 算法核心指令。</td>
+      <td>
+<code class="language-plaintext highlighter-rouge">mul r0, r1, r2, r3</code><br>(<code class="language-plaintext highlighter-rouge">R0 = R1 * R2 +  R3</code>)</td>
+      <td><code class="language-plaintext highlighter-rouge">a = (b * c) + d;</code></td>
+    </tr>
+    <tr>
+      <td style="text-align: center">
+<code class="language-plaintext highlighter-rouge">udiv</code><br>(Unsigned Divide)</td>
+      <td>无符号除法。</td>
+      <td><code class="language-plaintext highlighter-rouge">udiv r0, r1, r2</code></td>
+      <td><code class="language-plaintext highlighter-rouge">unsigned a = b / c;</code></td>
+    </tr>
+    <tr>
+      <td style="text-align: center">
+<code class="language-plaintext highlighter-rouge">sdiv</code><br>(Signed Divided)</td>
+      <td>有符号除法。</td>
+      <td><code class="language-plaintext highlighter-rouge">sdiv r0, r1, r2</code></td>
+      <td><code class="language-plaintext highlighter-rouge">int a = b / c;</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<h4 id="312-逻辑类">3.1.2 逻辑类</h4>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: center">指令</th>
+      <th>解释</th>
+      <th>汇编举例</th>
+      <th>C 语言映射</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: center">
+<code class="language-plaintext highlighter-rouge">and</code><br>(Logical AND)</td>
+      <td>按位与。<br>常用于<strong>提取</strong>某几位。</td>
+      <td><code class="language-plaintext highlighter-rouge">and r0, r1, #0xff</code></td>
+      <td><code class="language-plaintext highlighter-rouge">a = b &amp; 0xff;</code></td>
+    </tr>
+    <tr>
+      <td style="text-align: center">
+<code class="language-plaintext highlighter-rouge">orr</code><br>(Logical OR)</td>
+      <td>按位或。<br>常用于<strong>置位</strong>（设为 1）。</td>
+      <td><code class="language-plaintext highlighter-rouge">orr r0, r0, #(1&lt;&lt;3)</code></td>
+      <td><code class="language-plaintext highlighter-rouge">r0                | = (1 &lt;&lt; 3);</code></td>
+    </tr>
+    <tr>
+      <td style="text-align: center">
+<code class="language-plaintext highlighter-rouge">eor</code><br>(Exclusive OR)</td>
+      <td>按位异或。<br>常用于<strong>翻转</strong>某几位。</td>
+      <td><code class="language-plaintext highlighter-rouge">eor r0, r0, #1</code></td>
+      <td><code class="language-plaintext highlighter-rouge">a = b ^ 1;</code></td>
+    </tr>
+    <tr>
+      <td style="text-align: center">
+<code class="language-plaintext highlighter-rouge">bic</code><br>(Bit Clear)</td>
+      <td>
+<strong>位清除</strong>。<br><code class="language-plaintext highlighter-rouge">and</code> 的反向操作：<code class="language-plaintext highlighter-rouge">dest = op1 and (not op2)</code>
+</td>
+      <td><code class="language-plaintext highlighter-rouge">bic r0, r0, #(1&lt;&lt;3)</code></td>
+      <td><code class="language-plaintext highlighter-rouge">r0 &amp;= ~(1 &lt;&lt; 3);</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<h4 id="313-数据搬运">3.1.3 数据搬运</h4>
+
+<table>
+  <thead>
+    <tr>
+      <th>指令</th>
+      <th>解释</th>
+      <th>汇编举例</th>
+      <th>C 语言映射</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>
+<code class="language-plaintext highlighter-rouge">mov</code><br>(Move)</td>
+      <td>寄存器间传值，或立即数赋值。</td>
+      <td><code class="language-plaintext highlighter-rouge">mov r0, r1</code></td>
+      <td><code class="language-plaintext highlighter-rouge">a = b;</code></td>
+    </tr>
+    <tr>
+      <td>
+<code class="language-plaintext highlighter-rouge">mvn</code><br>(Move Not)</td>
+      <td>
+<strong>按位取反</strong>后传送。</td>
+      <td>
+<code class="language-plaintext highlighter-rouge">mvn r0, #0</code><br>(<code class="language-plaintext highlighter-rouge">r0 = 0xffffffff</code>)</td>
+      <td><code class="language-plaintext highlighter-rouge">a = ~0;</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="notice--warning">
+  <p>ARM 指令是定长 32 位的。除去操作码和条件码，留给立即数的空间只有 12 位。并且这 12 位还不是直接存数字，而是被拆分位 8 位常数 + 4 位循环右移。</p>
+
+  <p>这就意味着在向寄存器写入某些立即数时，例如 <code class="language-plaintext highlighter-rouge">mov r0, #0x12345678</code> 是会失败的，因为 <code class="language-plaintext highlighter-rouge">0x12345678</code> 这个立即数太乱了，无法通过 8 位常数 + 4 位循环右移凑出来。</p>
+
+  <p>解决办法是使用 <code class="language-plaintext highlighter-rouge">ldr r0, =0x12345678</code>。此时，汇编器会悄悄在代码段的末尾（Literal Pool）找个地方放 <code class="language-plaintext highlighter-rouge">0x12345678</code>，然后把这条指令翻译成去那个地址读数据。</p>
+</div>
+
+<h4 id="314-比较指令">3.1.4 比较指令</h4>
+
+<p class="notice--info"><strong>不保存运算结果</strong>，只更新 CPSR 的标志位（N, Z, C, V），为后面的条件执行做铺垫。</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>指令</th>
+      <th>解释</th>
+      <th>汇编举例</th>
+      <th>C 语言映射</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>
+<code class="language-plaintext highlighter-rouge">cmp</code><br>(Compare)</td>
+      <td>本质是 <code class="language-plaintext highlighter-rouge">sub</code>。<br>比较大小。</td>
+      <td>
+<code class="language-plaintext highlighter-rouge">cmp r0, #5</code><br>(<code class="language-plaintext highlighter-rouge">r0 - 5</code>，更新 Z 标志位)</td>
+      <td><code class="language-plaintext highlighter-rouge">if (a &gt;= 5)</code></td>
+    </tr>
+    <tr>
+      <td>
+<code class="language-plaintext highlighter-rouge">tst</code><br>(Test)</td>
+      <td>本质是 <code class="language-plaintext highlighter-rouge">and</code>。<br>测试某位是否为 1。</td>
+      <td>
+<code class="language-plaintext highlighter-rouge">tst r0, #(1&lt;&lt;3)</code><br>(<code class="language-plaintext highlighter-rouge">r0 &amp; 0x8</code>，更新 Z 标志位)</td>
+      <td><code class="language-plaintext highlighter-rouge">if (a &amp; (1&lt;&lt;3))</code></td>
+    </tr>
+    <tr>
+      <td>
+<code class="language-plaintext highlighter-rouge">teq</code><br>(Test Equivalence)</td>
+      <td>本质是 <code class="language-plaintext highlighter-rouge">eor</code>。<br>测试两个数是否相等（不影响进位标志）。</td>
+      <td><code class="language-plaintext highlighter-rouge">teq r0, r1</code></td>
+      <td>常用于汇编手写检查</td>
+    </tr>
+  </tbody>
+</table>
+
+<h4 id="315-桶形移位器barrel-shifter">3.1.5 桶形移位器（Barrel Shifter）</h4>
+
+<p>在 ARM 中，移位操作不是独立指令，而是数据进入 ALU 之前的<strong>预处理</strong>。它是免费的。指令 <code class="language-plaintext highlighter-rouge">add r0, r1, r2, lsl #2</code> 的物理含义是：</p>
+
+<p>$$
+\text{R0} = \text{R1} + (\text{R2} \ll 2)
+$$</p>
+
+<p>这在单周期内完成，这就是为什么 ARM 处理数组索引（地址 = 基址 + 索引 $\times$ 4）特别快。</p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: center">模式</th>
+      <th>物理动作</th>
+      <th>C 标志位更新</th>
+      <th style="text-align: center">数学含义</th>
+      <th>C 语言映射</th>
+      <th>典型应用场景</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: center">
+<code class="language-plaintext highlighter-rouge">lsl</code><br>(Logical Shift Left)</td>
+      <td>
+<strong>左移</strong>。<br>低位补 0，高位移出</td>
+      <td>最后移出的位</td>
+      <td style="text-align: center">$\times 2^n$</td>
+      <td><code class="language-plaintext highlighter-rouge">x &lt;&lt; n</code></td>
+      <td>乘法优化、位字段对齐、生成掩码</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">
+<code class="language-plaintext highlighter-rouge">lsr</code><br>(Logical Shift Right)</td>
+      <td>
+<strong>右移</strong>。<br>高位补 0，低位移出</td>
+      <td>最后移出的位</td>
+      <td style="text-align: center">$/2^n$<br>（无符号）</td>
+      <td><code class="language-plaintext highlighter-rouge">(unsigned)x &gt;&gt; n</code></td>
+      <td>无符号数除法、读取特定位段</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">
+<code class="language-plaintext highlighter-rouge">asr</code><br>(Arithmetic Shift Right)</td>
+      <td>
+<strong>算术右移</strong>。<br>高位补<strong>符号位</strong>，低位移出</td>
+      <td>最后移出的位</td>
+      <td style="text-align: center">$/2^n$<br>（有符号）</td>
+      <td><code class="language-plaintext highlighter-rouge">(signed)x &gt;&gt; n</code></td>
+      <td>有符号数除法</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">
+<code class="language-plaintext highlighter-rouge">ror</code><br>(Rotate Right)</td>
+      <td>
+<strong>循环右移</strong>。<br>低位移出后，<strong>填补到高位</strong>
+</td>
+      <td>最后移出的位</td>
+      <td style="text-align: center">-</td>
+      <td><code class="language-plaintext highlighter-rouge">(x &gt;&gt; n)          | (x &lt;&lt; (32-n))</code></td>
+      <td>加密算法、哈希函数、位图操作</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">
+<code class="language-plaintext highlighter-rouge">rrx</code><br>(Rotate Right with Extend)</td>
+      <td>
+<strong>带扩展循环右移</strong>。<br>33 位循环<br>（32 位寄存器 + 1 位 Carry）</td>
+      <td>寄存器移出的 LSB</td>
+      <td style="text-align: center">-</td>
+      <td>无</td>
+      <td>大数运算、多精度算术</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="32-内存访问指令memory-access">3.2 内存访问指令（Memory Access）</h3>
+
+<p>这是 CPU 与外部世界（DDR 内存、GPIO 控制器等）交互的唯一桥梁。</p>
+
+<h4 id="321-单寄存器">3.2.1 单寄存器</h4>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: center">指令</th>
+      <th>解释</th>
+      <th>汇编举例</th>
+      <th>C 语言映射</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: center">
+<code class="language-plaintext highlighter-rouge">ldr</code><br>(Load Register)</td>
+      <td>从内存读 4 字节到寄存器。</td>
+      <td><code class="language-plaintext highlighter-rouge">ldr r0, [r1]</code></td>
+      <td><code class="language-plaintext highlighter-rouge">r0 = *r1;</code></td>
+    </tr>
+    <tr>
+      <td style="text-align: center">
+<code class="language-plaintext highlighter-rouge">str</code><br>(Store Register)</td>
+      <td>把寄存器的值写入内存 4 字节。</td>
+      <td><code class="language-plaintext highlighter-rouge">str r0, [r1]</code></td>
+      <td><code class="language-plaintext highlighter-rouge">*r1 = r0;</code></td>
+    </tr>
+    <tr>
+      <td style="text-align: center">
+<code class="language-plaintext highlighter-rouge">ldrb</code> (8 bit)<br>(Load Byte)</td>
+      <td>读 1 字节，高 24 位<strong>补零</strong>。</td>
+      <td><code class="language-plaintext highlighter-rouge">ldrb r0, [r1]</code></td>
+      <td><code class="language-plaintext highlighter-rouge">r0 = (unsigned char)*r1;</code></td>
+    </tr>
+    <tr>
+      <td style="text-align: center">
+<code class="language-plaintext highlighter-rouge">ldrh</code> (16 bit)<br>(Load Halfword)</td>
+      <td>读 2 字节，高 16 位<strong>补零</strong>。</td>
+      <td><code class="language-plaintext highlighter-rouge">ldrh r0, [r1]</code></td>
+      <td><code class="language-plaintext highlighter-rouge">r0 = (unsigned short)*r1;</code></td>
+    </tr>
+    <tr>
+      <td style="text-align: center">
+<code class="language-plaintext highlighter-rouge">ldrsb</code><br>(Load Signed Byte)</td>
+      <td>读 1 字节，高 24 位<strong>补符号位</strong>。</td>
+      <td><code class="language-plaintext highlighter-rouge">ldrsb r0, [r1]</code></td>
+      <td><code class="language-plaintext highlighter-rouge">r0 = (char)*r1;</code></td>
+    </tr>
+    <tr>
+      <td style="text-align: center">
+<code class="language-plaintext highlighter-rouge">ldrsh</code><br>(Load Signed Halfword)</td>
+      <td>读 2 字节，高 16 位<strong>补符号位</strong>。</td>
+      <td><code class="language-plaintext highlighter-rouge">ldrsh r0, [r1]</code></td>
+      <td><code class="language-plaintext highlighter-rouge">r0 = (short)*r1;</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<h4 id="322-寻址模式">3.2.2 寻址模式</h4>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: center">寻址模式</th>
+      <th>汇编举例</th>
+      <th>C 语言映射</th>
+      <th>状态</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: center">立即数偏移<br>（Offset）</td>
+      <td><code class="language-plaintext highlighter-rouge">ldr r0, [r1, #4]</code></td>
+      <td><code class="language-plaintext highlighter-rouge">r0 = *(r1 + 1);</code></td>
+      <td>
+<code class="language-plaintext highlighter-rouge">r1</code> 保持不变</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">前索引<br>（Pre-indexed）</td>
+      <td><code class="language-plaintext highlighter-rouge">ldr r0, [r1, #4]!</code></td>
+      <td><code class="language-plaintext highlighter-rouge">r0 = *(++ptr);</code></td>
+      <td>
+<code class="language-plaintext highlighter-rouge">r1</code> 在访问内存<strong>前</strong>更新为 <code class="language-plaintext highlighter-rouge">r1 + 4</code>
+</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">后索引<br>（Post-indexed）</td>
+      <td><code class="language-plaintext highlighter-rouge">ldr r0, [r1], #4</code></td>
+      <td><code class="language-plaintext highlighter-rouge">r0 = *(ptr++);</code></td>
+      <td>访问内存<strong>后</strong>，<code class="language-plaintext highlighter-rouge">r1</code> 更新为 <code class="language-plaintext highlighter-rouge">r1 + 4</code>
+</td>
+    </tr>
+  </tbody>
+</table>
+
+<h4 id="323-多寄存器">3.2.3 多寄存器</h4>
+
+<p class="notice--info">这是 ARM 实现<strong>栈</strong>（Stack）和<strong>上下文切换</strong>（Context Switch）的基石。</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>指令</th>
+      <th>解释</th>
+      <th>汇编举例</th>
+      <th>场景</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>
+<code class="language-plaintext highlighter-rouge">ldm</code><br>(Load Multiple)</td>
+      <td>内存 $\rightarrow$ 多个寄存器。</td>
+      <td><code class="language-plaintext highlighter-rouge">ldm r0, {r4-r6, pc}</code></td>
+      <td>恢复现场并返回</td>
+    </tr>
+    <tr>
+      <td>
+<code class="language-plaintext highlighter-rouge">stm</code><br>(Store Multiple)</td>
+      <td>多个寄存器 $\rightarrow$ 内存。</td>
+      <td><code class="language-plaintext highlighter-rouge">stm r0, {r4-r6, lr}</code></td>
+      <td>保存现场</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>说明：</p>
+
+<ul>
+  <li>
+<code class="language-plaintext highlighter-rouge">ldm r0, {r4-r6, pc}</code>：从以 <code class="language-plaintext highlighter-rouge">r0</code> 为基址的内存地址开始，依次加载数据到寄存器 <code class="language-plaintext highlighter-rouge">r4</code>、<code class="language-plaintext highlighter-rouge">r5</code>、<code class="language-plaintext highlighter-rouge">r6</code> 和 <code class="language-plaintext highlighter-rouge">pc</code>。</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">stm r0, {r4-r6, lr}</code>：从寄存器 <code class="language-plaintext highlighter-rouge">r4</code>、<code class="language-plaintext highlighter-rouge">r5</code>、<code class="language-plaintext highlighter-rouge">r6</code> 和 <code class="language-plaintext highlighter-rouge">lr</code> 中，依次将数据存储到以 <code class="language-plaintext highlighter-rouge">r0</code> 为基址的内存地址。</li>
+</ul>
+
+<h5 id="后缀模式">后缀模式</h5>
+
+<p>虽然有 <code class="language-plaintext highlighter-rouge">ia</code>、<code class="language-plaintext highlighter-rouge">ib</code>、<code class="language-plaintext highlighter-rouge">da</code> 和 <code class="language-plaintext highlighter-rouge">db</code> 四种，但 ARM 官方推荐在操作栈时使用别名，方便记忆：</p>
+
+<ul>
+  <li>
+<code class="language-plaintext highlighter-rouge">stmfd</code> (Full Descending) = <code class="language-plaintext highlighter-rouge">stmdb</code> (Decrement Before)：入栈（压栈）。</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">ldmfd</code> (Full Descending) = <code class="language-plaintext highlighter-rouge">ldmia</code> (Increment After)：出栈。</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">push {reglist}</code> 等价于 <code class="language-plaintext highlighter-rouge">stmdb sp!, {reglist}</code>。</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">pop {reglist}</code> 等价于 <code class="language-plaintext highlighter-rouge">ldmia sp!, {reglist}</code>。</li>
+</ul>
+
+<h3 id="33-分支与控制流branch--control">3.3 分支与控制流（Branch &amp; Control）</h3>
+
+<p>打破顺序执行，实现 <code class="language-plaintext highlighter-rouge">if</code>、<code class="language-plaintext highlighter-rouge">for</code>、<code class="language-plaintext highlighter-rouge">function call</code>。</p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: center">指令</th>
+      <th>解释</th>
+      <th>汇编举例</th>
+      <th>C 语言映射</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: center">
+<code class="language-plaintext highlighter-rouge">b</code><br>(Branch)</td>
+      <td>相对跳转（范围 $\pm 32\text{MB}$）</td>
+      <td><code class="language-plaintext highlighter-rouge">b label</code></td>
+      <td><code class="language-plaintext highlighter-rouge">goto label;</code></td>
+    </tr>
+    <tr>
+      <td style="text-align: center">
+<code class="language-plaintext highlighter-rouge">bl</code><br>(Branch with Link)</td>
+      <td>带连接跳转。<br><strong>保存下一条指令地址到 <code class="language-plaintext highlighter-rouge">lr</code></strong>。</td>
+      <td><code class="language-plaintext highlighter-rouge">bl func</code></td>
+      <td><code class="language-plaintext highlighter-rouge">func();</code></td>
+    </tr>
+    <tr>
+      <td style="text-align: center">
+<code class="language-plaintext highlighter-rouge">bx</code><br>(Branch Exchange)</td>
+      <td>跳转并根据目标地址最低位切换状态<br>（ARM $\rightarrow$ Thumb）。</td>
+      <td><code class="language-plaintext highlighter-rouge">bx lr</code></td>
+      <td>
+<code class="language-plaintext highlighter-rouge">return;</code>（函数返回）</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">
+<code class="language-plaintext highlighter-rouge">blx</code><br>(Branch Link Exchange)</td>
+      <td>
+<code class="language-plaintext highlighter-rouge">bl</code> + <code class="language-plaintext highlighter-rouge">bx</code> 的结合。<br>调用不同指令集的函数。</td>
+      <td><code class="language-plaintext highlighter-rouge">blx r0</code></td>
+      <td>函数指针调用</td>
+    </tr>
+  </tbody>
+</table>
+
+<p class="notice--info">还可以直接修改 PC 寄存器实现跳转，例如 <code class="language-plaintext highlighter-rouge">mov pc, lr</code>，这是函数返回的底层实现。</p>
+
+<h3 id="34-系统与状态指令system--status">3.4 系统与状态指令（System &amp; Status）</h3>
+
+<p>这部分在使用上层语言实现业务逻辑时几乎看不到，但是对于操作系统而言至关重要。</p>
+
+<h4 id="341-状态寄存器访问">3.4.1 状态寄存器访问</h4>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: center">指令</th>
+      <th>解释</th>
+      <th>汇编举例</th>
+      <th>场景</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: center">
+<code class="language-plaintext highlighter-rouge">mrs</code><br>(Move Register from Status)</td>
+      <td>读取 CPSR/SPSR 到通用寄存器。</td>
+      <td><code class="language-plaintext highlighter-rouge">mrs r0, cpsr</code></td>
+      <td>读取当前中断状态</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">
+<code class="language-plaintext highlighter-rouge">msr</code><br>(Move Status from Register)</td>
+      <td>将通用寄存器写会 CPSR/SPSR。</td>
+      <td><code class="language-plaintext highlighter-rouge">msr cpsr_c, r0</code></td>
+      <td>开/关中断</td>
+    </tr>
+  </tbody>
+</table>
+
+<h4 id="342-异常与中断生成">3.4.2 异常与中断生成</h4>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: center">指令</th>
+      <th>解释</th>
+      <th>场景</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: center">
+<code class="language-plaintext highlighter-rouge">svc</code><br>(Supervisor Call)</td>
+      <td>
+<strong>软中断</strong>。<br>CPU 进入 SVC 模式。<br>Linux 中用于从用户态（User）陷入内核态（Kernel）。</td>
+      <td>系统调用（<code class="language-plaintext highlighter-rouge">open</code>，<code class="language-plaintext highlighter-rouge">read</code> 等）。</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">
+<code class="language-plaintext highlighter-rouge">bkpt</code><br>(Breakpoint)</td>
+      <td>断点指令。<br>执行到此时 CPU 暂停并通知调试器。</td>
+      <td>JTAG/GDB 调试。</td>
+    </tr>
+  </tbody>
+</table>
+
+<h4 id="343-协处理器指令">3.4.3 协处理器指令</h4>
+
+<p>I.MX6ULL 中，CP15 协处理器控制着 MMU、Cache 和中断向量表基地址。</p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: center">指令</th>
+      <th>解释</th>
+      <th>助记法</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: center">
+<code class="language-plaintext highlighter-rouge">mcr</code><br>(Move to Coprocessor from Register)</td>
+      <td>CPU $\rightarrow$ CP15<br>（写配置）</td>
+      <td>R（Register）在最后，表示源</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">
+<code class="language-plaintext highlighter-rouge">mrc</code><br>(Move to Register from Coprocessor)</td>
+      <td>CP15 $\rightarrow$ CPU<br>（读状态）</td>
+      <td>C（Coprocessor）在最后，表示源</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>例如：<code class="language-plaintext highlighter-rouge">mcr p15, 0, r0, c1, c0, 0</code>（开启 MMU）。</p>
+
+<p class="notice--info"><strong>协处理器</strong>（Coprocessor）时依附于 CPU 主核的独立电路单元。ARM 主核（ALU）只管算逻辑和搬砖，像 MMU（内存映射管理）、Cache 配置这些脏活累活，都丢给 CP15 协处理器；浮点运算丢给 CP10/CP11。</p>
+
+<h4 id="344-内存屏障memory-barriers">3.4.4 内存屏障（Memory Barriers）</h4>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: center">指令</th>
+      <th>解释</th>
+      <th>场景</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: center">
+<code class="language-plaintext highlighter-rouge">dmb</code><br>(Data Memory Barrier)</td>
+      <td>确保指令前的内存访问在指令后的内存访问之前完成。</td>
+      <td>操作 DMA 描述符时</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">
+<code class="language-plaintext highlighter-rouge">dsb</code><br>(Data Synchronization Barrier)</td>
+      <td>比 DMB 更强。<br>确保前面的访存全部完成，CPU 才会执行下一条指令。</td>
+      <td>修改页表后</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">
+<code class="language-plaintext highlighter-rouge">isb</code><br>(Instruction Synchronization Barrier)</td>
+      <td>冲刷流水线。确保重新取指。</td>
+      <td>修改了代码段或中断向量表后</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="35-同步与原子操作synchronization">3.5 同步与原子操作（Synchronization）</h3>
+
+<p>对于多任务操作系统，需要处理竞态条件。</p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: center">指令</th>
+      <th>解释</th>
+      <th>C 语言映射</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: center">
+<code class="language-plaintext highlighter-rouge">ldrex</code><br>(Load Register Exclusive)</td>
+      <td>读取并设置独占监视器</td>
+      <td>
+<code class="language-plaintext highlighter-rouge">atomic_load</code> (C11)</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">
+<code class="language-plaintext highlighter-rouge">strex</code><br>(Store Register Exclusive)</td>
+      <td>如果监视状态未被破坏，则写入。<br>返回 0 成功，1 失败。</td>
+      <td>
+<code class="language-plaintext highlighter-rouge">atomic_compare_exchange</code> (C11)</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">
+<code class="language-plaintext highlighter-rouge">clrex</code><br>(Clear Exclusive)</td>
+      <td>清除监视器状态。</td>
+      <td>上下文切换时清理残余状态</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="notice--info">
+  <p>ARM 没有 x86 的 <code class="language-plaintext highlighter-rouge">lock</code> 总线锁，它使用 “<strong>独占监视器</strong>” 硬件。</p>
+
+  <ul>
+    <li>
+<code class="language-plaintext highlighter-rouge">ldrex</code> 读取数据的同时标记该地址为 “被我监视”。</li>
+    <li>
+<code class="language-plaintext highlighter-rouge">strex</code> 尝试写入。如果期间没有其他核心 / DMA 修改过该地址，写入成功；否则写入失败。</li>
+  </ul>
+
+  <p>这会实现 <code class="language-plaintext highlighter-rouge">mutex</code>（互斥锁）和 <code class="language-plaintext highlighter-rouge">semaphore</code>（信号量）的基石。</p>
+</div>
+
+<div class="notice--info">
+  <p>互斥锁（Mutex）&amp; 信号量（Semaphore）：</p>
+
+  <ul>
+    <li>互斥锁（厕所钥匙）：只有一个资源（厕所）。你拿了钥匙进去锁门，别惹只能在门口排队（阻塞），直到你出来还钥匙。用户保护<strong>临界区</strong>。</li>
+    <li>信号量（餐厅叫号）：有 $N$ 个资源（空桌子）。来一个人 $N-1$，走一个人 $N+1$。当 $N=0$ 时，新来的人必须等到。</li>
+  </ul>
+
+  <p>这两个都是软件概念，但底层必须由<strong>原子指令</strong>支持。</p>
+</div>
+
+        
+      </section>
+
+      <footer class="page__meta">
+        
+        
+
+  
+    
+
+
+
+  
+
+  <p class="page__taxonomy">
+    <strong><i class="fas fa-fw fa-tags" aria-hidden="true"></i> Tags: </strong>
+    <span itemprop="keywords">
+    
+      <a href="/tags/arm" class="page__taxonomy-item p-category" rel="tag">ARM</a><span class="sep">, </span>
+    
+      <a href="/tags/assembly" class="page__taxonomy-item p-category" rel="tag">Assembly</a><span class="sep">, </span>
+    
+      <a href="/tags/i-mx6ull" class="page__taxonomy-item p-category" rel="tag">i.MX6ULL</a>
+    
+    </span>
+  </p>
+
+
+  
+
+  
+    
+
+
+
+  
+
+  <p class="page__taxonomy">
+    <strong><i class="fas fa-fw fa-folder-open" aria-hidden="true"></i> Categories: </strong>
+    <span itemprop="keywords">
+    
+      <a href="/categories/note" class="page__taxonomy-item p-category" rel="tag">Note</a>
+    
+    </span>
+  </p>
+
+
+  
+
+
+        
+
+
+  <p class="page__date"><strong><i class="fas fa-fw fa-calendar-alt" aria-hidden="true"></i> Updated:</strong> <time class="dt-published" datetime="2026-04-05T08:20:00+00:00">April 5, 2026</time></p>
+
+
+      </footer>
+
+      
+<section class="page__share">
+  <h4 class="page__share-title">Share on</h4>
+
+  <a href="https://x.com/intent/tweet?text=ARMv7-A+%E6%8C%87%E4%BB%A4%E4%BD%93%E7%B3%BB%E5%85%A8%E8%A7%A3%EF%BC%9A%E6%95%B0%E6%8D%AE%E5%A4%84%E7%90%86%E3%80%81%E8%AE%BF%E5%AD%98%E3%80%81%E5%88%86%E6%94%AF%E4%B8%8E%E5%90%8C%E6%AD%A5%20https%3A%2F%2Fbfmhno3.github.io%2Fnote%2Farmv7-a-isa%2F" class="btn btn--x" aria-label="Share on X" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on X">
+    <i class="fab fa-fw fa-x-twitter" aria-hidden="true"></i><span> X</span>
+  </a>
+
+  <a href="https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fbfmhno3.github.io%2Fnote%2Farmv7-a-isa%2F" class="btn btn--facebook" aria-label="Share on Facebook" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on Facebook">
+    <i class="fab fa-fw fa-facebook" aria-hidden="true"></i><span> Facebook</span>
+  </a>
+
+  <a href="https://www.linkedin.com/shareArticle?mini=true&url=https://bfmhno3.github.io/note/armv7-a-isa/" class="btn btn--linkedin" aria-label="Share on LinkedIn" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on LinkedIn">
+    <i class="fab fa-fw fa-linkedin" aria-hidden="true"></i><span> LinkedIn</span>
+  </a>
+
+  <a href="https://bsky.app/intent/compose?text=ARMv7-A+%E6%8C%87%E4%BB%A4%E4%BD%93%E7%B3%BB%E5%85%A8%E8%A7%A3%EF%BC%9A%E6%95%B0%E6%8D%AE%E5%A4%84%E7%90%86%E3%80%81%E8%AE%BF%E5%AD%98%E3%80%81%E5%88%86%E6%94%AF%E4%B8%8E%E5%90%8C%E6%AD%A5%20https%3A%2F%2Fbfmhno3.github.io%2Fnote%2Farmv7-a-isa%2F" class="btn btn--bluesky" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on Bluesky">
+    <i class="fab fa-fw fa-bluesky" aria-hidden="true"></i><span> Bluesky</span>
+  </a>
+</section>
+
+
+      
+
+  <nav class="pagination" aria-label="Post pagination">
+    
+      <a href="/tutorial/wsl2-image-migration-guide/" class="pagination--pager" title="如何将 WSL2 镜像无损迁移至非系统盘">Previous</a>
+    
+    
+      <a href="/note/gnu-assembly/" class="pagination--pager" title="GNU 汇编（GAS）通用语法与伪指令指南">Next</a>
+    
+  </nav>
+
+
+    </div>
+
+    
+      
+        
+<div class="page__comments">
+  
+  
+      <h4 class="page__comments-title">Comments</h4>
+      <section id="giscus-comments"></section>
+    
+</div>
+
+      
+    
+  </article>
+
+  
+  
+    
+
+<div class="page__related">
+  
+  <h2 class="page__related-title">You May Also Enjoy</h2>
+  <div class="grid__wrapper">
+    
+      
+      
+
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc p-name" itemprop="headline">
+      
+        <a class="u-url" href="/note/gnu-assembly/" rel="permalink">GNU 汇编（GAS）通用语法与伪指令指南
+</a>
+      
+    </h2>
+    
+
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-04-05T08:35:00+00:00">April 5, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          11 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt p-summary" itemprop="description">本文不聚焦某一指令集细节，而是系统梳理 GNU Assembler 的通用语法与伪指令体系，涵盖注释规则、操作数方向、寻址模式、宽度后缀、段与符号控制，以及局部标签与宏等实用写法，帮助你在 x86、ARM、RISC-V 间建立统一理解。
+</p>
+  </article>
+</div>
+
+    
+      
+      
+
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc p-name" itemprop="headline">
+      
+        <a class="u-url" href="/tutorial/wsl2-image-migration-guide/" rel="permalink">如何将 WSL2 镜像无损迁移至非系统盘
+</a>
+      
+    </h2>
+    
+
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-03-14T05:16:00+00:00">March 14, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          3 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt p-summary" itemprop="description">1 引言
+
+随着开发环境的日益庞大，默认安装在 C:\ 盘的 WSL2 (Windows Subsystem for Linux) 镜像体积也会不断膨胀。本文将分享如何通过命令行操作，将 WSL 迁移至 E:\ 盘乃至其他盘符，彻底释放系统盘空间。
+
+1.1 笔者环境
+
+
+  
+    
+      名称
+   ...</p>
+  </article>
+</div>
+
+    
+      
+      
+
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc p-name" itemprop="headline">
+      
+        <a class="u-url" href="/note/stack-in-cpp/" rel="permalink">C++ 中的 stack
+</a>
+      
+    </h2>
+    
+
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-02-19T02:45:00+00:00">February 19, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          10 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt p-summary" itemprop="description">要真正理解栈这种结构，意味着我们要剥离事物表象，追究其最本质的问题，即我们到底面临什么样的数据处理需求，才导致了 “栈” 这种结构的诞生？
+
+我们不需要把栈仅仅看作是教科书上的定义，而是把它看作是为了解决特定时序问题而设计的一种 “受限” 模型。
+
+1. 什么是栈？
+
+从本质上来说，计算机处理任务通常有两种模式：...</p>
+  </article>
+</div>
+
+    
+      
+      
+
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc p-name" itemprop="headline">
+      
+        <a class="u-url" href="/note/process-in-os/" rel="permalink">操作系统中的进程
+</a>
+      
+    </h2>
+    
+
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-01-26T22:10:00+00:00">January 26, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          3 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt p-summary" itemprop="description">在计算机科学的教科书中，关于进程（Process）的定义往往只有冷冰冰的一句话：
+
+
+  进程是程序的一次执行过程。
+
+
+这句话虽然准确，但它掩盖了太多细节。对于初学者而言，这更像是一个黑盒。为什么要有进程？为什么不能直接操作物理地址？所谓的上下文切换到底切换了什么？
+
+要真正理解进程，我们不能只看定义，而必须回...</p>
+  </article>
+</div>
+
+    
+  </div>
+</div>
+
+  
+  
+</div>
+
+      
+    </div>
+
+    
+      <div class="search-content">
+        
+<div class="search-content__inner-wrap">
+<form class="search-content__form" onkeydown="return event.key != 'Enter';" role="search">
+    <label class="sr-only" for="search">
+      Enter your search term...
+    </label>
+    <input type="search" id="search" class="search-input" tabindex="-1" placeholder="Enter your search term...">
+  </form>
+  <div id="results" class="results"></div>
+</div>
+
+      </div>
+    
+
+    <div id="footer" class="page__footer">
+      <footer>
+        <!-- start custom footer snippets -->
+
+<!-- end custom footer snippets -->
+        
+
+
+<div class="page__footer-follow">
+  <ul class="social-icons">
+    
+
+    
+      
+        
+          <li><a href="https://github.com/bfmhno3" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-github" aria-hidden="true"></i> GitHub</a></li>
+        
+      
+        
+          <li><a href="https://gitee.com/bfmhno3" rel="nofollow noopener noreferrer"><i class="fa-solid fa-g" aria-hidden="true"></i> Gitee</a></li>
+        
+      
+        
+          <li><a href="https://www.cnblogs.com/bfmhno3" rel="nofollow noopener noreferrer"><i class="fa-solid fa-blog" aria-hidden="true"></i> cnblogs</a></li>
+        
+      
+        
+          <li><a href="https://blog.csdn.net/B33336" rel="nofollow noopener noreferrer"><i class="fa-solid fa-blog" aria-hidden="true"></i> CSDN</a></li>
+        
+      
+    
+
+    
+      <li><a href="/feed.xml"><i class="fas fa-fw fa-square-rss" aria-hidden="true"></i> Feed</a></li>
+    
+  </ul>
+</div>
+
+
+<div class="page__footer-copyright">© 2026 <a href="https://bfmhno3.github.io">Better Mistakes</a>. Powered by <a href="https://jekyllrb.com" rel="nofollow">Jekyll</a> &amp; <a href="https://mademistakes.com/work/jekyll-themes/minimal-mistakes/" rel="nofollow">Minimal Mistakes</a>.</div>
+
+      </footer>
+    </div>
+
+    
+
+  <script src="/assets/js/main.min.js"></script>
+
+
+
+
+
+<script src="/assets/js/lunr/lunr.min.js"></script>
+<script src="/assets/js/lunr/lunr-store.js"></script>
+<script src="/assets/js/lunr/lunr-en.js"></script>
+
+
+
+
+
+  <!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-VS5B3CR1M6"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-VS5B3CR1M6', { 'anonymize_ip': false});
+</script>
+
+
+
+
+
+
+
+    <script>
+  'use strict';
+
+  (function () {
+    var commentContainer = document.querySelector('#giscus-comments');
+
+    if (!commentContainer) {
+      return;
+    }
+
+    var script = document.createElement('script');
+
+    script.setAttribute('src', 'https://giscus.app/client.js');
+    script.setAttribute('data-repo', 'bfmhno3/bfmhno3.github.io');
+    script.setAttribute('data-repo-id', 'R_kgDOQCQGxg');
+    script.setAttribute('data-category', 'General');
+    script.setAttribute('data-category-id', 'DIC_kwDOQCQGxs4CzG3a');
+    script.setAttribute('data-mapping', 'pathname');
+    script.setAttribute('data-strict', '0');
+    script.setAttribute('data-reactions-enabled', '1');
+    script.setAttribute('data-emit-metadata', '0');
+    script.setAttribute('data-input-position', 'bottom');
+    script.setAttribute('data-theme', 'transparent_dark');
+    script.setAttribute('data-lang',  'en');
+    
+    script.setAttribute('data-loading', 'lazy');
+    
+    script.setAttribute('crossorigin', 'anonymous');
+
+    script.setAttribute('async', '');
+
+    commentContainer.appendChild(script);
+  })();
+</script>
+
+  
+
+
+
+
+  </body>
+</html>

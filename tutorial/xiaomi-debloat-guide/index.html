@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<!--
+  Minimal Mistakes Jekyll Theme 4.28.0 by Michael Rose
+  Copyright 2013-2026 Michael Rose - mademistakes.com | @mmistakes
+  Copyright 2024-2026 iBug - ibugone.com | @iBug
+  Free for personal and commercial use under the MIT license
+  https://github.com/mmistakes/minimal-mistakes/blob/master/LICENSE
+--><html lang="en-US" class="no-js">
+  <head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+<meta charset="utf-8">
+
+
+<!-- begin _includes/seo.html --><title>小米手机 (HyperOS/MIUI) 深度优化指南：移除 AI 组件与去广告 - Better Mistakes</title>
+<meta name="description" content="通过 ADB 移除小米手机中冗余的 AI 组件、广告服务及臃肿软件，并调整系统设置以提升流畅度和续航。">
+
+
+  <meta name="author" content="bfmhno3">
+  
+  <meta property="article:author" content="bfmhno3">
+  
+
+
+<meta property="og:type" content="article">
+<meta property="og:locale" content="en_US">
+<meta property="og:site_name" content="Better Mistakes">
+<meta property="og:title" content="小米手机 (HyperOS/MIUI) 深度优化指南：移除 AI 组件与去广告">
+<meta property="og:url" content="https://bfmhno3.github.io/tutorial/xiaomi-debloat-guide/">
+
+
+  <meta property="og:description" content="通过 ADB 移除小米手机中冗余的 AI 组件、广告服务及臃肿软件，并调整系统设置以提升流畅度和续航。">
+
+
+
+  <meta property="og:image" content="https://bfmhno3.github.io/assets/images/avatar.jpg">
+  
+
+
+
+
+
+
+
+  <meta property="article:published_time" content="2025-11-25T14:00:00+00:00">
+
+
+
+
+
+  
+
+  
+
+
+<link rel="canonical" href="https://bfmhno3.github.io/tutorial/xiaomi-debloat-guide/">
+
+
+
+
+
+
+
+  <meta name="google-site-verification" content="UUnU8OnGqO_2FFdhrv7eEABM5p_cNPhM4Se6HB1KFSk">
+
+
+  <meta name="msvalidate.01" content="FC3BA97765A3C90F8CA771F70AE34FB8">
+
+
+
+
+
+<!-- end _includes/seo.html -->
+
+
+
+  <link href="/feed.xml" type="application/atom+xml" rel="alternate" title="Better Mistakes Feed">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script>
+  document.documentElement.className = document.documentElement.className.replace(/\bno-js\b/g, '') + ' js ';
+  window.enable_copy_code_button = true;
+</script>
+
+<!-- For all browsers -->
+<link rel="stylesheet" href="/assets/css/main.css">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@latest/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@latest/css/all.min.css"></noscript>
+
+
+
+    <link rel="icon" type="image/png" href="/assets/images/favicon/favicon-96x96.png" sizes="96x96">
+<link rel="icon" type="image/svg+xml" href="/assets/images/favicon/favicon.svg">
+<link rel="shortcut icon" href="/assets/images/favicon/favicon.ico">
+<link rel="apple-touch-icon" sizes="180x180" href="/assets/images/favicon/apple-touch-icon.png">
+<link rel="manifest" href="/assets/images/favicon/site.webmanifest">
+  </head>
+
+  <body class="layout--single" dir="ltr">
+    
+<nav class="skip-links" aria-label="Skip links">
+  <ul>
+    <li><a href="#site-nav" class="screen-reader-shortcut">Skip to primary navigation</a></li>
+    <li><a href="#main" class="screen-reader-shortcut">Skip to content</a></li>
+    <li><a href="#footer" class="screen-reader-shortcut">Skip to footer</a></li>
+  </ul>
+</nav>
+
+    
+
+
+<div class="masthead">
+  <div class="masthead__inner-wrap">
+    <div class="masthead__menu">
+      <nav id="site-nav" class="greedy-nav" aria-label="Primary navigation">
+        
+          <a class="site-logo" href="/"><img src="/assets/images/logo.svg" alt="Better Mistakes"></a>
+        
+        <a class="site-title" href="/">
+          Better Mistakes
+          <span class="site-subtitle">Trial.Error.Iteration.</span>
+        </a>
+        <ul class="visible-links">
+<li class="masthead__menu-item">
+              <a href="/posts/">Posts</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/categories/">Categories</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/tags/">Tags</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/portfolio/">Portfolio</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/about/">About</a>
+            </li>
+</ul>
+        
+        <button class="search__toggle" type="button">
+          <span class="visually-hidden">Toggle search</span>
+          <i class="fas fa-search"></i>
+        </button>
+        
+        <button class="greedy-nav__toggle hidden" type="button">
+          <span class="visually-hidden">Toggle menu</span>
+          <div class="navicon"></div>
+        </button>
+        <ul class="hidden-links hidden"></ul>
+      </nav>
+    </div>
+  </div>
+</div>
+
+
+    <div class="initial-content">
+      
+
+
+
+
+
+
+
+<div id="main" role="main">
+  
+
+  <div class="sidebar sticky">
+  
+
+
+
+<div itemscope itemtype="https://schema.org/Person" class="h-card">
+
+  
+    <div class="author__avatar">
+      <a href="https://bfmhno3.github.io/">
+        <img src="/assets/images/avatar.jpg" alt="bfmhno3" itemprop="image" class="u-photo">
+      </a>
+    </div>
+  
+
+  <div class="author__content">
+    <h3 class="author__name p-name" itemprop="name">
+      <a class="u-url" rel="me" href="https://bfmhno3.github.io/" itemprop="url">bfmhno3</a>
+    </h3>
+    
+      <div class="author__bio p-note" itemprop="description">
+        <p>Third-year university student majoring in energy engineering. Exploring the world of code and mathematics.</p>
+
+      </div>
+    
+  </div>
+
+  <div class="author__urls-wrapper">
+    <button class="btn btn--inverse">Follow</button>
+    <ul class="author__urls social-icons">
+      
+
+      
+        
+          
+            <li><a href="https://github.com/bfmhno3" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fab fa-fw fa-github" aria-hidden="true"></i><span class="label">GitHub</span></a></li>
+          
+        
+          
+            <li><a href="https://gitee.com/bfmhno3" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fa-solid fa-g" aria-hidden="true"></i><span class="label">Gitee</span></a></li>
+          
+        
+          
+            <li><a href="https://www.cnblogs.com/bfmhno3" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fa-solid fa-blog" aria-hidden="true"></i><span class="label">cnblogs</span></a></li>
+          
+        
+          
+            <li><a href="https://blog.csdn.net/B33336" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fa-solid fa-blog" aria-hidden="true"></i><span class="label">CSDN</span></a></li>
+          
+        
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      <!--
+  <li>
+    <a href="http://link-to-whatever-social-network.com/user/" itemprop="sameAs" rel="nofollow noopener noreferrer me">
+      <i class="fas fa-fw" aria-hidden="true"></i> Custom Social Profile Link
+    </a>
+  </li>
+-->
+    </ul>
+  </div>
+</div>
+
+  
+  
+  </div>
+
+
+
+  <article class="page h-entry" itemscope itemtype="https://schema.org/CreativeWork">
+    <meta itemprop="headline" content="小米手机 (HyperOS/MIUI) 深度优化指南：移除 AI 组件与去广告">
+    <meta itemprop="description" content="通过 ADB 移除小米手机中冗余的 AI 组件、广告服务及臃肿软件，并调整系统设置以提升流畅度和续航。">
+    <meta itemprop="datePublished" content="2025-11-25T14:00:00+00:00">
+    
+
+    <div class="page__inner-wrap">
+      
+        <header>
+          <h1 id="page-title" class="page__title p-name" itemprop="headline">
+            <a href="https://bfmhno3.github.io/tutorial/xiaomi-debloat-guide/" itemprop="url">小米手机 (HyperOS/MIUI) 深度优化指南：移除 AI 组件与去广告
+</a>
+          </h1>
+          
+
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2025-11-25T14:00:00+00:00">November 25, 2025</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-clock" aria-hidden="true"></i>
+        
+          2 minute read
+        
+      </span>
+    
+  </p>
+
+
+        </header>
+      
+
+      <section class="page__content e-content" itemprop="text">
+        
+          <aside class="sidebar__right sticky">
+            <nav class="toc" aria-label="Table of contents">
+              <header><h4 class="nav__title">
+<i class="fas fa-cog"></i> 目录</h4></header>
+              <ul class="toc__menu">
+<li>
+<a href="#%E9%80%9A%E8%BF%87-adb-%E5%8D%B8%E8%BD%BD-ai-%E5%8F%8A%E5%86%97%E4%BD%99%E7%BB%84%E4%BB%B6">通过 ADB 卸载 AI 及冗余组件</a><ul>
+<li><a href="#1-%E5%87%86%E5%A4%87%E5%B7%A5%E4%BD%9C">1. 准备工作</a></li>
+<li><a href="#2-%E6%89%A7%E8%A1%8C%E5%8D%B8%E8%BD%BD%E5%91%BD%E4%BB%A4">2. 执行卸载命令</a></li>
+<li>
+<a href="#3-%E5%BB%BA%E8%AE%AE%E5%8D%B8%E8%BD%BD%E7%9A%84%E6%B8%85%E5%8D%95">3. 建议卸载的清单</a><ul>
+<li><a href="#-%E6%A0%B8%E5%BF%83-ai-%E4%B8%8E%E8%AF%AD%E9%9F%B3%E7%BB%84%E4%BB%B6">🤖 核心 AI 与语音组件</a></li>
+<li><a href="#-%E5%B9%BF%E5%91%8A%E4%B8%8E%E5%88%86%E6%9E%90%E7%BB%84%E4%BB%B6-%E6%8E%A8%E8%8D%90%E5%88%A0%E9%99%A4">📢 广告与分析组件 (推荐删除)</a></li>
+<li><a href="#-%E5%85%B6%E4%BB%96%E5%B8%B8%E8%A7%81%E8%87%83%E8%82%BF%E8%BD%AF%E4%BB%B6">📦 其他常见臃肿软件</a></li>
+</ul>
+</li>
+<li><a href="#4-%E5%A6%82%E4%BD%95%E6%81%A2%E5%A4%8D%E8%AF%AF%E5%88%A0%E7%9A%84%E5%BA%94%E7%94%A8">4. 如何恢复误删的应用？</a></li>
+<li><a href="#5-%E6%8E%A8%E8%8D%90%E5%B7%A5%E5%85%B7uad">5. 推荐工具：UAD</a></li>
+</ul>
+</li>
+<li>
+<a href="#%E7%B3%BB%E7%BB%9F%E8%AE%BE%E7%BD%AE%E4%BC%98%E5%8C%96">系统设置优化</a><ul>
+<li><a href="#1-%E5%85%B3%E9%97%AD%E5%86%85%E5%AD%98%E6%89%A9%E5%B1%95-memory-extension">1. 关闭内存扩展 (Memory Extension)</a></li>
+<li><a href="#2-%E5%85%B3%E9%97%AD%E7%B3%BB%E7%BB%9F%E5%B9%BF%E5%91%8A%E5%BC%80%E5%85%B3">2. 关闭系统广告开关</a></li>
+<li><a href="#3-%E8%B0%83%E6%95%B4%E5%8A%A8%E7%94%BB%E9%80%9F%E5%BA%A6">3. 调整动画速度</a></li>
+</ul>
+</li>
+</ul>
+            </nav>
+          </aside>
+        
+        <p>随着 HyperOS 和 MIUI 的更新，系统集成了越来越多的 AI 功能和后台服务。虽然部分功能很实用，但对于追求极致流畅、隐私保护或老机型用户来说，这些组件可能意味着额外的耗电和卡顿。</p>
+
+<p>本文将介绍如何通过 ADB (Android Debug Bridge) 安全地移除这些组件，并进行系统级优化。</p>
+
+<h2 id="通过-adb-卸载-ai-及冗余组件">通过 ADB 卸载 AI 及冗余组件</h2>
+
+<p>此操作<strong>不需要 ROOT 权限</strong>，但需要一台电脑（Windows/Mac/Linux 均可）。</p>
+
+<h3 id="1-准备工作">1. 准备工作</h3>
+
+<ol>
+  <li>
+    <p><strong>开启开发者模式</strong>：</p>
+
+    <ul>
+      <li>进入<strong>设置</strong> $\rightarrow$ <strong>我的设备</strong> $\rightarrow$ <strong>全部参数</strong>。</li>
+      <li>连续点击“OS 版本号”约 5-7 次，直到提示“您已处于开发者模式”。</li>
+    </ul>
+  </li>
+  <li>
+    <p><strong>开启 USB 调试</strong>：</p>
+
+    <ul>
+      <li>进入<strong>设置</strong> $\rightarrow$ <strong>更多设置</strong> $\rightarrow$ <strong>开发者选项</strong>。</li>
+      <li>开启<strong>“USB 调试”</strong>。</li>
+      <li>开启 <strong>“USB 调试（安全设置）”</strong>（重要：如果不开启此项，部分系统应用无法被卸载，提示 <code class="language-plaintext highlighter-rouge">Permission denied</code>）。</li>
+    </ul>
+  </li>
+  <li>
+    <p><strong>连接电脑</strong>：</p>
+
+    <ul>
+      <li>使用数据线连接手机与电脑。</li>
+      <li>在电脑上下载并解压 <a href="https://developer.android.com/studio/releases/platform-tools">SDK Platform Tools</a> (ADB 工具包)。</li>
+    </ul>
+  </li>
+</ol>
+
+<h3 id="2-执行卸载命令">2. 执行卸载命令</h3>
+
+<p>在电脑终端（CMD 或 Powershell）进入 ADB 工具目录，输入以下命令确认连接：</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>adb devices
+</code></pre></div></div>
+
+<p>如果手机弹出授权窗口，请点击“允许”。看到设备序列号后，即可使用以下格式卸载应用：</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>adb shell pm uninstall <span class="nt">--user</span> 0 &lt;包名&gt;
+</code></pre></div></div>
+
+<blockquote>
+  <p><strong>注意</strong>：<code class="language-plaintext highlighter-rouge">--user 0</code> 表示仅针对当前用户卸载，不会破坏系统分区。如果出现问题，可以通过恢复出厂设置完全还原。</p>
+</blockquote>
+
+<h3 id="3-建议卸载的清单">3. 建议卸载的清单</h3>
+
+<p>以下是小米系统中常见的 AI 相关及“臃肿”组件的包名。请根据你的需求<strong>选择性</strong>执行：</p>
+
+<h4 id="-核心-ai-与语音组件">🤖 核心 AI 与语音组件</h4>
+
+<p>如果你不使用小爱同学，这些服务在后台占用大量资源。</p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left">组件名称</th>
+      <th style="text-align: left">包名</th>
+      <th style="text-align: left">说明</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left"><strong>小爱同学</strong></td>
+      <td style="text-align: left"><code class="language-plaintext highlighter-rouge">com.miui.voiceassist</code></td>
+      <td style="text-align: left">语音助手主程序</td>
+    </tr>
+    <tr>
+      <td style="text-align: left"><strong>小米 AI 引擎</strong></td>
+      <td style="text-align: left"><code class="language-plaintext highlighter-rouge">com.xiaomi.aiasst.service</code></td>
+      <td style="text-align: left">场景识别、AI 调度</td>
+    </tr>
+    <tr>
+      <td style="text-align: left"><strong>AI 视觉/传送门</strong></td>
+      <td style="text-align: left"><code class="language-plaintext highlighter-rouge">com.miui.contentextension</code></td>
+      <td style="text-align: left">屏幕识别、选词搜索</td>
+    </tr>
+    <tr>
+      <td style="text-align: left"><strong>小爱建议/负一屏</strong></td>
+      <td style="text-align: left"><code class="language-plaintext highlighter-rouge">com.miui.personalassistant</code></td>
+      <td style="text-align: left">桌面左侧的负一屏</td>
+    </tr>
+    <tr>
+      <td style="text-align: left"><strong>小爱翻译</strong></td>
+      <td style="text-align: left"><code class="language-plaintext highlighter-rouge">com.xiaomi.scanner</code></td>
+      <td style="text-align: left">包含扫一扫和翻译功能</td>
+    </tr>
+  </tbody>
+</table>
+
+<h4 id="-广告与分析组件-推荐删除">📢 广告与分析组件 (推荐删除)</h4>
+
+<p>这些组件主要用于推送广告和收集数据，删除后系统更清爽。</p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left">组件名称</th>
+      <th style="text-align: left">包名</th>
+      <th style="text-align: left">说明</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left"><strong>系统广告服务 (MSA)</strong></td>
+      <td style="text-align: left"><code class="language-plaintext highlighter-rouge">com.miui.systemAdSolution</code></td>
+      <td style="text-align: left">MIUI System Ads，广告核心</td>
+    </tr>
+    <tr>
+      <td style="text-align: left"><strong>小米分析</strong></td>
+      <td style="text-align: left"><code class="language-plaintext highlighter-rouge">com.miui.analytics</code></td>
+      <td style="text-align: left">数据采集与分析</td>
+    </tr>
+    <tr>
+      <td style="text-align: left"><strong>用户反馈</strong></td>
+      <td style="text-align: left"><code class="language-plaintext highlighter-rouge">com.miui.miservice</code></td>
+      <td style="text-align: left">反馈服务</td>
+    </tr>
+    <tr>
+      <td style="text-align: left"><strong>智能服务</strong></td>
+      <td style="text-align: left"><code class="language-plaintext highlighter-rouge">com.miui.hybrid</code></td>
+      <td style="text-align: left">混合推送服务</td>
+    </tr>
+    <tr>
+      <td style="text-align: left"><strong>快应用服务框架</strong></td>
+      <td style="text-align: left"><code class="language-plaintext highlighter-rouge">com.miui.hybrid.accessory</code></td>
+      <td style="text-align: left">经常误触打开快应用</td>
+    </tr>
+  </tbody>
+</table>
+
+<h4 id="-其他常见臃肿软件">📦 其他常见臃肿软件</h4>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left">组件名称</th>
+      <th style="text-align: left">包名</th>
+      <th style="text-align: left">说明</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left"><strong>小米浏览器</strong></td>
+      <td style="text-align: left"><code class="language-plaintext highlighter-rouge">com.android.browser</code></td>
+      <td style="text-align: left">建议使用 Chrome 或 Edge 替代</td>
+    </tr>
+    <tr>
+      <td style="text-align: left"><strong>小米视频</strong></td>
+      <td style="text-align: left"><code class="language-plaintext highlighter-rouge">com.miui.video</code></td>
+      <td style="text-align: left">包含大量在线内容</td>
+    </tr>
+    <tr>
+      <td style="text-align: left"><strong>小米音乐</strong></td>
+      <td style="text-align: left"><code class="language-plaintext highlighter-rouge">com.miui.player</code></td>
+      <td style="text-align: left">QQ 音乐简化版，可以试一试</td>
+    </tr>
+    <tr>
+      <td style="text-align: left"><strong>小米钱包</strong></td>
+      <td style="text-align: left"><code class="language-plaintext highlighter-rouge">com.mipay.wallet</code></td>
+      <td style="text-align: left">如果不用 NFC 刷卡可删</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="4-如何恢复误删的应用">4. 如何恢复误删的应用？</h3>
+
+<p>如果你不小心删除了重要组件，可以通过以下命令恢复（无需重置手机）：</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>adb shell cmd package install-existing &lt;包名&gt;
+</code></pre></div></div>
+
+<p>例如恢复小爱同学：<code class="language-plaintext highlighter-rouge">adb shell cmd package install-existing com.miui.voiceassist</code></p>
+
+<h3 id="5-推荐工具uad">5. 推荐工具：UAD</h3>
+
+<p>如果你觉得敲命令太麻烦，可以使用开源图形化工具 <strong><a href="https://github.com/0x192/universal-android-debloater">UAD (Universal Android Debloater)</a></strong>。</p>
+
+<p>UAD 是一个跨平台的图形界面软件，能自动识别小米手机的臃肿软件，并标注“安全删除”、“谨慎删除”，非常适合新手。</p>
+
+<blockquote>
+  <p><strong>⚠️ 警告</strong>：绝对不要卸载 <code class="language-plaintext highlighter-rouge">com.miui.home</code>（系统桌面）或 <code class="language-plaintext highlighter-rouge">com.android.systemui</code>，否则手机会黑屏或无法进入系统。</p>
+</blockquote>
+
+<hr>
+
+<h2 id="系统设置优化">系统设置优化</h2>
+
+<p>除了卸载软件，正确的设置也能显著提升体验。</p>
+
+<h3 id="1-关闭内存扩展-memory-extension">1. 关闭内存扩展 (Memory Extension)</h3>
+
+<ul>
+  <li>
+<strong>路径</strong>：<strong>设置</strong> $\rightarrow$ <strong>更多设置</strong> $\rightarrow$ <strong>内存扩展</strong>
+</li>
+  <li>
+<strong>建议</strong>：<strong>关闭</strong>
+</li>
+  <li>
+<strong>原因</strong>：这个功能使用闪存（Flash Storage）模拟内存（SWAP）。手机闪存的随机读写速度远低于物理内存（RAM）。开启后不仅不会让手机变快，反而会增加 I/O 负担，导致系统在切换应用时掉帧，并增加发热和耗电。对于 8GB 及以上内存的机型，此功能完全是副作用。</li>
+</ul>
+
+<h3 id="2-关闭系统广告开关">2. 关闭系统广告开关</h3>
+
+<p>虽然卸载了 MSA，但部分开关仍建议手动关闭以防漏网之鱼。</p>
+
+<ul>
+  <li>
+<strong>系统工具广告</strong>：<strong>设置</strong> $\rightarrow$ <strong>账号</strong> $\rightarrow$ <strong>关于小米账号</strong> $\rightarrow$ <strong>系统广告</strong> $\rightarrow$ 关闭。</li>
+  <li>
+<strong>应用内推荐</strong>：分别进入<strong>天气、日历、下载管理、应用商店、文件管理</strong>的设置中，找到并关闭“内容推荐”、“个性化服务”或“资讯”。</li>
+</ul>
+
+<h3 id="3-调整动画速度">3. 调整动画速度</h3>
+
+<ul>
+  <li>
+<strong>路径</strong>：<strong>开发者选项</strong> $\rightarrow$ 向下滚动找到<strong>绘图</strong>栏目。</li>
+  <li>
+<strong>设置</strong>：
+    <ul>
+      <li>窗口动画缩放 $\rightarrow$ <strong>0.5x</strong>
+</li>
+      <li>过渡动画缩放 $\rightarrow$ <strong>0.5x</strong>
+</li>
+      <li>Animator 时长缩放 $\rightarrow$ <strong>0.5x</strong>
+</li>
+    </ul>
+  </li>
+  <li>
+<strong>效果</strong>：这不会改变手机的实际处理速度，但会缩短 UI 动画的持续时间，让手机在体感上响应更加迅速干脆。</li>
+</ul>
+
+<hr>
+
+<p>*免责声明：本文提供的操作涉及系统层面的修改。虽然通过 <code class="language-plaintext highlighter-rouge">pm uninstall --user 0</code> 卸载应用通常是安全的且可逆的，但操作不当仍可能导致系统不稳定。</p>
+
+        
+      </section>
+
+      <footer class="page__meta">
+        
+        
+
+  
+    
+
+
+
+  
+
+  <p class="page__taxonomy">
+    <strong><i class="fas fa-fw fa-tags" aria-hidden="true"></i> Tags: </strong>
+    <span itemprop="keywords">
+    
+      <a href="/tags/adb" class="page__taxonomy-item p-category" rel="tag">ADB</a><span class="sep">, </span>
+    
+      <a href="/tags/android" class="page__taxonomy-item p-category" rel="tag">Android</a><span class="sep">, </span>
+    
+      <a href="/tags/hyperos" class="page__taxonomy-item p-category" rel="tag">HyperOS</a><span class="sep">, </span>
+    
+      <a href="/tags/miui" class="page__taxonomy-item p-category" rel="tag">MIUI</a><span class="sep">, </span>
+    
+      <a href="/tags/redmi" class="page__taxonomy-item p-category" rel="tag">RedMi</a><span class="sep">, </span>
+    
+      <a href="/tags/xiaomi" class="page__taxonomy-item p-category" rel="tag">XiaoMi</a>
+    
+    </span>
+  </p>
+
+
+  
+
+  
+    
+
+
+
+  
+
+  <p class="page__taxonomy">
+    <strong><i class="fas fa-fw fa-folder-open" aria-hidden="true"></i> Categories: </strong>
+    <span itemprop="keywords">
+    
+      <a href="/categories/tutorial" class="page__taxonomy-item p-category" rel="tag">Tutorial</a>
+    
+    </span>
+  </p>
+
+
+  
+
+
+        
+
+
+  <p class="page__date"><strong><i class="fas fa-fw fa-calendar-alt" aria-hidden="true"></i> Updated:</strong> <time class="dt-published" datetime="2025-11-25T14:00:00+00:00">November 25, 2025</time></p>
+
+
+      </footer>
+
+      
+<section class="page__share">
+  <h4 class="page__share-title">Share on</h4>
+
+  <a href="https://x.com/intent/tweet?text=%E5%B0%8F%E7%B1%B3%E6%89%8B%E6%9C%BA+%28HyperOS%2FMIUI%29+%E6%B7%B1%E5%BA%A6%E4%BC%98%E5%8C%96%E6%8C%87%E5%8D%97%EF%BC%9A%E7%A7%BB%E9%99%A4+AI+%E7%BB%84%E4%BB%B6%E4%B8%8E%E5%8E%BB%E5%B9%BF%E5%91%8A%20https%3A%2F%2Fbfmhno3.github.io%2Ftutorial%2Fxiaomi-debloat-guide%2F" class="btn btn--x" aria-label="Share on X" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on X">
+    <i class="fab fa-fw fa-x-twitter" aria-hidden="true"></i><span> X</span>
+  </a>
+
+  <a href="https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fbfmhno3.github.io%2Ftutorial%2Fxiaomi-debloat-guide%2F" class="btn btn--facebook" aria-label="Share on Facebook" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on Facebook">
+    <i class="fab fa-fw fa-facebook" aria-hidden="true"></i><span> Facebook</span>
+  </a>
+
+  <a href="https://www.linkedin.com/shareArticle?mini=true&url=https://bfmhno3.github.io/tutorial/xiaomi-debloat-guide/" class="btn btn--linkedin" aria-label="Share on LinkedIn" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on LinkedIn">
+    <i class="fab fa-fw fa-linkedin" aria-hidden="true"></i><span> LinkedIn</span>
+  </a>
+
+  <a href="https://bsky.app/intent/compose?text=%E5%B0%8F%E7%B1%B3%E6%89%8B%E6%9C%BA+%28HyperOS%2FMIUI%29+%E6%B7%B1%E5%BA%A6%E4%BC%98%E5%8C%96%E6%8C%87%E5%8D%97%EF%BC%9A%E7%A7%BB%E9%99%A4+AI+%E7%BB%84%E4%BB%B6%E4%B8%8E%E5%8E%BB%E5%B9%BF%E5%91%8A%20https%3A%2F%2Fbfmhno3.github.io%2Ftutorial%2Fxiaomi-debloat-guide%2F" class="btn btn--bluesky" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on Bluesky">
+    <i class="fab fa-fw fa-bluesky" aria-hidden="true"></i><span> Bluesky</span>
+  </a>
+</section>
+
+
+      
+
+  <nav class="pagination" aria-label="Post pagination">
+    
+      <a href="/tutorial/deploy-overleaf-community-on-windows-with-docker-and-git-bash/" class="pagination--pager" title="在 Windows 上使用 Docker、Git Bash 和 overleaf-toolkit 部署 Overleaf 社区版">Previous</a>
+    
+    
+      <a href="/tutorial/cs2-optimization-guide/" class="pagination--pager" title="CS2 游戏设置优化">Next</a>
+    
+  </nav>
+
+
+    </div>
+
+    
+      
+        
+<div class="page__comments">
+  
+  
+      <h4 class="page__comments-title">Comments</h4>
+      <section id="giscus-comments"></section>
+    
+</div>
+
+      
+    
+  </article>
+
+  
+  
+    
+
+<div class="page__related">
+  
+  <h2 class="page__related-title">You May Also Enjoy</h2>
+  <div class="grid__wrapper">
+    
+      
+      
+
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc p-name" itemprop="headline">
+      
+        <a class="u-url" href="/note/gnu-assembly/" rel="permalink">GNU 汇编（GAS）通用语法与伪指令指南
+</a>
+      
+    </h2>
+    
+
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-04-05T08:35:00+00:00">April 5, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          11 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt p-summary" itemprop="description">本文不聚焦某一指令集细节，而是系统梳理 GNU Assembler 的通用语法与伪指令体系，涵盖注释规则、操作数方向、寻址模式、宽度后缀、段与符号控制，以及局部标签与宏等实用写法，帮助你在 x86、ARM、RISC-V 间建立统一理解。
+</p>
+  </article>
+</div>
+
+    
+      
+      
+
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc p-name" itemprop="headline">
+      
+        <a class="u-url" href="/note/armv7-a-isa/" rel="permalink">ARMv7-A 指令体系全解：数据处理、访存、分支与同步
+</a>
+      
+    </h2>
+    
+
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-04-05T08:20:00+00:00">April 5, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          16 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt p-summary" itemprop="description">以 I.MX6ULL（ARM Cortex-A7）为背景，从物理本质出发，系统梳理 ARMv7-A 指令集的核心要点：定长 32 位指令结构与条件执行机制、16 个核心寄存器的 AAPCS 调用规范，以及数据处理、内存访问、分支控制、系统状态和原子同步五大类指令的功能与应用场景。
+</p>
+  </article>
+</div>
+
+    
+      
+      
+
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc p-name" itemprop="headline">
+      
+        <a class="u-url" href="/tutorial/wsl2-image-migration-guide/" rel="permalink">如何将 WSL2 镜像无损迁移至非系统盘
+</a>
+      
+    </h2>
+    
+
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-03-14T05:16:00+00:00">March 14, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          3 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt p-summary" itemprop="description">详细记录在 Windows 11 环境下，将默认安装在 C 盘的 WSL2 Ubuntu 镜像无损迁移至其他数据盘的完整过程，包含导出、导入、默认用户配置及原实例清理，有效释放系统盘空间。
+</p>
+  </article>
+</div>
+
+    
+      
+      
+
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc p-name" itemprop="headline">
+      
+        <a class="u-url" href="/note/stack-in-cpp/" rel="permalink">C++ 中的 stack
+</a>
+      
+    </h2>
+    
+
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-02-19T02:45:00+00:00">February 19, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          8 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt p-summary" itemprop="description">本文从本质需求出发解释栈（LIFO）为何存在，串联函数调用、递归、撤销与括号匹配等典型场景，并结合 C++ STL 的 std::stack 用法、异常安全设计与底层容器选择，最后配合多道题目示例完成从概念到实战的闭环。
+</p>
+  </article>
+</div>
+
+    
+  </div>
+</div>
+
+  
+  
+</div>
+
+      
+    </div>
+
+    
+      <div class="search-content">
+        
+<div class="search-content__inner-wrap">
+<form class="search-content__form" onkeydown="return event.key != 'Enter';" role="search">
+    <label class="sr-only" for="search">
+      Enter your search term...
+    </label>
+    <input type="search" id="search" class="search-input" tabindex="-1" placeholder="Enter your search term...">
+  </form>
+  <div id="results" class="results"></div>
+</div>
+
+      </div>
+    
+
+    <div id="footer" class="page__footer">
+      <footer>
+        <!-- start custom footer snippets -->
+
+<!-- end custom footer snippets -->
+        
+
+
+<div class="page__footer-follow">
+  <ul class="social-icons">
+    
+
+    
+      
+        
+          <li><a href="https://github.com/bfmhno3" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-github" aria-hidden="true"></i> GitHub</a></li>
+        
+      
+        
+          <li><a href="https://gitee.com/bfmhno3" rel="nofollow noopener noreferrer"><i class="fa-solid fa-g" aria-hidden="true"></i> Gitee</a></li>
+        
+      
+        
+          <li><a href="https://www.cnblogs.com/bfmhno3" rel="nofollow noopener noreferrer"><i class="fa-solid fa-blog" aria-hidden="true"></i> cnblogs</a></li>
+        
+      
+        
+          <li><a href="https://blog.csdn.net/B33336" rel="nofollow noopener noreferrer"><i class="fa-solid fa-blog" aria-hidden="true"></i> CSDN</a></li>
+        
+      
+    
+
+    
+      <li><a href="/feed.xml"><i class="fas fa-fw fa-square-rss" aria-hidden="true"></i> Feed</a></li>
+    
+  </ul>
+</div>
+
+
+<div class="page__footer-copyright">© 2026 <a href="https://bfmhno3.github.io">Better Mistakes</a>. Powered by <a href="https://jekyllrb.com" rel="nofollow">Jekyll</a> &amp; <a href="https://mademistakes.com/work/jekyll-themes/minimal-mistakes/" rel="nofollow">Minimal Mistakes</a>.</div>
+
+      </footer>
+    </div>
+
+    
+
+  <script src="/assets/js/main.min.js"></script>
+
+
+
+
+
+<script src="/assets/js/lunr/lunr.min.js"></script>
+<script src="/assets/js/lunr/lunr-store.js"></script>
+<script src="/assets/js/lunr/lunr-en.js"></script>
+
+
+
+
+
+  <!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-VS5B3CR1M6"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-VS5B3CR1M6', { 'anonymize_ip': false});
+</script>
+
+
+
+
+
+
+
+    <script>
+  'use strict';
+
+  (function () {
+    var commentContainer = document.querySelector('#giscus-comments');
+
+    if (!commentContainer) {
+      return;
+    }
+
+    var script = document.createElement('script');
+
+    script.setAttribute('src', 'https://giscus.app/client.js');
+    script.setAttribute('data-repo', 'bfmhno3/bfmhno3.github.io');
+    script.setAttribute('data-repo-id', 'R_kgDOQCQGxg');
+    script.setAttribute('data-category', 'General');
+    script.setAttribute('data-category-id', 'DIC_kwDOQCQGxs4CzG3a');
+    script.setAttribute('data-mapping', 'pathname');
+    script.setAttribute('data-strict', '0');
+    script.setAttribute('data-reactions-enabled', '1');
+    script.setAttribute('data-emit-metadata', '0');
+    script.setAttribute('data-input-position', 'bottom');
+    script.setAttribute('data-theme', 'transparent_dark');
+    script.setAttribute('data-lang',  'en');
+    
+    script.setAttribute('data-loading', 'lazy');
+    
+    script.setAttribute('crossorigin', 'anonymous');
+
+    script.setAttribute('async', '');
+
+    commentContainer.appendChild(script);
+  })();
+</script>
+
+  
+
+
+
+
+  </body>
+</html>

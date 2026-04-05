@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<!--
+  Minimal Mistakes Jekyll Theme 4.28.0 by Michael Rose
+  Copyright 2013-2026 Michael Rose - mademistakes.com | @mmistakes
+  Copyright 2024-2026 iBug - ibugone.com | @iBug
+  Free for personal and commercial use under the MIT license
+  https://github.com/mmistakes/minimal-mistakes/blob/master/LICENSE
+--><html lang="en-US" class="no-js">
+  <head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+<meta charset="utf-8">
+
+
+<!-- begin _includes/seo.html --><title>如何将 WSL2 镜像无损迁移至非系统盘 - Better Mistakes</title>
+<meta name="description" content="详细记录在 Windows 11 环境下，将默认安装在 C 盘的 WSL2 Ubuntu 镜像无损迁移至其他数据盘的完整过程，包含导出、导入、默认用户配置及原实例清理，有效释放系统盘空间。">
+
+
+  <meta name="author" content="bfmhno3">
+  
+  <meta property="article:author" content="bfmhno3">
+  
+
+
+<meta property="og:type" content="article">
+<meta property="og:locale" content="en_US">
+<meta property="og:site_name" content="Better Mistakes">
+<meta property="og:title" content="如何将 WSL2 镜像无损迁移至非系统盘">
+<meta property="og:url" content="https://bfmhno3.github.io/tutorial/wsl2-image-migration-guide/">
+
+
+  <meta property="og:description" content="详细记录在 Windows 11 环境下，将默认安装在 C 盘的 WSL2 Ubuntu 镜像无损迁移至其他数据盘的完整过程，包含导出、导入、默认用户配置及原实例清理，有效释放系统盘空间。">
+
+
+
+  <meta property="og:image" content="https://bfmhno3.github.io/assets/images/avatar.jpg">
+  
+
+
+
+
+
+
+
+  <meta property="article:published_time" content="2026-03-14T05:16:00+00:00">
+
+
+
+
+
+  
+
+  
+
+
+<link rel="canonical" href="https://bfmhno3.github.io/tutorial/wsl2-image-migration-guide/">
+
+
+
+
+
+
+
+  <meta name="google-site-verification" content="UUnU8OnGqO_2FFdhrv7eEABM5p_cNPhM4Se6HB1KFSk">
+
+
+  <meta name="msvalidate.01" content="FC3BA97765A3C90F8CA771F70AE34FB8">
+
+
+
+
+
+<!-- end _includes/seo.html -->
+
+
+
+  <link href="/feed.xml" type="application/atom+xml" rel="alternate" title="Better Mistakes Feed">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script>
+  document.documentElement.className = document.documentElement.className.replace(/\bno-js\b/g, '') + ' js ';
+  window.enable_copy_code_button = true;
+</script>
+
+<!-- For all browsers -->
+<link rel="stylesheet" href="/assets/css/main.css">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@latest/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@latest/css/all.min.css"></noscript>
+
+
+
+    <link rel="icon" type="image/png" href="/assets/images/favicon/favicon-96x96.png" sizes="96x96">
+<link rel="icon" type="image/svg+xml" href="/assets/images/favicon/favicon.svg">
+<link rel="shortcut icon" href="/assets/images/favicon/favicon.ico">
+<link rel="apple-touch-icon" sizes="180x180" href="/assets/images/favicon/apple-touch-icon.png">
+<link rel="manifest" href="/assets/images/favicon/site.webmanifest">
+  </head>
+
+  <body class="layout--single" dir="ltr">
+    
+<nav class="skip-links" aria-label="Skip links">
+  <ul>
+    <li><a href="#site-nav" class="screen-reader-shortcut">Skip to primary navigation</a></li>
+    <li><a href="#main" class="screen-reader-shortcut">Skip to content</a></li>
+    <li><a href="#footer" class="screen-reader-shortcut">Skip to footer</a></li>
+  </ul>
+</nav>
+
+    
+
+
+<div class="masthead">
+  <div class="masthead__inner-wrap">
+    <div class="masthead__menu">
+      <nav id="site-nav" class="greedy-nav" aria-label="Primary navigation">
+        
+          <a class="site-logo" href="/"><img src="/assets/images/logo.svg" alt="Better Mistakes"></a>
+        
+        <a class="site-title" href="/">
+          Better Mistakes
+          <span class="site-subtitle">Trial.Error.Iteration.</span>
+        </a>
+        <ul class="visible-links">
+<li class="masthead__menu-item">
+              <a href="/posts/">Posts</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/categories/">Categories</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/tags/">Tags</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/portfolio/">Portfolio</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/about/">About</a>
+            </li>
+</ul>
+        
+        <button class="search__toggle" type="button">
+          <span class="visually-hidden">Toggle search</span>
+          <i class="fas fa-search"></i>
+        </button>
+        
+        <button class="greedy-nav__toggle hidden" type="button">
+          <span class="visually-hidden">Toggle menu</span>
+          <div class="navicon"></div>
+        </button>
+        <ul class="hidden-links hidden"></ul>
+      </nav>
+    </div>
+  </div>
+</div>
+
+
+    <div class="initial-content">
+      
+
+
+
+
+
+
+
+<div id="main" role="main">
+  
+
+  <div class="sidebar sticky">
+  
+
+
+
+<div itemscope itemtype="https://schema.org/Person" class="h-card">
+
+  
+    <div class="author__avatar">
+      <a href="https://bfmhno3.github.io/">
+        <img src="/assets/images/avatar.jpg" alt="bfmhno3" itemprop="image" class="u-photo">
+      </a>
+    </div>
+  
+
+  <div class="author__content">
+    <h3 class="author__name p-name" itemprop="name">
+      <a class="u-url" rel="me" href="https://bfmhno3.github.io/" itemprop="url">bfmhno3</a>
+    </h3>
+    
+      <div class="author__bio p-note" itemprop="description">
+        <p>Third-year university student majoring in energy engineering. Exploring the world of code and mathematics.</p>
+
+      </div>
+    
+  </div>
+
+  <div class="author__urls-wrapper">
+    <button class="btn btn--inverse">Follow</button>
+    <ul class="author__urls social-icons">
+      
+
+      
+        
+          
+            <li><a href="https://github.com/bfmhno3" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fab fa-fw fa-github" aria-hidden="true"></i><span class="label">GitHub</span></a></li>
+          
+        
+          
+            <li><a href="https://gitee.com/bfmhno3" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fa-solid fa-g" aria-hidden="true"></i><span class="label">Gitee</span></a></li>
+          
+        
+          
+            <li><a href="https://www.cnblogs.com/bfmhno3" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fa-solid fa-blog" aria-hidden="true"></i><span class="label">cnblogs</span></a></li>
+          
+        
+          
+            <li><a href="https://blog.csdn.net/B33336" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fa-solid fa-blog" aria-hidden="true"></i><span class="label">CSDN</span></a></li>
+          
+        
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      <!--
+  <li>
+    <a href="http://link-to-whatever-social-network.com/user/" itemprop="sameAs" rel="nofollow noopener noreferrer me">
+      <i class="fas fa-fw" aria-hidden="true"></i> Custom Social Profile Link
+    </a>
+  </li>
+-->
+    </ul>
+  </div>
+</div>
+
+  
+  
+  </div>
+
+
+
+  <article class="page h-entry" itemscope itemtype="https://schema.org/CreativeWork">
+    <meta itemprop="headline" content="如何将 WSL2 镜像无损迁移至非系统盘">
+    <meta itemprop="description" content="详细记录在 Windows 11 环境下，将默认安装在 C 盘的 WSL2 Ubuntu 镜像无损迁移至其他数据盘的完整过程，包含导出、导入、默认用户配置及原实例清理，有效释放系统盘空间。">
+    <meta itemprop="datePublished" content="2026-03-14T05:16:00+00:00">
+    
+
+    <div class="page__inner-wrap">
+      
+        <header>
+          <h1 id="page-title" class="page__title p-name" itemprop="headline">
+            <a href="https://bfmhno3.github.io/tutorial/wsl2-image-migration-guide/" itemprop="url">如何将 WSL2 镜像无损迁移至非系统盘
+</a>
+          </h1>
+          
+
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-03-14T05:16:00+00:00">March 14, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-clock" aria-hidden="true"></i>
+        
+          3 minute read
+        
+      </span>
+    
+  </p>
+
+
+        </header>
+      
+
+      <section class="page__content e-content" itemprop="text">
+        
+          <aside class="sidebar__right sticky">
+            <nav class="toc" aria-label="Table of contents">
+              <header><h4 class="nav__title">
+<i class="fas fa-file-alt"></i> On this page</h4></header>
+              <ul class="toc__menu">
+<li>
+<a href="#1-%E5%BC%95%E8%A8%80">1 引言</a><ul><li><a href="#11-%E7%AC%94%E8%80%85%E7%8E%AF%E5%A2%83">1.1 笔者环境</a></li></ul>
+</li>
+<li>
+<a href="#2-%E5%87%86%E5%A4%87%E5%B7%A5%E4%BD%9C">2 准备工作</a><ul>
+<li><a href="#21-%E7%A1%AE%E8%AE%A4%E5%BD%93%E5%89%8D%E5%AE%89%E8%A3%85%E7%8A%B6%E6%80%81">2.1 确认当前安装状态</a></li>
+<li><a href="#21-%E7%A1%AE%E5%AE%9A%E5%8E%9F%E9%95%9C%E5%83%8F%E5%8F%8A%E7%9B%AE%E6%A0%87%E8%B7%AF%E5%BE%84">2.1 确定原镜像及目标路径</a></li>
+<li><a href="#22-%E5%BB%BA%E7%AB%8B%E6%96%B0%E7%9A%84%E4%BD%8D%E7%BD%AE">2.2 建立新的位置</a></li>
+</ul>
+</li>
+<li>
+<a href="#3-%E8%BF%81%E7%A7%BB%E9%95%9C%E5%83%8F">3 迁移镜像</a><ul>
+<li><a href="#31-%E5%AF%BC%E5%87%BA%E5%8E%9F-wsl-%E5%88%86%E5%8F%91">3.1 导出原 WSL 分发</a></li>
+<li><a href="#32-%E5%B0%86%E5%8E%8B%E7%BC%A9%E5%8C%85%E5%AF%BC%E5%85%A5%E6%96%B0%E4%BD%8D%E7%BD%AE">3.2 将压缩包导入新位置</a></li>
+<li><a href="#33-%E6%81%A2%E5%A4%8D%E9%BB%98%E8%AE%A4%E7%94%A8%E6%88%B7">3.3 恢复默认用户</a></li>
+<li><a href="#34-%E8%AE%BE%E7%BD%AE%E4%B8%BA%E9%BB%98%E8%AE%A4%E5%88%86%E5%8F%91%E5%B9%B6%E6%B8%85%E7%90%86%E5%96%84%E5%90%8E">3.4 设置为默认分发并清理善后</a></li>
+</ul>
+</li>
+<li><a href="#4-%E6%80%BB%E7%BB%93">4 总结</a></li>
+<li><a href="#%E5%8F%82%E8%80%83%E8%B5%84%E6%96%99">参考资料</a></li>
+</ul>
+            </nav>
+          </aside>
+        
+        <h2 id="1-引言">1 引言</h2>
+
+<p>随着开发环境的日益庞大，默认安装在 <code class="language-plaintext highlighter-rouge">C:\</code> 盘的 WSL2 (Windows Subsystem for Linux) 镜像体积也会不断膨胀。本文将分享如何通过命令行操作，将 WSL 迁移至 <code class="language-plaintext highlighter-rouge">E:\</code> 盘乃至其他盘符，彻底释放系统盘空间。</p>
+
+<h3 id="11-笔者环境">1.1 笔者环境</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: center">名称</th>
+      <th style="text-align: left">版本</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: center">Windows 11 Pro</td>
+      <td style="text-align: left">25H2 26200.8037</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">PWSH</td>
+      <td style="text-align: left">7.5.5</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">WSL</td>
+      <td style="text-align: left">2.6.3.0</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">Ubuntu</td>
+      <td style="text-align: left">22.04 LTS</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">Ubuntu</td>
+      <td style="text-align: left">24.04 LTS</td>
+    </tr>
+  </tbody>
+</table>
+
+<p class="notice--info"><strong>注意</strong>：这里的 PWSH 并不是指 Windows 系统内置的经典 PowerShell，而是跨平台的开源项目 <a href="https://github.com/PowerShell/PowerShell">PowerShell Core</a>。下文中使用 PowerShell 指代系统默认版本，PWSH 指代开源版本。</p>
+
+<h2 id="2-准备工作">2 准备工作</h2>
+
+<h3 id="21-确认当前安装状态">2.1 确认当前安装状态</h3>
+
+<p>如果你还没有安装镜像，或想查看当前支持的发行版，可以使用以下命令：</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 查看支持的在线发行版</span>
+wsl <span class="nt">--list</span> <span class="nt">--online</span>
+
+<span class="c"># 安装 Ubuntu 镜像</span>
+wsl <span class="nt">--install</span> Ubuntu-22.04
+wsl <span class="nt">--install</span> Ubuntu-24.04
+</code></pre></div></div>
+
+<p>在终端输入以下命令，查看当前已安装的发行版：</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>wsl <span class="nt">-l</span> <span class="nt">-v</span>
+</code></pre></div></div>
+
+<h3 id="21-确定原镜像及目标路径">2.1 确定原镜像及目标路径</h3>
+
+<p>WSL2 的虚拟磁盘文件通常为 <code class="language-plaintext highlighter-rouge">ext4.vhdx</code>。你可以使用强大的文件搜索工具 <a href="https://www.voidtools.com/zh-cn/">Everything</a> 来定位它们。不同版本的 Ubuntu 默认安装路径可能略有不同。</p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: center">镜像</th>
+      <th style="text-align: left">原始路径</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: center">Ubuntu 22.04 LTS</td>
+      <td style="text-align: left"><code class="language-plaintext highlighter-rouge">C:\Users\&lt;your_windows_username&gt;\AppData\Local\Packages\CanonicalGroupLimited.Ubuntu22.04LTS_...\LocalState</code></td>
+    </tr>
+    <tr>
+      <td style="text-align: center">Ubuntu 24.04 LTS</td>
+      <td style="text-align: left"><code class="language-plaintext highlighter-rouge">C:\Users\&lt;your_windows_username&gt;\AppData\wsl\{UUID}</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<p>可以看到这里两者的路径有着细微差别，Ubuntu 22.04 LTS 安装在 <code class="language-plaintext highlighter-rouge">Local\Packages</code> 下，而 Ubuntu 24.04 LTS 却安装在 <code class="language-plaintext highlighter-rouge">Local</code> 同级的 <code class="language-plaintext highlighter-rouge">wsl</code> 下。</p>
+
+<p>具体原因犹未可知，笔者暂时没有时间去查阅官方文档，但是并不影响后续步骤以及日常使用。</p>
+
+<h3 id="22-建立新的位置">2.2 建立新的位置</h3>
+
+<p>在上一步中已经获取到了原始的位置，根据笔者的风格，迁移之后的镜像路径应该尽可能维持原来的目录结构，但是笔者还是做了一点细微的修改，迁移路径具体如下：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: center">镜像</th>
+      <th style="text-align: left">迁移路径</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: center">Ubuntu 22.04 LTS</td>
+      <td style="text-align: left"><code class="language-plaintext highlighter-rouge">E:\Users\&lt;your_windows_username&gt;\AppData\wsl\ubuntu2204</code></td>
+    </tr>
+    <tr>
+      <td style="text-align: center">Ubuntu 24.04 LTS</td>
+      <td style="text-align: left"><code class="language-plaintext highlighter-rouge">E:\Users\&lt;your_windows_username&gt;\AppData\wsl\ubuntu2404</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<p class="notice--warning">请在后续的命令行中将 <code class="language-plaintext highlighter-rouge">&lt;your_windows_username&gt;</code> 替换为你的实际 Windows 用户名。</p>
+
+<p>在新版的 PWSH 中可以直接使用以下命令创建目录：</p>
+
+<div class="language-powershell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">mkdir</span><span class="w"> </span><span class="nt">-p</span><span class="w"> </span><span class="nx">E:\Users\</span><span class="err">&lt;</span><span class="nx">your_windows_username</span><span class="err">&gt;</span><span class="nx">\AppData\wsl\ubuntu2204\</span><span class="w">
+</span><span class="n">mkdir</span><span class="w"> </span><span class="nt">-p</span><span class="w"> </span><span class="nx">E:\Users\</span><span class="err">&lt;</span><span class="nx">your_windows_username</span><span class="err">&gt;</span><span class="nx">\AppData\wsl\ubuntu2404\</span><span class="w">
+</span></code></pre></div></div>
+
+<p>或者以下命令（支持在 PowerShell 中使用）：</p>
+
+<div class="language-powershell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">New-Item</span><span class="w"> </span><span class="nt">-Path</span><span class="w"> </span><span class="nx">E:\Users\</span><span class="err">&lt;</span><span class="nx">your_windows_username</span><span class="err">&gt;</span><span class="nx">\AppData\wsl\ubuntu2204\</span><span class="w"> </span><span class="nt">-ItemType</span><span class="w"> </span><span class="nx">Directory</span><span class="w">
+</span><span class="n">New-Item</span><span class="w"> </span><span class="nt">-Path</span><span class="w"> </span><span class="nx">E:\Users\</span><span class="err">&lt;</span><span class="nx">your_windows_username</span><span class="err">&gt;</span><span class="nx">\AppData\wsl\ubuntu2404\</span><span class="w"> </span><span class="nt">-ItemType</span><span class="w"> </span><span class="nx">Directory</span><span class="w">
+</span></code></pre></div></div>
+
+<h2 id="3-迁移镜像">3 迁移镜像</h2>
+
+<h3 id="31-导出原-wsl-分发">3.1 导出原 WSL 分发</h3>
+
+<p>在进行导出操作前，<strong>强烈建议先停止 WSL2 中的所有工作并彻底关闭所有正在运行的 WSL 实例</strong>以防止数据损坏：</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>wsl <span class="nt">--shutdown</span>
+</code></pre></div></div>
+
+<p>接着，将现有的系统状态导出为 <code class="language-plaintext highlighter-rouge">.tar</code> 压缩包：</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>wsl <span class="nt">--export</span> Ubuntu-22.04 E:<span class="se">\U</span>sers<span class="se">\&lt;</span>your_windows_username&gt;<span class="se">\A</span>ppData<span class="se">\w</span>sl<span class="se">\u</span>buntu2204.tar
+wsl <span class="nt">--export</span> Ubuntu-24.04 E:<span class="se">\U</span>sers<span class="se">\&lt;</span>your_windows_username&gt;<span class="se">\A</span>ppData<span class="se">\w</span>sl<span class="se">\u</span>buntu2404.tar
+</code></pre></div></div>
+
+<h3 id="32-将压缩包导入新位置">3.2 将压缩包导入新位置</h3>
+
+<p>使用 <code class="language-plaintext highlighter-rouge">wsl --import</code> 命令将刚才导出的 <code class="language-plaintext highlighter-rouge">.tar</code> 文件导入到我们在 E 盘创建的新目录中。为了方便区分，我们将导入后的新实例命名为小写的 <code class="language-plaintext highlighter-rouge">ubuntu2204</code> 和 <code class="language-plaintext highlighter-rouge">ubuntu240</code>：</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>wsl <span class="nt">--import</span> ubuntu2204 E:<span class="se">\U</span>sers<span class="se">\&lt;</span>your_windows_username&gt;<span class="se">\A</span>ppData<span class="se">\w</span>sl<span class="se">\u</span>buntu2204 E:<span class="se">\U</span>sers<span class="se">\a</span>mara<span class="se">\A</span>ppData<span class="se">\w</span>sl<span class="se">\u</span>buntu2204.tar
+wsl <span class="nt">--import</span> ubuntu2404 E:<span class="se">\U</span>sers<span class="se">\&lt;</span>your_windows_username&gt;<span class="se">\A</span>ppData<span class="se">\w</span>sl<span class="se">\u</span>buntu2404 E:<span class="se">\U</span>sers<span class="se">\a</span>mara<span class="se">\A</span>ppData<span class="se">\w</span>sl<span class="se">\u</span>buntu2404.tar
+</code></pre></div></div>
+
+<p class="notice--info">利用 <code class="language-plaintext highlighter-rouge">wsl --import</code>，你可以将同一个 <code class="language-plaintext highlighter-rouge">.tar</code> 包导入多次并赋予不同名称，从而实现多开同一个发行版。虽然在隔离环境方面类似于 Docker，但 WSL2 原生支持 WSLg，可以直接运行 Linux 图形化应用，这在某些桌面开发场景下比 Docker 更具优势。</p>
+
+<h3 id="33-恢复默认用户">3.3 恢复默认用户</h3>
+
+<p>导入完成并启动新的分发后，你可能会发现默认登录用户变成了 <code class="language-plaintext highlighter-rouge">root</code>。我们需要将其改回你原本的 Linux 用户名。如果你的分发并没有发现此类问题，可以跳过本节。</p>
+
+<p>进入新的 WSL 实例：</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>wsl ~ <span class="nt">-d</span> ubuntu2204
+</code></pre></div></div>
+
+<p>使用 <code class="language-plaintext highlighter-rouge">nano</code> 编辑器修改 WSL 配置文件（如果你更习惯图形化界面，也可以执行 <code class="language-plaintext highlighter-rouge">apt update &amp;&amp; apt install gedit -y</code> 后使用 <code class="language-plaintext highlighter-rouge">gedit</code>）：</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>nano /etc/wsl.conf
+</code></pre></div></div>
+
+<p>在文件中添加或修改以下内容（将 <code class="language-plaintext highlighter-rouge">&lt;your_linux_username&gt;</code> 替换为你在 WSL 中的用户名）：</p>
+
+<div class="language-ini highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nn">[user]</span>
+<span class="py">default</span><span class="p">=</span><span class="s">&lt;your_linux_username&gt;</span>
+</code></pre></div></div>
+
+<p>保存并退出：依次按下 <kbd>Ctrl</kbd> + <kbd>X</kbd>，输入 <kbd>Y</kbd> 确认保存，最后按 <kbd>Enter</kbd> 退出。</p>
+
+<p>退出当前 WSL 会话，并在 Windows 终端中重启改实例使配置生效：</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># 终止实例</span>
+wsl <span class="nt">--terminate</span> ubuntu2204
+<span class="c"># 重新进入验证用户是否恢复正常</span>
+wsl ~ <span class="nt">-d</span> ubuntu2204
+</code></pre></div></div>
+
+<h3 id="34-设置为默认分发并清理善后">3.4 设置为默认分发并清理善后</h3>
+
+<p>如果一切验证无误，将新的实例设置为系统的默认 WSL 分发：</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>wsl <span class="nt">--set-default</span> ubuntu2404
+</code></pre></div></div>
+
+<p>确认无误后，就可以卸载 C 盘中的旧分发了：</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>wsl <span class="nt">--unregister</span> Ubuntu-22.04
+wsl <span class="nt">--unregister</span> Ubuntu-24.04
+</code></pre></div></div>
+
+<p>最后，删除存放在 E 盘的过渡文件 <code class="language-plaintext highlighter-rouge">.tar</code> 压缩包以释放空间。此时再次执行 <code class="language-plaintext highlighter-rouge">wsl -l -v</code>，你应该能看到干净清爽的列表了。</p>
+
+<h2 id="4-总结">4 总结</h2>
+
+<p>迁移安装最大的好处就是能显著减小 C 盘的存储压力。不过，如果你的物理磁盘总容量本身较小（比如只有 512GB 单盘），笔者依然更推荐直接重装系统并只保留一个 C 盘分区，统一管理存储空间。</p>
+
+<p>此外，根据<a href="https://bfmhno3.github.io/tutorial/wsl2-image-migration-guide/">微软官方文档的建议</a>，为了获得最佳的文件 I/O 性能，进行 Linux 相关的开发时，请务必将项目文件直接存储在 WSL 的 Linux 文件系统（如 <code class="language-plaintext highlighter-rouge">~</code> 目录下），而不是跨文件系统存储在 Windows 盘符（如 <code class="language-plaintext highlighter-rouge">/mnt/c</code>）中。</p>
+
+<h2 id="参考资料">参考资料</h2>
+
+<ol>
+  <li><a href="https://superuser.com/questions/1701175/installing-ubuntu-on-mnt-d-with-wsl">Installing Ubuntu on /mnt/d with WSL</a></li>
+  <li><a href="https://github.com/OsbertWang/install-latex-guide-zh-cn">install-latex-guide-zh-cn (附录B.5 迁移 WSL 的安装位置)</a></li>
+</ol>
+
+        
+      </section>
+
+      <footer class="page__meta">
+        
+        
+
+  
+    
+
+
+
+  
+
+  <p class="page__taxonomy">
+    <strong><i class="fas fa-fw fa-tags" aria-hidden="true"></i> Tags: </strong>
+    <span itemprop="keywords">
+    
+      <a href="/tags/ubuntu" class="page__taxonomy-item p-category" rel="tag">Ubuntu</a><span class="sep">, </span>
+    
+      <a href="/tags/windows" class="page__taxonomy-item p-category" rel="tag">Windows</a><span class="sep">, </span>
+    
+      <a href="/tags/wsl2" class="page__taxonomy-item p-category" rel="tag">WSL2</a>
+    
+    </span>
+  </p>
+
+
+  
+
+  
+    
+
+
+
+  
+
+  <p class="page__taxonomy">
+    <strong><i class="fas fa-fw fa-folder-open" aria-hidden="true"></i> Categories: </strong>
+    <span itemprop="keywords">
+    
+      <a href="/categories/tutorial" class="page__taxonomy-item p-category" rel="tag">Tutorial</a>
+    
+    </span>
+  </p>
+
+
+  
+
+
+        
+
+
+  <p class="page__date"><strong><i class="fas fa-fw fa-calendar-alt" aria-hidden="true"></i> Updated:</strong> <time class="dt-published" datetime="2026-03-14T05:16:00+00:00">March 14, 2026</time></p>
+
+
+      </footer>
+
+      
+<section class="page__share">
+  <h4 class="page__share-title">Share on</h4>
+
+  <a href="https://x.com/intent/tweet?text=%E5%A6%82%E4%BD%95%E5%B0%86+WSL2+%E9%95%9C%E5%83%8F%E6%97%A0%E6%8D%9F%E8%BF%81%E7%A7%BB%E8%87%B3%E9%9D%9E%E7%B3%BB%E7%BB%9F%E7%9B%98%20https%3A%2F%2Fbfmhno3.github.io%2Ftutorial%2Fwsl2-image-migration-guide%2F" class="btn btn--x" aria-label="Share on X" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on X">
+    <i class="fab fa-fw fa-x-twitter" aria-hidden="true"></i><span> X</span>
+  </a>
+
+  <a href="https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fbfmhno3.github.io%2Ftutorial%2Fwsl2-image-migration-guide%2F" class="btn btn--facebook" aria-label="Share on Facebook" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on Facebook">
+    <i class="fab fa-fw fa-facebook" aria-hidden="true"></i><span> Facebook</span>
+  </a>
+
+  <a href="https://www.linkedin.com/shareArticle?mini=true&url=https://bfmhno3.github.io/tutorial/wsl2-image-migration-guide/" class="btn btn--linkedin" aria-label="Share on LinkedIn" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on LinkedIn">
+    <i class="fab fa-fw fa-linkedin" aria-hidden="true"></i><span> LinkedIn</span>
+  </a>
+
+  <a href="https://bsky.app/intent/compose?text=%E5%A6%82%E4%BD%95%E5%B0%86+WSL2+%E9%95%9C%E5%83%8F%E6%97%A0%E6%8D%9F%E8%BF%81%E7%A7%BB%E8%87%B3%E9%9D%9E%E7%B3%BB%E7%BB%9F%E7%9B%98%20https%3A%2F%2Fbfmhno3.github.io%2Ftutorial%2Fwsl2-image-migration-guide%2F" class="btn btn--bluesky" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on Bluesky">
+    <i class="fab fa-fw fa-bluesky" aria-hidden="true"></i><span> Bluesky</span>
+  </a>
+</section>
+
+
+      
+
+  <nav class="pagination" aria-label="Post pagination">
+    
+      <a href="/note/stack-in-cpp/" class="pagination--pager" title="C++ 中的 stack">Previous</a>
+    
+    
+      <a href="/note/armv7-a-isa/" class="pagination--pager" title="ARMv7-A 指令体系全解：数据处理、访存、分支与同步">Next</a>
+    
+  </nav>
+
+
+    </div>
+
+    
+      
+        
+<div class="page__comments">
+  
+  
+      <h4 class="page__comments-title">Comments</h4>
+      <section id="giscus-comments"></section>
+    
+</div>
+
+      
+    
+  </article>
+
+  
+  
+    
+
+<div class="page__related">
+  
+  <h2 class="page__related-title">You May Also Enjoy</h2>
+  <div class="grid__wrapper">
+    
+      
+      
+
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc p-name" itemprop="headline">
+      
+        <a class="u-url" href="/note/gnu-assembly/" rel="permalink">GNU 汇编（GAS）通用语法与伪指令指南
+</a>
+      
+    </h2>
+    
+
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-04-05T08:35:00+00:00">April 5, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          11 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt p-summary" itemprop="description">本文不聚焦某一指令集细节，而是系统梳理 GNU Assembler 的通用语法与伪指令体系，涵盖注释规则、操作数方向、寻址模式、宽度后缀、段与符号控制，以及局部标签与宏等实用写法，帮助你在 x86、ARM、RISC-V 间建立统一理解。
+</p>
+  </article>
+</div>
+
+    
+      
+      
+
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc p-name" itemprop="headline">
+      
+        <a class="u-url" href="/note/armv7-a-isa/" rel="permalink">ARMv7-A 指令体系全解：数据处理、访存、分支与同步
+</a>
+      
+    </h2>
+    
+
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-04-05T08:20:00+00:00">April 5, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          16 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt p-summary" itemprop="description">以 I.MX6ULL（ARM Cortex-A7）为背景，从物理本质出发，系统梳理 ARMv7-A 指令集的核心要点：定长 32 位指令结构与条件执行机制、16 个核心寄存器的 AAPCS 调用规范，以及数据处理、内存访问、分支控制、系统状态和原子同步五大类指令的功能与应用场景。
+</p>
+  </article>
+</div>
+
+    
+      
+      
+
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc p-name" itemprop="headline">
+      
+        <a class="u-url" href="/note/stack-in-cpp/" rel="permalink">C++ 中的 stack
+</a>
+      
+    </h2>
+    
+
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-02-19T02:45:00+00:00">February 19, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          10 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt p-summary" itemprop="description">要真正理解栈这种结构，意味着我们要剥离事物表象，追究其最本质的问题，即我们到底面临什么样的数据处理需求，才导致了 “栈” 这种结构的诞生？
+
+我们不需要把栈仅仅看作是教科书上的定义，而是把它看作是为了解决特定时序问题而设计的一种 “受限” 模型。
+
+1. 什么是栈？
+
+从本质上来说，计算机处理任务通常有两种模式：...</p>
+  </article>
+</div>
+
+    
+      
+      
+
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc p-name" itemprop="headline">
+      
+        <a class="u-url" href="/note/process-in-os/" rel="permalink">操作系统中的进程
+</a>
+      
+    </h2>
+    
+
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-01-26T22:10:00+00:00">January 26, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          3 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt p-summary" itemprop="description">在计算机科学的教科书中，关于进程（Process）的定义往往只有冷冰冰的一句话：
+
+
+  进程是程序的一次执行过程。
+
+
+这句话虽然准确，但它掩盖了太多细节。对于初学者而言，这更像是一个黑盒。为什么要有进程？为什么不能直接操作物理地址？所谓的上下文切换到底切换了什么？
+
+要真正理解进程，我们不能只看定义，而必须回...</p>
+  </article>
+</div>
+
+    
+  </div>
+</div>
+
+  
+  
+</div>
+
+      
+    </div>
+
+    
+      <div class="search-content">
+        
+<div class="search-content__inner-wrap">
+<form class="search-content__form" onkeydown="return event.key != 'Enter';" role="search">
+    <label class="sr-only" for="search">
+      Enter your search term...
+    </label>
+    <input type="search" id="search" class="search-input" tabindex="-1" placeholder="Enter your search term...">
+  </form>
+  <div id="results" class="results"></div>
+</div>
+
+      </div>
+    
+
+    <div id="footer" class="page__footer">
+      <footer>
+        <!-- start custom footer snippets -->
+
+<!-- end custom footer snippets -->
+        
+
+
+<div class="page__footer-follow">
+  <ul class="social-icons">
+    
+
+    
+      
+        
+          <li><a href="https://github.com/bfmhno3" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-github" aria-hidden="true"></i> GitHub</a></li>
+        
+      
+        
+          <li><a href="https://gitee.com/bfmhno3" rel="nofollow noopener noreferrer"><i class="fa-solid fa-g" aria-hidden="true"></i> Gitee</a></li>
+        
+      
+        
+          <li><a href="https://www.cnblogs.com/bfmhno3" rel="nofollow noopener noreferrer"><i class="fa-solid fa-blog" aria-hidden="true"></i> cnblogs</a></li>
+        
+      
+        
+          <li><a href="https://blog.csdn.net/B33336" rel="nofollow noopener noreferrer"><i class="fa-solid fa-blog" aria-hidden="true"></i> CSDN</a></li>
+        
+      
+    
+
+    
+      <li><a href="/feed.xml"><i class="fas fa-fw fa-square-rss" aria-hidden="true"></i> Feed</a></li>
+    
+  </ul>
+</div>
+
+
+<div class="page__footer-copyright">© 2026 <a href="https://bfmhno3.github.io">Better Mistakes</a>. Powered by <a href="https://jekyllrb.com" rel="nofollow">Jekyll</a> &amp; <a href="https://mademistakes.com/work/jekyll-themes/minimal-mistakes/" rel="nofollow">Minimal Mistakes</a>.</div>
+
+      </footer>
+    </div>
+
+    
+
+  <script src="/assets/js/main.min.js"></script>
+
+
+
+
+
+<script src="/assets/js/lunr/lunr.min.js"></script>
+<script src="/assets/js/lunr/lunr-store.js"></script>
+<script src="/assets/js/lunr/lunr-en.js"></script>
+
+
+
+
+
+  <!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-VS5B3CR1M6"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-VS5B3CR1M6', { 'anonymize_ip': false});
+</script>
+
+
+
+
+
+
+
+    <script>
+  'use strict';
+
+  (function () {
+    var commentContainer = document.querySelector('#giscus-comments');
+
+    if (!commentContainer) {
+      return;
+    }
+
+    var script = document.createElement('script');
+
+    script.setAttribute('src', 'https://giscus.app/client.js');
+    script.setAttribute('data-repo', 'bfmhno3/bfmhno3.github.io');
+    script.setAttribute('data-repo-id', 'R_kgDOQCQGxg');
+    script.setAttribute('data-category', 'General');
+    script.setAttribute('data-category-id', 'DIC_kwDOQCQGxs4CzG3a');
+    script.setAttribute('data-mapping', 'pathname');
+    script.setAttribute('data-strict', '0');
+    script.setAttribute('data-reactions-enabled', '1');
+    script.setAttribute('data-emit-metadata', '0');
+    script.setAttribute('data-input-position', 'bottom');
+    script.setAttribute('data-theme', 'transparent_dark');
+    script.setAttribute('data-lang',  'en');
+    
+    script.setAttribute('data-loading', 'lazy');
+    
+    script.setAttribute('crossorigin', 'anonymous');
+
+    script.setAttribute('async', '');
+
+    commentContainer.appendChild(script);
+  })();
+</script>
+
+  
+
+
+
+
+  </body>
+</html>
