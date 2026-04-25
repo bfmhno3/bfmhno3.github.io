@@ -1,3 +1,4 @@
+---
 title: "Tmux 使用笔记"
 date: 2026-04-25 21:55:00 +08:00
 excerpt: "理解 tmux 的 C/S 架构和 Session、Window、Pane 的三层模型，快速掌握日常工作中最常用的快捷键，提升远程开发效率。"
