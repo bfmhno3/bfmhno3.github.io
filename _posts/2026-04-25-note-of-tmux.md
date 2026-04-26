@@ -52,7 +52,7 @@ tags:
 2. **Window（窗口）**：Session 里面的 “标签页”。类似于浏览器的 Tab，一个屏幕只能显示一个 Window。
 3. **Pane（窗格）**：Window 里的 “分屏”。你可以把一个 Window 切分成左边看代码、右边看日志。
 
-```mermaid
+```mermaid!
 graph TD
   Server["🖥️ Tmux Server<br/>(后台进程，永不宕机)"]
     
