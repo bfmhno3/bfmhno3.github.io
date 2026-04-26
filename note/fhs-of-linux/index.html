@@ -1,0 +1,1544 @@
+<!DOCTYPE html>
+<!--
+  Minimal Mistakes Jekyll Theme 4.28.0 by Michael Rose
+  Copyright 2013-2026 Michael Rose - mademistakes.com | @mmistakes
+  Copyright 2024-2026 iBug - ibugone.com | @iBug
+  Free for personal and commercial use under the MIT license
+  https://github.com/mmistakes/minimal-mistakes/blob/master/LICENSE
+--><html lang="en-US" class="no-js">
+  <head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+<meta charset="utf-8">
+
+
+<!-- begin _includes/seo.html --><title>从 FHS 到 Linux 运行时目录体系 - Better Mistakes</title>
+<meta name="description" content="从 FHS 的官方目录分层出发，顺着静态与可变、共享与本机专属这两条线，一路理解 Linux 根目录如何演化为今天庞大的运行时目录体系。">
+
+
+  <meta name="author" content="bfmhno3">
+  
+  <meta property="article:author" content="bfmhno3">
+  
+
+
+<meta property="og:type" content="article">
+<meta property="og:locale" content="en_US">
+<meta property="og:site_name" content="Better Mistakes">
+<meta property="og:title" content="从 FHS 到 Linux 运行时目录体系">
+<meta property="og:url" content="https://bfmhno3.github.io/note/fhs-of-linux/">
+
+
+  <meta property="og:description" content="从 FHS 的官方目录分层出发，顺着静态与可变、共享与本机专属这两条线，一路理解 Linux 根目录如何演化为今天庞大的运行时目录体系。">
+
+
+
+  <meta property="og:image" content="https://bfmhno3.github.io/assets/images/avatar.jpg">
+  
+
+
+
+
+
+
+
+  <meta property="article:published_time" content="2026-04-21T07:00:00+00:00">
+
+
+
+
+
+  
+
+  
+
+
+<link rel="canonical" href="https://bfmhno3.github.io/note/fhs-of-linux/">
+
+
+
+
+
+
+
+  <meta name="google-site-verification" content="UUnU8OnGqO_2FFdhrv7eEABM5p_cNPhM4Se6HB1KFSk">
+
+
+  <meta name="msvalidate.01" content="FC3BA97765A3C90F8CA771F70AE34FB8">
+
+
+
+
+
+<!-- end _includes/seo.html -->
+
+
+
+  <link href="/feed.xml" type="application/atom+xml" rel="alternate" title="Better Mistakes Feed">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script>
+  document.documentElement.className = document.documentElement.className.replace(/\bno-js\b/g, '') + ' js ';
+  window.enable_copy_code_button = true;
+</script>
+
+<!-- For all browsers -->
+<link rel="stylesheet" href="/assets/css/main.css">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@latest/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@latest/css/all.min.css"></noscript>
+
+
+
+    <link rel="icon" type="image/png" href="/assets/images/favicon/favicon-96x96.png" sizes="96x96">
+<link rel="icon" type="image/svg+xml" href="/assets/images/favicon/favicon.svg">
+<link rel="shortcut icon" href="/assets/images/favicon/favicon.ico">
+<link rel="apple-touch-icon" sizes="180x180" href="/assets/images/favicon/apple-touch-icon.png">
+<link rel="manifest" href="/assets/images/favicon/site.webmanifest">
+  </head>
+
+  <body class="layout--single" dir="ltr">
+    
+<nav class="skip-links" aria-label="Skip links">
+  <ul>
+    <li><a href="#site-nav" class="screen-reader-shortcut">Skip to primary navigation</a></li>
+    <li><a href="#main" class="screen-reader-shortcut">Skip to content</a></li>
+    <li><a href="#footer" class="screen-reader-shortcut">Skip to footer</a></li>
+  </ul>
+</nav>
+
+    
+
+
+<div class="masthead">
+  <div class="masthead__inner-wrap">
+    <div class="masthead__menu">
+      <nav id="site-nav" class="greedy-nav" aria-label="Primary navigation">
+        
+          <a class="site-logo" href="/"><img src="/assets/images/logo.svg" alt="Better Mistakes"></a>
+        
+        <a class="site-title" href="/">
+          Better Mistakes
+          <span class="site-subtitle">Trial.Error.Iteration.</span>
+        </a>
+        <ul class="visible-links">
+<li class="masthead__menu-item">
+              <a href="/posts/">Posts</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/categories/">Categories</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/tags/">Tags</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/portfolio/">Portfolio</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/about/">About</a>
+            </li>
+</ul>
+        
+        <button class="search__toggle" type="button">
+          <span class="visually-hidden">Toggle search</span>
+          <i class="fas fa-search"></i>
+        </button>
+        
+        <button class="greedy-nav__toggle hidden" type="button">
+          <span class="visually-hidden">Toggle menu</span>
+          <div class="navicon"></div>
+        </button>
+        <ul class="hidden-links hidden"></ul>
+      </nav>
+    </div>
+  </div>
+</div>
+
+
+    <div class="initial-content">
+      
+
+
+
+
+
+
+
+<div id="main" role="main">
+  
+
+  <div class="sidebar sticky">
+  
+
+
+
+<div itemscope itemtype="https://schema.org/Person" class="h-card">
+
+  
+    <div class="author__avatar">
+      <a href="https://bfmhno3.github.io/">
+        <img src="/assets/images/avatar.jpg" alt="bfmhno3" itemprop="image" class="u-photo">
+      </a>
+    </div>
+  
+
+  <div class="author__content">
+    <h3 class="author__name p-name" itemprop="name">
+      <a class="u-url" rel="me" href="https://bfmhno3.github.io/" itemprop="url">bfmhno3</a>
+    </h3>
+    
+      <div class="author__bio p-note" itemprop="description">
+        <p>Third-year university student majoring in energy engineering. Exploring the world of code and mathematics.</p>
+
+      </div>
+    
+  </div>
+
+  <div class="author__urls-wrapper">
+    <button class="btn btn--inverse">Follow</button>
+    <ul class="author__urls social-icons">
+      
+
+      
+        
+          
+            <li><a href="https://github.com/bfmhno3" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fab fa-fw fa-github" aria-hidden="true"></i><span class="label">GitHub</span></a></li>
+          
+        
+          
+            <li><a href="https://gitee.com/bfmhno3" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fa-solid fa-g" aria-hidden="true"></i><span class="label">Gitee</span></a></li>
+          
+        
+          
+            <li><a href="https://www.cnblogs.com/bfmhno3" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fa-solid fa-blog" aria-hidden="true"></i><span class="label">cnblogs</span></a></li>
+          
+        
+          
+            <li><a href="https://blog.csdn.net/B33336" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fa-solid fa-blog" aria-hidden="true"></i><span class="label">CSDN</span></a></li>
+          
+        
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      <!--
+  <li>
+    <a href="http://link-to-whatever-social-network.com/user/" itemprop="sameAs" rel="nofollow noopener noreferrer me">
+      <i class="fas fa-fw" aria-hidden="true"></i> Custom Social Profile Link
+    </a>
+  </li>
+-->
+    </ul>
+  </div>
+</div>
+
+  
+  
+  </div>
+
+
+
+  <article class="page h-entry" itemscope itemtype="https://schema.org/CreativeWork">
+    <meta itemprop="headline" content="从 FHS 到 Linux 运行时目录体系">
+    <meta itemprop="description" content="从 FHS 的官方目录分层出发，顺着静态与可变、共享与本机专属这两条线，一路理解 Linux 根目录如何演化为今天庞大的运行时目录体系。">
+    <meta itemprop="datePublished" content="2026-04-21T07:00:00+00:00">
+    
+
+    <div class="page__inner-wrap">
+      
+        <header>
+          <h1 id="page-title" class="page__title p-name" itemprop="headline">
+            <a href="https://bfmhno3.github.io/note/fhs-of-linux/" itemprop="url">从 FHS 到 Linux 运行时目录体系
+</a>
+          </h1>
+          
+
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-04-21T07:00:00+00:00">April 21, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-clock" aria-hidden="true"></i>
+        
+          13 minute read
+        
+      </span>
+    
+  </p>
+
+
+        </header>
+      
+
+      <section class="page__content e-content" itemprop="text">
+        
+          <aside class="sidebar__right sticky">
+            <nav class="toc" aria-label="Table of contents">
+              <header><h4 class="nav__title">
+<i class="fas fa-file-alt"></i> On this page</h4></header>
+              <ul class="toc__menu">
+<li><a href="#%E6%8E%A8%E6%BC%94%E8%B5%B7%E7%82%B9%E6%88%91%E4%BB%AC%E5%88%B0%E5%BA%95%E8%A6%81%E5%AD%98%E5%82%A8%E4%BB%80%E4%B9%88">推演起点：我们到底要存储什么？</a></li>
+<li>
+<a href="#%E7%9B%AE%E5%BD%95%E6%8B%86%E8%A7%A3">目录拆解</a><ul>
+<li><a href="#1-%E7%B3%BB%E7%BB%9F%E7%9A%84-%E5%9C%B0%E5%9F%BA-%E4%B8%8E-%E9%AA%A8%E6%9E%B6%E4%B8%8D%E5%8F%AF%E5%85%B1%E4%BA%AB--%E9%9D%99%E6%80%81">1. 系统的 “地基” 与 “骨架”（不可共享 / 静态）</a></li>
+<li><a href="#2-%E4%B8%80%E5%88%87%E7%9A%86%E6%96%87%E4%BB%B6-%E7%9A%84%E8%99%9A%E6%8B%9F%E6%8A%BD%E8%B1%A1%E5%B1%82%E4%B8%8D%E5%8F%AF%E5%85%B1%E4%BA%AB--%E5%AE%9E%E6%97%B6%E5%8A%A8%E6%80%81">2. “一切皆文件” 的虚拟抽象层（不可共享 / 实时动态）</a></li>
+<li>
+<a href="#3-%E7%B3%BB%E7%BB%9F%E7%9A%84-%E6%89%A9%E5%B1%95%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E5%8F%AF%E5%85%B1%E4%BA%AB--%E9%9D%99%E6%80%81">3. 系统的 “扩展应用程序”（可共享 / 静态）</a><ul><li><a href="#usr">/usr</a></li></ul>
+</li>
+<li>
+<a href="#4-%E7%B3%BB%E7%BB%9F%E7%9A%84%E6%96%B0%E9%99%88%E4%BB%A3%E8%B0%A2%E4%B8%8E%E7%8A%B6%E6%80%81%E8%AE%B0%E5%BD%95%E4%B8%8D%E5%8F%AF%E5%85%B1%E4%BA%AB--%E5%8F%AF%E5%8F%98">4. 系统的“新陈代谢”与状态记录（不可共享 / 可变）</a><ul><li><a href="#var">/var</a></li></ul>
+</li>
+<li><a href="#5-%E7%94%A8%E6%88%B7%E4%B8%8E%E4%B8%B4%E6%97%B6%E6%95%B0%E6%8D%AE%E5%8F%AF%E5%8F%98">5. 用户与临时数据（可变）</a></li>
+<li><a href="#6-%E9%A2%9D%E5%A4%96%E4%B8%8E%E5%A4%96%E8%BD%BD%E8%B5%84%E6%BA%90">6. 额外与外载资源</a></li>
+</ul>
+</li>
+<li><a href="#%E7%8E%B0%E4%BB%A3-linux-%E7%9A%84%E5%8F%98%E5%8C%96">现代 Linux 的变化</a></li>
+<li>
+<a href="#%E8%A1%A5%E5%85%A8-fhs-%E6%8B%BC%E5%9B%BE%E4%BB%8E%E7%B3%BB%E7%BB%9F%E5%BC%80%E5%8F%91%E5%92%8C%E7%BC%96%E8%AF%91%E9%93%BE%E8%B7%AF%E8%A7%86%E8%A7%92%E5%86%8D%E7%9C%8B%E4%B8%80%E9%81%8D">补全 FHS 拼图：从系统开发和编译链路视角再看一遍</a><ul>
+<li><a href="#1-%E6%B7%B1%E5%BA%A6%E6%8B%86%E8%A7%A3-usr-%E5%AD%90%E7%9B%AE%E5%BD%95%E5%BC%80%E5%8F%91%E8%80%85%E7%9A%84%E4%B8%BB%E6%88%98%E5%9C%BA">1. 深度拆解 /usr 子目录（开发者的主战场）</a></li>
+<li><a href="#2-%E7%8E%B0%E4%BB%A3-linux-%E7%9A%84%E5%86%85%E5%AD%98%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%E8%A1%A5%E5%85%85">2. 现代 Linux 的内存文件系统补充</a></li>
+<li><a href="#3-%E9%A9%B1%E5%8A%A8%E4%B8%8E%E6%9C%8D%E5%8A%A1%E7%9A%84%E7%89%B9%E5%AE%9A%E7%9B%AE%E5%BD%95">3. 驱动与服务的特定目录</a></li>
+<li><a href="#4-%E7%81%BE%E9%9A%BE%E6%81%A2%E5%A4%8D%E6%9C%BA%E5%88%B6">4. 灾难恢复机制</a></li>
+<li><a href="#%E5%85%A8%E6%99%AF%E8%A7%86%E5%9B%BEfirst-principles-%E7%9F%A9%E9%98%B5%E6%9C%80%E7%BB%88%E7%89%88">全景视图（First Principles 矩阵最终版）</a></li>
+</ul>
+</li>
+<li>
+<a href="#%E4%BB%8E-fhs-%E5%88%B0-linux-%E8%BF%90%E8%A1%8C%E6%97%B6%E7%9B%AE%E5%BD%95%E4%BD%93%E7%B3%BB">从 FHS 到 Linux 运行时目录体系</a><ul>
+<li>
+<a href="#%E5%B5%8C%E5%85%A5%E5%BC%8F%E4%B8%8E%E5%BA%95%E5%B1%82%E7%A1%AC%E4%BB%B6%E5%BC%80%E5%8F%91">嵌入式与底层硬件开发</a><ul>
+<li><a href="#1-%E7%A1%AC%E4%BB%B6%E6%8F%8F%E8%BF%B0%E7%9A%84%E7%9C%9F%E7%90%86%E4%B9%8B%E6%BA%90sysfirmwaredevicetree">1. 硬件描述的真理之源：/sys/firmware/devicetree</a></li>
+<li><a href="#2-%E7%94%A8%E6%88%B7%E7%A9%BA%E9%97%B4%E7%9A%84%E7%A1%AC%E4%BB%B6%E6%93%8D%E6%8E%A7%E9%9D%A2%E6%9D%BFsysclass">2. 用户空间的硬件操控面板：/sys/class/</a></li>
+<li><a href="#3-%E4%BA%A4%E5%8F%89%E7%BC%96%E8%AF%91%E4%B8%8E%E6%A0%B9%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%E6%9E%84%E5%BB%BAsysroot">3. 交叉编译与根文件系统构建（Sysroot）</a></li>
+<li><a href="#4-%E6%B7%B1%E5%BA%A6%E5%AE%9A%E5%88%B6%E7%B3%BB%E7%BB%9F%E7%9A%84%E5%8F%98%E5%BC%82%E4%BB%A5-openwrtimmortalwrt-%E4%B8%BA%E4%BE%8B">4. 深度定制系统的变异：以 OpenWrt/ImmortalWrt 为例</a></li>
+<li><a href="#5-%E6%9E%B6%E6%9E%84%E7%9A%84%E5%A6%A5%E5%8D%8Flib32-lib64-libx86_64-linux-gnu">5. 架构的妥协：/lib32, /lib64, /lib/x86_64-linux-gnu</a></li>
+</ul>
+</li>
+<li>
+<a href="#%E4%BA%91%E5%8E%9F%E7%94%9F%E4%B8%8E%E7%8E%B0%E4%BB%A3%E6%9E%B6%E6%9E%84">云原生与现代架构</a><ul>
+<li><a href="#1-%E5%AE%B9%E5%99%A8%E4%B8%8E%E8%B5%84%E6%BA%90%E8%B0%83%E5%BA%A6%E7%9A%84%E5%9F%BA%E7%9F%B3sysfscgroup">1. 容器与资源调度的基石：/sys/fs/cgroup</a></li>
+<li><a href="#2-%E6%89%93%E7%A0%B4%E5%85%B1%E4%BA%AB%E6%B3%95%E5%88%99%E7%9A%84%E4%BE%9D%E8%B5%96%E6%B2%99%E7%9B%92snap-%E4%B8%8E-docker-%E8%81%94%E5%90%88%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F">2. 打破“共享”法则的依赖沙盒：/snap 与 Docker 联合文件系统</a></li>
+<li><a href="#3-%E4%B8%8D%E5%8F%AF%E5%8F%98%E7%B3%BB%E7%BB%9F-%E7%9A%84%E6%BF%80%E8%BF%9B%E5%AE%9E%E9%AA%8Cnixstore-%E4%B8%8E-ostree">3. “不可变系统” 的激进实验：/nix/store 与 /ostree</a></li>
+<li><a href="#4-%E5%BD%BB%E5%BA%95%E6%8A%9B%E5%BC%83-gnu-%E5%B7%A5%E5%85%B7%E9%93%BE%E7%9A%84%E5%8F%98%E7%A7%8Dandroid-%E7%9A%84%E7%9B%AE%E5%BD%95%E4%BD%93%E7%B3%BB">4. 彻底抛弃 GNU 工具链的变种：Android 的目录体系</a></li>
+<li><a href="#5-%E4%B8%BB%E6%9D%BF%E5%9B%BA%E4%BB%B6%E7%9A%84%E7%89%A9%E7%90%86%E6%A1%A5%E6%A2%81bootefi">5. 主板固件的物理桥梁：/boot/efi</a></li>
+</ul>
+</li>
+<li>
+<a href="#%E6%A1%8C%E9%9D%A2%E8%B7%A8%E7%B3%BB%E7%BB%9F%E4%B8%8E%E4%BA%91%E7%AB%AF">桌面、跨系统与云端</a><ul>
+<li><a href="#1-%E6%A1%8C%E9%9D%A2%E7%BA%A7%E5%BA%94%E7%94%A8%E7%9A%84%E6%95%B0%E6%8D%AE%E5%BD%92%E5%AE%BFxdg-base-directory-%E8%A7%84%E8%8C%83">1. 桌面级应用的数据归宿：XDG Base Directory 规范</a></li>
+<li><a href="#2-%E8%B7%A8%E7%B3%BB%E7%BB%9F%E8%9E%8D%E5%90%88%E7%9A%84%E9%AD%94%E6%B3%95%E6%A1%A5%E6%A2%81wsl2-%E4%B8%8E-9p-%E5%8D%8F%E8%AE%AE%E6%8C%82%E8%BD%BD">2. 跨系统融合的魔法桥梁：WSL2 与 9P 协议挂载</a></li>
+<li><a href="#3-%E4%BA%91%E7%AB%AF%E5%AE%9E%E4%BE%8B%E7%9A%84%E8%AF%9E%E7%94%9F%E5%8D%B0%E8%AE%B0cloud-init-%E4%B8%8E-varlibcloud">3. 云端实例的诞生印记：cloud-init 与 /var/lib/cloud</a></li>
+</ul>
+</li>
+<li>
+<a href="#%E5%86%85%E6%A0%B8%E6%9C%BA%E5%88%B6%E4%B8%8E%E5%BA%95%E5%B1%82%E8%B0%83%E8%AF%95">内核机制与底层调试</a><ul>
+<li><a href="#1-%E8%B7%AF%E7%94%B1%E5%99%A8%E4%B8%8D%E6%AD%BB%E4%B9%8B%E8%BA%AB%E7%9A%84%E7%A7%98%E5%AF%86rom-%E4%B8%8E-overlay">1. 路由器“不死之身”的秘密：/rom 与 /overlay</a></li>
+<li><a href="#2-%E8%A3%B8%E6%9C%BA%E9%97%AA%E5%AD%98%E7%9A%84%E7%9C%9F%E9%9D%A2%E7%9B%AEdevmtd-%E4%B8%8E-devmtdblock">2. 裸机闪存的真面目：/dev/mtd 与 /dev/mtdblock</a></li>
+<li><a href="#3-%E5%AE%B9%E5%99%A8%E8%A7%86%E7%95%8C%E7%9A%84%E7%89%A9%E7%90%86%E8%BE%B9%E7%95%8Cprocpidns">3. 容器“视界”的物理边界：/proc/[pid]/ns/</a></li>
+<li><a href="#4-%E5%86%85%E6%A0%B8%E5%BC%80%E5%8F%91%E8%80%85%E7%9A%84-%E5%90%8E%E9%97%A8syskerneldebug-debugfs">4. 内核开发者的 “后门”：/sys/kernel/debug/ (DebugFS)</a></li>
+<li><a href="#5-%E6%AD%BB%E4%BA%A1%E7%9E%AC%E9%97%B4%E7%9A%84%E9%BB%91%E5%8C%A3%E5%AD%90sysfspstore-persistent-storage">5. 死亡瞬间的黑匣子：/sys/fs/pstore (Persistent Storage)</a></li>
+<li><a href="#6-%E7%8E%B0%E4%BB%A3%E5%86%85%E6%A0%B8%E7%9A%84%E4%B8%8A%E5%B8%9D%E8%A7%86%E8%A7%92sysfsbpf-ebpf-maps">6. 现代内核的上帝视角：/sys/fs/bpf (eBPF Maps)</a></li>
+<li><a href="#7-%E5%BC%BA%E5%88%B6%E8%AE%BF%E9%97%AE%E6%8E%A7%E5%88%B6%E7%9A%84%E7%BB%88%E6%9E%81%E7%9B%91%E7%8B%B1sysfsselinux-%E6%88%96-smacksapparmor">7. 强制访问控制的终极监狱：/sys/fs/selinux (或 smacks/apparmor)</a></li>
+<li><a href="#8-%E5%B9%BD%E7%81%B5%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9Fnet-%E6%88%96-misc-autofs">8. 幽灵文件系统：/net 或 /misc (AutoFS)</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#%E7%9C%9F%E6%AD%A3%E7%9A%84%E7%BB%9D%E5%AF%B9%E5%BA%95%E9%83%A8vfs-virtual-file-system">真正的绝对底部：VFS (Virtual File System)</a></li>
+</ul>
+            </nav>
+          </aside>
+        
+        <p>要真正理解 Linux 的 <strong>FHS (Filesystem Hierarchy Standard，文件系统层次结构标准)</strong>，不能只靠死记硬背“哪个目录放什么文件”。更有效的办法，是剥开表象，回到操作系统设计的起点，看看在构建一个多用户、网络化、可扩展的系统时，我们究竟面临了哪些根本问题，以及 FHS 又是如何作为一套“解决框架”出现的。</p>
+
+<p>不过，本文并不准备停在 FHS 的条文本身。更准确地说，行文会分成两步：先把 <strong>FHS 作为规范</strong> 讲明白，再顺着这套规范继续往外延伸，看看现代 Linux 是如何在这棵目录树上接入运行时机制、容器隔离、嵌入式约束和内核接口的。也正因为如此，标题与其叫“Linux 的 FHS”，不如更直接一点，叫“从 FHS 到 Linux 运行时目录体系”。</p>
+
+<h2 id="推演起点我们到底要存储什么">推演起点：我们到底要存储什么？</h2>
+
+<p>假设你从零开始设计一个操作系统。系统需要运行，用户需要存数据，程序需要产生日志。如果你把所有东西都塞进一个大文件夹里，系统马上就会面临灾难：</p>
+
+<ol>
+  <li>
+<strong>权限混乱</strong>： 普通用户可能会不小心删掉系统的核心启动文件。</li>
+  <li>
+<strong>状态混淆</strong>： 你无法区分哪些文件是只读的系统核心，哪些是随时变动的日志，导致备份极其困难。</li>
+  <li>
+<strong>共享灾难</strong>： 如果你想在局域网内让多台机器共享一套程序，你无法分离 “机器特有的配置” 和 “可以共享的程序本体”。</li>
+</ol>
+
+<p>因此，FHS 的本质，是基于<strong>数据属性的二维分类矩阵</strong>。Linux 的文件系统布局，本质上就是围绕着这两个核心维度展开的：</p>
+
+<p><strong>维度一：是否可变 (Static vs. Variable)</strong></p>
+
+<ul>
+  <li>
+<strong>静态数据 (Static)：</strong> 系统运行期间不需要修改的文件（如可执行程序、库文件、默认系统配置）。</li>
+  <li>
+<strong>可变数据 (Variable)：</strong> 系统运行期间会不断变化的文件（如日志、用户数据、临时文件、缓存）。</li>
+</ul>
+
+<p><strong>维度二：是否可共享 (Shareable vs. Unshareable)</strong></p>
+
+<ul>
+  <li>
+<strong>可共享 (Shareable)：</strong> 可以在多台主机之间共享的数据（如二进制应用程序、用户主目录）。</li>
+  <li>
+<strong>不可共享 (Unshareable)：</strong> 特定于某台主机的本地数据（如本机的网络配置、设备节点、本机的运行状态）。</li>
+</ul>
+
+<p>通过这个 2x2 的矩阵，FHS 建立了一个严密的逻辑体系。</p>
+
+<h2 id="目录拆解">目录拆解</h2>
+
+<p>有了上面这两个维度，再回头看 Linux 根目录 <code class="language-plaintext highlighter-rouge">/</code> 下的各个分支，很多事情就会变得顺理成章。</p>
+
+<h3 id="1-系统的-地基-与-骨架不可共享--静态">1. 系统的 “地基” 与 “骨架”（不可共享 / 静态）</h3>
+
+<p>系统要能够开机，或者在崩溃时能够进入单用户模式进行急救，它需要一个自给自足的最基础环境。</p>
+
+<ul>
+  <li>
+<strong><code class="language-plaintext highlighter-rouge">/boot</code> (启动引导)：</strong> 系统启动的第一步。这里存放着内核（vmlinuz）和引导程序（GRUB）。它是极其特殊的不可共享静态数据。</li>
+  <li>
+<strong><code class="language-plaintext highlighter-rouge">/bin</code> (Basic Binaries)：</strong> 系统最核心、最基础的用户级命令（如 <code class="language-plaintext highlighter-rouge">ls</code>, <code class="language-plaintext highlighter-rouge">cp</code>, <code class="language-plaintext highlighter-rouge">cat</code>）。<strong>原则：</strong> 即使所有其他分区（如 <code class="language-plaintext highlighter-rouge">/usr</code>）都损坏或未挂载，这里的命令也必须能用，以保证管理员能修复系统。</li>
+  <li>
+<strong><code class="language-plaintext highlighter-rouge">/sbin</code> (System Binaries)：</strong> 系统级的核心命令（如 <code class="language-plaintext highlighter-rouge">fdisk</code>, <code class="language-plaintext highlighter-rouge">reboot</code>, <code class="language-plaintext highlighter-rouge">ip</code>）。与 <code class="language-plaintext highlighter-rouge">/bin</code> 的区别在于，这里的工具主要是给 <strong>Root（超级用户）</strong> 用的。</li>
+  <li>
+<strong><code class="language-plaintext highlighter-rouge">/etc</code> (Host-specific system configuration)：</strong> 按照 FHS 的官方说法，这里是 <strong>host-specific system configuration</strong>，也就是“特定于本机的系统配置”。你可以把它理解为本机的“规则字典”。<strong>原则：</strong> 这里面应该全是配置，而不应该放可执行二进制文件。</li>
+  <li>
+<strong><code class="language-plaintext highlighter-rouge">/lib</code> &amp; <code class="language-plaintext highlighter-rouge">/lib64</code> (Libraries)：</strong> <code class="language-plaintext highlighter-rouge">/bin</code> 和 <code class="language-plaintext highlighter-rouge">/sbin</code> 中的基础命令在运行时需要调用的共享库（C语言库等），以及内核模块。相当于程序的“公共零件库”。</li>
+</ul>
+
+<h3 id="2-一切皆文件-的虚拟抽象层不可共享--实时动态">2. “一切皆文件” 的虚拟抽象层（不可共享 / 实时动态）</h3>
+
+<p>Linux 继承了 UNIX 最伟大的哲学：“一切皆文件”。硬件设备和系统运行时的内存状态，都被抽象成了文件，方便统一管理。这些目录在硬盘上往往是不占空间的（存在于内存中）。</p>
+
+<ul>
+  <li>
+<strong><code class="language-plaintext highlighter-rouge">/dev</code> (Devices)：</strong> 所有的硬件设备（硬盘、键盘、鼠标、终端）都在这里有一个映射文件。对这些文件的读写，就是对硬件的读写。</li>
+  <li>
+<strong><code class="language-plaintext highlighter-rouge">/proc</code> (Processes)：</strong> 内核的“监视器”。里面全是虚拟文件，记录了当前运行的进程信息和内核状态。比如查 CPU 信息就是去读 <code class="language-plaintext highlighter-rouge">/proc/cpuinfo</code>。</li>
+  <li>
+<strong><code class="language-plaintext highlighter-rouge">/sys</code> (Sysfs)：</strong> 对 <code class="language-plaintext highlighter-rouge">/proc</code> 的现代化补充，更结构化地展示内核、设备驱动和总线的信息。</li>
+</ul>
+
+<h3 id="3-系统的-扩展应用程序可共享--静态">3. 系统的 “扩展应用程序”（可共享 / 静态）</h3>
+
+<p>当系统完成了基础启动，我们需要安装大量的第三方软件（办公软件、开发工具等）。这些软件体积庞大，且在不同主机间是<strong>可以共享</strong>的。</p>
+
+<h4 id="usr"><code class="language-plaintext highlighter-rouge">/usr</code></h4>
+
+<p><strong><code class="language-plaintext highlighter-rouge">/usr</code>：</strong> FHS 对它的定位，本质上是系统中 <strong>shareable, read-only data</strong> 的主要存放地。你可以把它理解为系统的“第二层级”：基础系统先靠 <code class="language-plaintext highlighter-rouge">/bin</code>、<code class="language-plaintext highlighter-rouge">/sbin</code>、<code class="language-plaintext highlighter-rouge">/lib</code> 站起来，而更完整、更庞大的用户空间资源则放在 <code class="language-plaintext highlighter-rouge">/usr</code> 下。</p>
+
+<ul>
+  <li>
+<code class="language-plaintext highlighter-rouge">/usr/bin</code> 和 <code class="language-plaintext highlighter-rouge">/usr/sbin</code>：绝大多数非核心的用户和管理员命令。</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">/usr/lib</code>：非核心的库文件。</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">/usr/local</code>：系统管理员本地手动编译安装的软件存放地（不受包管理器如 apt/yum 管辖，保证了系统的纯净）。</li>
+</ul>
+
+<h3 id="4-系统的新陈代谢与状态记录不可共享--可变">4. 系统的“新陈代谢”与状态记录（不可共享 / 可变）</h3>
+
+<p>系统在运行过程中，会产生大量的过程数据和历史记录。</p>
+
+<h4 id="var"><code class="language-plaintext highlighter-rouge">/var</code></h4>
+
+<p><strong><code class="language-plaintext highlighter-rouge">/var</code> (Variable)：</strong> 它是系统的“消化系统”。<strong>原则：</strong> 任何大小会随时间不断变化的数据，都必须放在这里，绝对不能放在只读的 <code class="language-plaintext highlighter-rouge">/usr</code> 下。</p>
+
+<ul>
+  <li>
+<code class="language-plaintext highlighter-rouge">/var/log</code>：系统和程序的日志（排错必备）。</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">/var/cache</code>：应用程序缓存。</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">/var/spool</code>：队列数据（如打印队列、未发送的邮件）。</li>
+</ul>
+
+<h3 id="5-用户与临时数据可变">5. 用户与临时数据（可变）</h3>
+
+<p>隔离系统和用户，是保障系统安全的基石。</p>
+
+<ul>
+  <li>
+<strong><code class="language-plaintext highlighter-rouge">/home</code>：</strong> 普通用户的“私人领地”。无论系统怎么重装或升级，只要单独挂载 <code class="language-plaintext highlighter-rouge">/home</code> 分区，用户的数据就不会丢失。</li>
+  <li>
+<strong><code class="language-plaintext highlighter-rouge">/root</code>：</strong> 超级用户 root 的主目录。为什么不放在 <code class="language-plaintext highlighter-rouge">/home/root</code>？因为如果 <code class="language-plaintext highlighter-rouge">/home</code> 所在的磁盘挂载失败，root 仍然需要登录系统进行修复。</li>
+  <li>
+<strong><code class="language-plaintext highlighter-rouge">/tmp</code> (Temporary)：</strong> 系统的“草稿纸”。任何程序或用户都可以把临时文件扔在这里。系统重启时（或定期），这里的数据会被自动清空。</li>
+</ul>
+
+<h3 id="6-额外与外载资源">6. 额外与外载资源</h3>
+<ul>
+  <li>
+<strong><code class="language-plaintext highlighter-rouge">/opt</code> (Optional)：</strong> 附加的应用程序软件包。通常用于大型闭源软件或第三方商业软件（如 Google Chrome, Oracle 数据库），它们喜欢把所有文件（二进制、库、配置）打包放在自己的一个独立目录下，互不干扰。</li>
+  <li>
+<strong><code class="language-plaintext highlighter-rouge">/mnt</code> (Mount) / <code class="language-plaintext highlighter-rouge">/media</code>：</strong> 挂载点。<code class="language-plaintext highlighter-rouge">/mnt</code> 通常用于管理员手动临时挂载额外的文件系统，而 <code class="language-plaintext highlighter-rouge">/media</code> 通常用于系统自动挂载的可移动介质（如 U盘、光驱）。</li>
+</ul>
+
+<h2 id="现代-linux-的变化">现代 Linux 的变化</h2>
+
+<p>随着技术的发展，早期的某些约束（比如硬盘太小，不得不把核心 <code class="language-plaintext highlighter-rouge">/bin</code> 放在一个小根分区，庞大的 <code class="language-plaintext highlighter-rouge">/usr/bin</code> 放在另一个大分区）已经不复存在。</p>
+
+<p>现在的 Linux 初始化流程（通过 <code class="language-plaintext highlighter-rouge">initramfs</code>）可以在挂载真正的根目录之前，就把需要的东西加载进内存。因此，现代发行版（如 Arch, Fedora, Ubuntu）正在推行 <strong>“usr-merge”（<code class="language-plaintext highlighter-rouge">/usr</code> 合并）</strong>：</p>
+
+<p class="notice--info">现在的 <code class="language-plaintext highlighter-rouge">/bin</code>, <code class="language-plaintext highlighter-rouge">/sbin</code>, <code class="language-plaintext highlighter-rouge">/lib</code> 往往只是指向 <code class="language-plaintext highlighter-rouge">/usr/bin</code>, <code class="language-plaintext highlighter-rouge">/usr/sbin</code>, <code class="language-plaintext highlighter-rouge">/usr/lib</code> 的<strong>软链接（Symlinks）</strong>。</p>
+
+<p>这并不是背离了 FHS，而是在<strong>物理条件改变后</strong>的自然进化：既然底层硬件不再受限，那么在逻辑上将 “系统核心二进制” 和 “系统扩展二进制” 统一管理（全部归入静态可共享的 <code class="language-plaintext highlighter-rouge">/usr</code>），能让系统结构更加干净利落。</p>
+
+<h2 id="补全-fhs-拼图从系统开发和编译链路视角再看一遍">补全 FHS 拼图：从系统开发和编译链路视角再看一遍</h2>
+
+<p>前面的重点，在于搭建 FHS 背后“可变/静态”与“共享/不可共享”的底层逻辑框架。顺着这条主线继续往下推，会发现还有一些对开发者，特别是做 C/C++ 编译、驱动、工具链和底层系统开发的人来说极其关键的目录，值得单独补齐。</p>
+
+<h3 id="1-深度拆解-usr-子目录开发者的主战场">1. 深度拆解 <code class="language-plaintext highlighter-rouge">/usr</code> 子目录（开发者的主战场）</h3>
+
+<p><code class="language-plaintext highlighter-rouge">/usr</code> (Universal System Resources) 是静态且可共享的资源库。除了前面提到的 <code class="language-plaintext highlighter-rouge">bin</code> 和 <code class="language-plaintext highlighter-rouge">lib</code>，它内部的细分目录是 C/C++ 工具链和系统构建的核心。</p>
+
+<ul>
+  <li>
+<strong><code class="language-plaintext highlighter-rouge">/usr/include</code> (C/C++ 标准头文件)</strong>
+    <ul>
+      <li>
+<strong>属性：</strong> 静态，可共享。</li>
+      <li>
+<strong>本质：</strong> 它是系统级 API 的“契约”。当你写 C/C++ 代码并使用 <code class="language-plaintext highlighter-rouge">#include &lt;stdio.h&gt;</code> 或 <code class="language-plaintext highlighter-rouge">#include &lt;linux/i2c.h&gt;</code> 时，GCC/Clang 编译器默认会来这里寻找对应的 <code class="language-plaintext highlighter-rouge">.h</code> 文件。如果你在交叉编译环境（比如为 ARM 架构编译代码）中，你的交叉编译工具链也会有一个结构完全平行的 <code class="language-plaintext highlighter-rouge">include</code> 目录。</li>
+    </ul>
+  </li>
+  <li>
+<strong><code class="language-plaintext highlighter-rouge">/usr/src</code> (源代码)</strong>
+    <ul>
+      <li>
+<strong>属性：</strong> 静态，可共享。</li>
+      <li>
+<strong>本质：</strong> 存放系统级软件的源代码。最常见的是<strong>内核源码头文件（Kernel Headers）</strong>。如果你需要为某个特定的硬件（比如一块自定义的驱动板）编写并编译外部内核模块（Out-of-tree module），你的 Makefile 必须引用这里的内核头文件，以确保你的驱动和当前运行的内核版本 ABI 兼容。</li>
+    </ul>
+  </li>
+  <li>
+<strong><code class="language-plaintext highlighter-rouge">/usr/share</code> (架构无关的共享数据)</strong>
+    <ul>
+      <li>
+<strong>属性：</strong> 静态，可共享，<strong>且与 CPU 架构无关</strong>。</li>
+      <li>
+<strong>本质：</strong> 按照 FHS 的说法，这里存放的是 <strong>architecture-independent data</strong>。无论你是 x86 还是 ARM，这里的数据都是通用的。这包括 <code class="language-plaintext highlighter-rouge">man</code> 帮助文档（<code class="language-plaintext highlighter-rouge">/usr/share/man</code>）、时区数据（<code class="language-plaintext highlighter-rouge">/usr/share/zoneinfo</code>）、以及构建工具的配置文件（例如 CMake 的默认模块通常存放在 <code class="language-plaintext highlighter-rouge">/usr/share/cmake/Modules/</code> 下）。</li>
+    </ul>
+  </li>
+  <li>
+<strong><code class="language-plaintext highlighter-rouge">/usr/libexec</code> (系统内部调用的可执行文件)</strong>
+    <ul>
+      <li>
+<strong>属性：</strong> 静态，可共享。</li>
+      <li>
+<strong>本质：</strong> FHS 对它的表述很直接：<strong>binaries run by other programs</strong>。这里存放的二进制程序<strong>不是给用户在终端里直接敲击运行的</strong>，而是给其他程序调用的后台工具。比如系统的认证模块守护进程、某些网络配置的辅助脚本等。它们没有被放进 <code class="language-plaintext highlighter-rouge">/usr/bin</code>，就是为了防止污染用户的环境变量 <code class="language-plaintext highlighter-rouge">PATH</code>。</li>
+    </ul>
+  </li>
+</ul>
+
+<h3 id="2-现代-linux-的内存文件系统补充">2. 现代 Linux 的内存文件系统补充</h3>
+
+<p>随着 systemd 的普及和系统启动流程的优化，FHS 引入了更高效的运行时目录。</p>
+
+<ul>
+  <li>
+<strong><code class="language-plaintext highlighter-rouge">/run</code> (运行时状态数据 - 现代 tmpfs)</strong>
+    <ul>
+      <li>
+<strong>属性：</strong> 实时动态，不可共享，<strong>纯内存存储</strong>。</li>
+      <li>
+<strong>本质：</strong> FHS 3.0 对它的定义就是 <strong>run-time variable data</strong>。它记录系统自本次开机以来的状态数据（如守护进程的 PID 文件、Socket 文件等）。在早期的 FHS 中，这些数据放在 <code class="language-plaintext highlighter-rouge">/var/run</code>。但因为 <code class="language-plaintext highlighter-rouge">/var</code> 通常在硬盘上，读写慢且可能在启动早期尚未挂载，所以现代 Linux 创建了 <code class="language-plaintext highlighter-rouge">/run</code> 并将其挂载为 <code class="language-plaintext highlighter-rouge">tmpfs</code>（内存文件系统）。每次重启，这里自然清空。</li>
+    </ul>
+  </li>
+  <li>
+<strong><code class="language-plaintext highlighter-rouge">/dev/shm</code> (POSIX 共享内存)</strong>
+    <ul>
+      <li>
+<strong>属性：</strong> 实时动态，纯内存存储。</li>
+      <li>
+<strong>本质：</strong> 也是一个 <code class="language-plaintext highlighter-rouge">tmpfs</code> 挂载点。它提供了一种极高效率的进程间通信（IPC）机制。如果有两个高实时性要求的进程需要交换海量数据，通过在这里创建内存映射文件进行读写，速度远超 Socket 或管道。</li>
+    </ul>
+  </li>
+</ul>
+
+<h3 id="3-驱动与服务的特定目录">3. 驱动与服务的特定目录</h3>
+
+<ul>
+  <li>
+<strong><code class="language-plaintext highlighter-rouge">/lib/modules</code> (内核模块)</strong>
+    <ul>
+      <li>
+<strong>属性：</strong> 静态（通常伴随内核更新而更新），不可共享。</li>
+      <li>
+<strong>本质：</strong> 虽然归属在 <code class="language-plaintext highlighter-rouge">/lib</code> 下，但必须单独拿出来强调。这里存放的是以 <code class="language-plaintext highlighter-rouge">.ko</code> 结尾的内核驱动模块。当系统通过 <code class="language-plaintext highlighter-rouge">udev</code> 检测到新硬件插入时，<code class="language-plaintext highlighter-rouge">modprobe</code> 工具就是在这个目录（具体路径为 <code class="language-plaintext highlighter-rouge">/lib/modules/$(uname -r)/</code>）下寻找并加载对应的驱动。</li>
+    </ul>
+  </li>
+  <li>
+<strong><code class="language-plaintext highlighter-rouge">/srv</code> (服务数据 Service Data)</strong>
+    <ul>
+      <li>
+<strong>属性：</strong> 可变或静态（视具体服务而定），不可共享。</li>
+      <li>
+<strong>本质：</strong> FHS 的官方说法是 <strong>data for services provided by this system</strong>。也就是说，这里存放的是“由这台机器对外提供的服务所使用的数据”。比如你在这台机器上跑了一个静态博客系统或 Web 服务器，网站的根目录数据（如 HTML、CSS、Markdown 渲染后的文件）就更适合放在 <code class="language-plaintext highlighter-rouge">/srv/www/</code> 或 <code class="language-plaintext highlighter-rouge">/srv/http/</code> 中，而不是混进 <code class="language-plaintext highlighter-rouge">/home</code> 或 <code class="language-plaintext highlighter-rouge">/var</code> 的其他语义里。</li>
+    </ul>
+  </li>
+</ul>
+
+<h3 id="4-灾难恢复机制">4. 灾难恢复机制</h3>
+
+<ul>
+  <li>
+<strong><code class="language-plaintext highlighter-rouge">/lost+found</code> (文件系统孤儿院)</strong>
+    <ul>
+      <li>
+<strong>属性：</strong> 动态。</li>
+      <li>
+<strong>本质：</strong> 这是 Ext 系列（Ext2/3/4）文件系统特有的目录。当系统遭遇突然断电或内核崩溃，导致文件系统损坏时，在下次重启运行 <code class="language-plaintext highlighter-rouge">fsck</code>（文件系统检查）时，那些在底层 inode 存在但失去了目录引用的“无头文件”，就会被抢救并存放在这里，供管理员后续手工分析和恢复。</li>
+    </ul>
+  </li>
+</ul>
+
+<h3 id="全景视图first-principles-矩阵最终版">全景视图（First Principles 矩阵最终版）</h3>
+
+<p>把这些补充的目录重新放回前面的二维分类矩阵里，FHS 的逻辑骨架就会清楚很多。这里要特别说明一点：<strong>下面这张表是为了帮助理解而做的教学化归纳，并不是 FHS 标准原文中逐格给出的官方表格。</strong> 不过，目录本身的定义和归属思路，会尽量贴近 FHS 的官方说法。</p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left">数据属性</th>
+      <th style="text-align: left">静态 (Static) <br> <em>系统运行不改变，可只读挂载</em>
+</th>
+      <th style="text-align: left">可变 (Variable) <br> <em>系统运行持续写入</em>
+</th>
+      <th style="text-align: left">实时内存抽象 <br> <em>不占硬盘，描述状态或提供机制</em>
+</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left">
+<strong>不可共享 (Unshareable)</strong> <br> <em>特定于本机</em>
+</td>
+      <td style="text-align: left">
+<code class="language-plaintext highlighter-rouge">/boot</code>, <code class="language-plaintext highlighter-rouge">/etc</code>, <code class="language-plaintext highlighter-rouge">/bin</code>, <code class="language-plaintext highlighter-rouge">/sbin</code>, <code class="language-plaintext highlighter-rouge">/lib</code>, <code class="language-plaintext highlighter-rouge">/lib/modules</code>
+</td>
+      <td style="text-align: left">
+<code class="language-plaintext highlighter-rouge">/var</code>, <code class="language-plaintext highlighter-rouge">/run</code>, <code class="language-plaintext highlighter-rouge">/tmp</code>, <code class="language-plaintext highlighter-rouge">/lost+found</code>, <code class="language-plaintext highlighter-rouge">/srv</code>
+</td>
+      <td style="text-align: left">
+<code class="language-plaintext highlighter-rouge">/dev</code>, <code class="language-plaintext highlighter-rouge">/proc</code>, <code class="language-plaintext highlighter-rouge">/sys</code>
+</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">
+<strong>可共享 (Shareable)</strong> <br> <em>可跨主机复用</em>
+</td>
+      <td style="text-align: left">
+<code class="language-plaintext highlighter-rouge">/usr</code>, <code class="language-plaintext highlighter-rouge">/usr/include</code>, <code class="language-plaintext highlighter-rouge">/usr/src</code>, <code class="language-plaintext highlighter-rouge">/usr/share</code>, <code class="language-plaintext highlighter-rouge">/usr/libexec</code>, <code class="language-plaintext highlighter-rouge">/opt</code>
+</td>
+      <td style="text-align: left"><code class="language-plaintext highlighter-rouge">/home</code></td>
+      <td style="text-align: left"><code class="language-plaintext highlighter-rouge">/dev/shm</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<p>FHS 的设计从来不是为了限制开发者，而是为了在混乱的多任务环境中划定清晰的边界。明白 <code class="language-plaintext highlighter-rouge">/usr/include</code> 提供接口、<code class="language-plaintext highlighter-rouge">/lib</code> 提供实现、<code class="language-plaintext highlighter-rouge">/usr/src</code> 提供底层编译依赖，整个系统的编译与运行逻辑就能彻底串联起来了。</p>
+
+<h2 id="从-fhs-到-linux-运行时目录体系">从 FHS 到 Linux 运行时目录体系</h2>
+
+<p>如果说前半篇讲的是“FHS 这套目录分层规范本身”，那么从这里开始，视角就要再往外扩一层。也就是说，下面讨论的很多目录，已经不只是在回答“标准要求你怎么放文件”，而是在回答另一个问题：<strong>现代 Linux 又是如何把硬件、容器、云实例、嵌入式约束和内核机制继续投影进这棵目录树里的。</strong></p>
+
+<p>换句话说，前半部分偏“规范”，后半部分偏“演化”。两者不能混为一谈，但放在同一篇文章里连起来看，恰好能把 Linux 的目录体系从静态分层一路看到动态运行。</p>
+
+<h3 id="嵌入式与底层硬件开发">嵌入式与底层硬件开发</h3>
+
+<p>标准 FHS 是为通用服务器设计的。当 Linux 运行在没有标准 BIOS/UEFI 的 ARM 开发板、路由器或嵌入式设备上时，文件系统的职责会发生微妙偏移，衍生出一些普通用户很少接触的 “隐藏版图”。</p>
+
+<h4 id="1-硬件描述的真理之源sysfirmwaredevicetree">1. 硬件描述的真理之源：<code class="language-plaintext highlighter-rouge">/sys/firmware/devicetree</code>
+</h4>
+
+<ul>
+  <li>
+<strong>底层逻辑：</strong> 与 x86 电脑不同，大部分 ARM 架构的主板（无论是开发板还是路由器）没有一套标准的机制让内核在开机时 “自动发现” 所有硬件（比如哪个引脚连着 LED，哪个 I2C 总线上挂着传感器）。</li>
+  <li>
+<strong>文件系统映射：</strong> Linux 引入了设备树（Device Tree, <code class="language-plaintext highlighter-rouge">.dtb</code> 文件）。在系统启动后，内核会将它解析到的底层硬件拓扑结构，原封不动地映射到 <code class="language-plaintext highlighter-rouge">/sys/firmware/devicetree/base</code> 目录下。</li>
+  <li>
+<strong>开发意义：</strong> 当你发现自己写的驱动或者配置没有生效时，第一步不是去查代码，而是直接 <code class="language-plaintext highlighter-rouge">cat</code> 这个目录下的节点，看看内核到底有没有正确加载你的硬件描述。这里是硬件状态的 “第一现场”。</li>
+</ul>
+
+<h4 id="2-用户空间的硬件操控面板sysclass">2. 用户空间的硬件操控面板：<code class="language-plaintext highlighter-rouge">/sys/class/</code>
+</h4>
+
+<ul>
+  <li>
+<strong>底层逻辑：</strong> 按照传统的 UNIX 哲学，操作硬件必须写内核态的驱动程序（<code class="language-plaintext highlighter-rouge">.ko</code>），然后通过 <code class="language-plaintext highlighter-rouge">/dev</code> 下的设备节点进行交互（如 <code class="language-plaintext highlighter-rouge">ioctl</code>）。但这对于简单的硬件控制来说太重了。</li>
+  <li>
+<strong>文件系统映射：</strong> Linux 内核提供了一套子系统，将底层硬件的控制权以<strong>纯文本文件</strong>的形式暴露在 <code class="language-plaintext highlighter-rouge">/sys/class/</code> 目录下。
+    <ul>
+      <li>
+<code class="language-plaintext highlighter-rouge">/sys/class/gpio/</code>：你可以通过向特定文件写入 <code class="language-plaintext highlighter-rouge">1</code> 或 <code class="language-plaintext highlighter-rouge">0</code> 来直接翻转微控制器的 GPIO 引脚电平。</li>
+      <li>
+<code class="language-plaintext highlighter-rouge">/sys/class/pwm/</code>：直接通过修改文本文件里的数值来调整 PWM 波的占空比（比如控制风扇转速或 TEC 散热功率）。</li>
+      <li>
+<code class="language-plaintext highlighter-rouge">/sys/class/leds/</code>：直接控制板载指示灯的亮灭和触发模式。</li>
+    </ul>
+  </li>
+  <li>
+<strong>开发意义：</strong> 极大地降低了调试成本。你可以直接用 Shell 脚本（如 <code class="language-plaintext highlighter-rouge">echo 1 &gt; /sys/class/gpio/gpio10/value</code>）来做硬件点检，而不需要写一行 C 代码编译驱动。</li>
+</ul>
+
+<h4 id="3-交叉编译与根文件系统构建sysroot">3. 交叉编译与根文件系统构建（Sysroot）</h4>
+
+<p>当你为另一台不同架构的机器（比如给 ARM 开发板或路由器）编译系统和软件时，你会在宿主机上看到 FHS 的 “套娃” 现象。</p>
+
+<ul>
+  <li>
+<strong>工具链目录（通常在 <code class="language-plaintext highlighter-rouge">/opt</code> 或独立目录下）：</strong> 你可能会看到像 <code class="language-plaintext highlighter-rouge">aarch64-linux-gnu</code> 这样的目录。在这个目录下，会<strong>完整地再现一套</strong> <code class="language-plaintext highlighter-rouge">bin</code>, <code class="language-plaintext highlighter-rouge">lib</code>, <code class="language-plaintext highlighter-rouge">include</code>, <code class="language-plaintext highlighter-rouge">sys</code>。</li>
+  <li>
+<strong>底层逻辑：</strong> 这个目录被称为 <strong>Sysroot（系统根）</strong>。编译器在编译代码时，不会去包含宿主机（你当前的电脑）的 <code class="language-plaintext highlighter-rouge">/usr/include</code>，而是去这个 Sysroot 里的 <code class="language-plaintext highlighter-rouge">include</code> 找头文件，去 Sysroot 里的 <code class="language-plaintext highlighter-rouge">lib</code> 找动态库。这是保证“跨平台编译”不出错的物理隔离带。</li>
+</ul>
+
+<h4 id="4-深度定制系统的变异以-openwrtimmortalwrt-为例">4. 深度定制系统的变异：以 OpenWrt/ImmortalWrt 为例</h4>
+
+<p>如果你接触过网络路由器的底层系统（如基于 Linux 的 OpenWrt 及其分支 ImmortalWrt），你会发现它们虽然遵循 FHS，但为了适应极其有限的 Flash 存储（比如只有 16MB 或 32MB），在 <code class="language-plaintext highlighter-rouge">/etc</code> 的管理上发展出了一套独特的哲学：</p>
+
+<ul>
+  <li>
+<strong><code class="language-plaintext highlighter-rouge">/etc/config/</code> (UCI 配置系统)：</strong> 在标准的 Ubuntu 或 Debian 中，各种软件的配置文件散落在 <code class="language-plaintext highlighter-rouge">/etc</code> 下，格式五花八门（json, yaml, ini, 纯文本）。但在路由器系统中，为了统一管理和提供 Web 界面（LuCI），所有的核心配置都被抽象并统一存放在 <code class="language-plaintext highlighter-rouge">/etc/config/</code> 下，采用完全一致的语法。</li>
+  <li>
+<strong>底层逻辑：</strong> 通过高度统一的配置范式，降低系统的解析开销，并使得网络状态、防火墙规则、代理转发的联动变得可通过脚本高效调度。</li>
+</ul>
+
+<h4 id="5-架构的妥协lib32-lib64-libx86_64-linux-gnu">5. 架构的妥协：<code class="language-plaintext highlighter-rouge">/lib32</code>, <code class="language-plaintext highlighter-rouge">/lib64</code>, <code class="language-plaintext highlighter-rouge">/lib/x86_64-linux-gnu</code>
+</h4>
+
+<ul>
+  <li>
+<strong>底层逻辑：</strong> 当计算机从 32 位向 64 位过渡时，面临着兼容性问题：64 位的系统可能需要运行 32 位的旧程序，这就需要系统里同时存在两套共享库。</li>
+  <li>
+<strong>文件系统映射：</strong> FHS 规范允许建立 <code class="language-plaintext highlighter-rouge">/lib32</code> 和 <code class="language-plaintext highlighter-rouge">/lib64</code>（或相应的 <code class="language-plaintext highlighter-rouge">/usr/lib32</code>）。但在现代的 Debian/Ubuntu 体系中，引入了更高级的 <strong>Multiarch（多架构）</strong> 机制。它们不再简单粗暴地用 32/64 区分，而是在 <code class="language-plaintext highlighter-rouge">/lib</code> 或 <code class="language-plaintext highlighter-rouge">/usr/lib</code> 下建立了按处理器架构命名的目录，例如 <code class="language-plaintext highlighter-rouge">/lib/x86_64-linux-gnu</code>。</li>
+</ul>
+
+<h3 id="云原生与现代架构">云原生与现代架构</h3>
+
+<p>传统的 FHS 是为<strong>“单机、多用户、共享物理资源”</strong>的时代设计的。但在过去的十几年里，云计算、容器化、智能手机和不可变基础设施的崛起，带来了全新的挑战：<strong>隔离性、可重复性、以及极致的安全。</strong> 为了应对这些挑战，现代 Linux 衍生出了若干对 FHS 的 “变异” 与 “延伸” 。</p>
+
+<h4 id="1-容器与资源调度的基石sysfscgroup">1. 容器与资源调度的基石：<code class="language-plaintext highlighter-rouge">/sys/fs/cgroup</code>
+</h4>
+
+<ul>
+  <li>
+<strong>底层逻辑：</strong> 传统的 Linux 里，所有进程都在抢占同一个 CPU 和内存池，最多靠 <code class="language-plaintext highlighter-rouge">nice</code> 值调换一下优先级。但在云时代，我们需要把资源切块卖给不同的租户，或者让不同的服务（比如 Web 服务和数据库）绝对互不干扰。</li>
+  <li>
+<strong>文件系统映射：</strong> Control Groups (cgroups)。内核又一次使用了“一切皆文件”的魔法。在 <code class="language-plaintext highlighter-rouge">/sys/fs/cgroup</code> 下，你会看到 <code class="language-plaintext highlighter-rouge">cpu</code>, <code class="language-plaintext highlighter-rouge">memory</code>, <code class="language-plaintext highlighter-rouge">blkio</code> 等目录。</li>
+  <li>
+<strong>开发意义：</strong> Docker 或 Kubernetes 怎么限制一个容器只能用 2G 内存和 1 个 CPU 核心？根本不需要什么复杂的系统调用，只需要在这个目录下建一个文件夹（代表一个进程组），然后往 <code class="language-plaintext highlighter-rouge">memory.max</code> 这个文本文件里写入 <code class="language-plaintext highlighter-rouge">2147483648</code>（2GB），内核的调度器就会死死掐住这个进程。这是整个现代云原生底座的物理控制面板。</li>
+</ul>
+
+<h4 id="2-打破共享法则的依赖沙盒snap-与-docker-联合文件系统">2. 打破“共享”法则的依赖沙盒：<code class="language-plaintext highlighter-rouge">/snap</code> 与 Docker 联合文件系统</h4>
+
+<ul>
+  <li>
+<strong>底层逻辑：</strong> FHS 的核心设计之一是 <code class="language-plaintext highlighter-rouge">/usr/lib</code> 作为全局共享库（大家共用一份 glibc 或 OpenSSL 节省空间）。但这导致了臭名昭著的 “依赖地狱” —— 软件 A 需要 OpenSSL 1.0，软件 B 需要 1.1，两者无法在同一个系统中共存。</li>
+  <li>
+<strong>文件系统映射：</strong>
+    <ul>
+      <li>
+<strong><code class="language-plaintext highlighter-rouge">/snap</code> 或 <code class="language-plaintext highlighter-rouge">/var/lib/flatpak</code>：</strong> 现代桌面 Linux 为了解决这个问题，干脆放弃了共享库。一个 App 把自己需要的所有底层库全部打包在一起，挂载成一个只读的虚拟磁盘。</li>
+      <li>
+<strong><code class="language-plaintext highlighter-rouge">/var/lib/docker/overlay2/</code>：</strong> Docker 更是把这种隔离推向了极致。它使用 OverlayFS（联合文件系统），把底层的操作系统（LowerDir）设为只读，然后在上面铺一层透明的读写层（UpperDir）。</li>
+    </ul>
+  </li>
+  <li>
+<strong>思考：</strong> 存储空间变得极其廉价，而工程师排查依赖冲突的时间变得极其昂贵。所以现代系统宁愿在硬盘上存 10 份冗余的相同库文件，也要换取应用环境的绝对隔离和稳定。</li>
+</ul>
+
+<h4 id="3-不可变系统-的激进实验nixstore-与-ostree">3. “不可变系统” 的激进实验：<code class="language-plaintext highlighter-rouge">/nix/store</code> 与 <code class="language-plaintext highlighter-rouge">/ostree</code>
+</h4>
+
+<ul>
+  <li>
+<strong>底层逻辑：</strong> 传统的 <code class="language-plaintext highlighter-rouge">/</code> 根目录是“可变的”（Mutable），你用 <code class="language-plaintext highlighter-rouge">apt</code> 或 <code class="language-plaintext highlighter-rouge">yum</code> 安装软件，文件系统就被修改了，一旦中断或出错，系统可能就崩了，且无法回滚。</li>
+  <li>
+<strong>文件系统映射：</strong>
+    <ul>
+      <li>
+<strong><code class="language-plaintext highlighter-rouge">/nix/store</code> (NixOS)：</strong> 这可以说是对 FHS 最彻底的颠覆。系统里所有的软件、库甚至配置文件，全部存放在这里，目录名是一长串哈希值（如 <code class="language-plaintext highlighter-rouge">/nix/store/x8z...-glibc-2.32/</code>）。系统的 <code class="language-plaintext highlighter-rouge">/bin</code> 和 <code class="language-plaintext highlighter-rouge">/etc</code> 全部变成了指向这里的软链接。</li>
+      <li>
+<strong><code class="language-plaintext highlighter-rouge">/ostree</code> (如 Fedora Silverblue)：</strong> 类似于操作系统的 Git 仓库。整个系统的核心文件被按版本管理，更新系统就像 <code class="language-plaintext highlighter-rouge">git pull</code>，出错了一键切回上一个 commit。</li>
+    </ul>
+  </li>
+  <li>
+<strong>开发意义：</strong> 实现了绝对的 “环境可复现”。无论你在哪台机器上部署，只要配置清单一样，构建出来的文件树在哈希级别完全一致。</li>
+</ul>
+
+<h4 id="4-彻底抛弃-gnu-工具链的变种android-的目录体系">4. 彻底抛弃 GNU 工具链的变种：Android 的目录体系</h4>
+
+<p>虽然 Android 的内核是 Linux，但它完全抛弃了标准的 FHS（因为它不需要支持传统的 GNU 工具链），重构了一套为 “App 沙盒” 和 “硬件厂商解耦” 而生的目录：</p>
+
+<ul>
+  <li>
+<strong><code class="language-plaintext highlighter-rouge">/system</code>：</strong> 相当于 Linux 的 <code class="language-plaintext highlighter-rouge">/usr</code>，但是由 Google 和手机厂商打包的只读系统镜像。</li>
+  <li>
+<strong><code class="language-plaintext highlighter-rouge">/vendor</code>：</strong> 专属硬件驱动层（高通、联发科的闭源驱动包）。这让 Google 可以单独升级 <code class="language-plaintext highlighter-rouge">/system</code> 而不需要硬件厂商配合重新编译驱动（Project Treble）。</li>
+  <li>
+<strong><code class="language-plaintext highlighter-rouge">/data</code>：</strong> 相当于高度隔离的 <code class="language-plaintext highlighter-rouge">/home</code> 和 <code class="language-plaintext highlighter-rouge">/var</code> 的结合体。每个 App 都有严格分配的 <code class="language-plaintext highlighter-rouge">/data/data/com.xxx.app/</code> 目录，相互之间即使通过绝对路径也无法跨越权限读取。</li>
+</ul>
+
+<h4 id="5-主板固件的物理桥梁bootefi">5. 主板固件的物理桥梁：<code class="language-plaintext highlighter-rouge">/boot/efi</code>
+</h4>
+
+<ul>
+  <li>
+<strong>底层逻辑：</strong> 早期的 BIOS 只要读硬盘前 512 字节（MBR）就能引导系统。现代的 UEFI 标准要求硬盘必须有一个专门的 FAT32 格式分区，主板固件只能读懂这个分区的格式。</li>
+  <li>
+<strong>文件系统映射：</strong> <code class="language-plaintext highlighter-rouge">/boot/efi</code>。这是 Linux 向主板妥协的产物。无论你用多么高级的 EXT4、BTRFS 还是 ZFS 格式化 Linux，你都必须留一个小小的 FAT32 分区挂载在这里，把引导程序（如 GRUB 的 <code class="language-plaintext highlighter-rouge">.efi</code> 文件）放在这，主板通电后才能找到操作系统的大门。</li>
+</ul>
+
+<h3 id="桌面跨系统与云端">桌面、跨系统与云端</h3>
+
+<p>在<strong>现代桌面软件开发</strong>、<strong>跨系统混合开发</strong>以及<strong>云服务器自动化部署</strong>的场景中，还存在几个绕不开的核心目录规范。这些规范由开源社区或云厂商为了解决实际痛点而建立，是 FHS 在特定领域的自然延伸。</p>
+
+<h4 id="1-桌面级应用的数据归宿xdg-base-directory-规范">1. 桌面级应用的数据归宿：XDG Base Directory 规范</h4>
+
+<ul>
+  <li>
+<strong>底层逻辑：</strong> 早期的 Linux 系统里，各种软件喜欢在用户的 <code class="language-plaintext highlighter-rouge">/home/user/</code> 目录下到处留下隐藏文件（比如 <code class="language-plaintext highlighter-rouge">.bashrc</code>, <code class="language-plaintext highlighter-rouge">.viminfo</code>, <code class="language-plaintext highlighter-rouge">.nvm</code>）。这导致用户的家目录极其混乱。为了解决这个问题，freedesktop.org 提出了 XDG 标准，规定用户级应用的数据必须分类存放。</li>
+  <li>
+<strong>文件系统映射：</strong>
+    <ul>
+      <li>
+<strong><code class="language-plaintext highlighter-rouge">~/.config/</code> (用户级配置)：</strong> 如果你用 Qt 等框架开发了一个带有复杂 GUI 的桌面应用程序（比如一个炫酷的音乐播放器），它的用户偏好设置、自定义的主题 QSS 样式文件，就不应该直接扔在 <code class="language-plaintext highlighter-rouge">~</code> 下，而应该存放在 <code class="language-plaintext highlighter-rouge">~/.config/你的应用名/</code> 里。</li>
+      <li>
+<strong><code class="language-plaintext highlighter-rouge">~/.local/share/</code> (用户级数据)：</strong> 存放该应用产生的、特定于用户的数据。比如你的程序扫描本地音乐库生成的 SQLite 数据库文件、或者用户自定义的播放列表。</li>
+      <li>
+<strong><code class="language-plaintext highlighter-rouge">~/.cache/</code> (用户级缓存)：</strong> 存放可以随时丢弃、不影响核心功能的数据。比如音乐播放过程中实时计算出的 FFT 频谱缓存，或者是从网络上拉取的专辑封面缩略图。</li>
+    </ul>
+  </li>
+  <li>
+<strong>开发意义：</strong> 遵循这个规范开发软件，能让用户的家目录保持整洁，同时在做系统备份时，用户可以放心地忽略 <code class="language-plaintext highlighter-rouge">~/.cache/</code> 目录，极大地节省存储空间和时间。</li>
+</ul>
+
+<h4 id="2-跨系统融合的魔法桥梁wsl2-与-9p-协议挂载">2. 跨系统融合的魔法桥梁：WSL2 与 <code class="language-plaintext highlighter-rouge">9P</code> 协议挂载</h4>
+
+<ul>
+  <li>
+<strong>底层逻辑：</strong> 当系统不再是纯粹的物理机，而是在宿主操作系统（Windows）内部运行的高级轻量级虚拟机时，如何让两个完全不同的文件系统（NTFS 和 Ext4）高效互通？</li>
+  <li>
+<strong>文件系统映射：</strong>
+    <ul>
+      <li>
+<strong><code class="language-plaintext highlighter-rouge">/mnt/c</code>, <code class="language-plaintext highlighter-rouge">/mnt/d</code> 等：</strong> 在使用 WSL2 进行开发时，Windows 的物理磁盘会被自动挂载到 Linux 的 <code class="language-plaintext highlighter-rouge">/mnt</code> 目录下。</li>
+      <li>
+<strong>原理：</strong> 这里并不是简单的磁盘共享。Windows 使用的是 DrvFs 插件，底层通过 <strong>9P 网络协议</strong>（一个源自贝尔实验室 Plan 9 系统的分布式文件系统协议）来实现跨 OS 的文件访问。它需要在 Linux 的 POSIX 权限模型（rwx，所有者/组）和 Windows 的 ACL（访问控制列表）之间做复杂的实时翻译。这也是为什么在 WSL2 里跨文件系统（比如在 Linux 里编译 <code class="language-plaintext highlighter-rouge">/mnt/c</code> 下的 C++ 项目）进行高频 I/O 操作会比较慢的原因：每一次读写，都要经过协议层的翻译。</li>
+    </ul>
+  </li>
+</ul>
+
+<h4 id="3-云端实例的诞生印记cloud-init-与-varlibcloud">3. 云端实例的诞生印记：<code class="language-plaintext highlighter-rouge">cloud-init</code> 与 <code class="language-plaintext highlighter-rouge">/var/lib/cloud</code>
+</h4>
+
+<ul>
+  <li>
+<strong>底层逻辑：</strong> 当你在云服务商（比如 GCP、AWS）那里点击 “创建一台 Ubuntu 服务器” 时，云厂商并不是现场给你安装系统，而是直接克隆一个标准的、一模一样的只读系统镜像。那么问题来了：这个标准镜像开机后，是怎么知道你的主机名、网络配置，以及最关键的——<strong>怎么把你的 SSH 公钥注入进系统的</strong>？</li>
+  <li>
+<strong>文件系统映射：</strong>
+    <ul>
+      <li>
+<strong><code class="language-plaintext highlighter-rouge">/var/lib/cloud/</code>：</strong> 这是现代云服务器自动初始化的“核心现场”。</li>
+    </ul>
+  </li>
+  <li>
+<strong>工作机制：</strong> 系统第一次开机时，一个叫 <code class="language-plaintext highlighter-rouge">cloud-init</code> 的核心服务会抢先运行。它会通过内部网络去访问云厂商的元数据服务器（Metadata Server），拉取你在这台实例上配置的专属数据（比如 SSH Key），然后把这些状态和执行日志保存在 <code class="language-plaintext highlighter-rouge">/var/lib/cloud/instances/</code> 下，最后再把 Key 写入到你的 <code class="language-plaintext highlighter-rouge">~/.ssh/authorized_keys</code> 里。当你成功通过 SSH 连接上这台服务器时，这套复杂的“认主”流程其实已经在文件系统的这个角落里悄悄走完了。</li>
+</ul>
+
+<h3 id="内核机制与底层调试">内核机制与底层调试</h3>
+
+<p>到了这个深度，我们已经脱离了传统意义上的 “文件系统规范”，触及到了 <strong>Linux 内核机制在用户态的强行投影</strong>。这里是底层驱动开发者、固件极客和内核调试专家的领域。</p>
+
+<h4 id="1-路由器不死之身的秘密rom-与-overlay">1. 路由器“不死之身”的秘密：<code class="language-plaintext highlighter-rouge">/rom</code> 与 <code class="language-plaintext highlighter-rouge">/overlay</code>
+</h4>
+
+<p>在高度定制的嵌入式网络设备（如 OpenWrt / ImmortalWrt）中，你可以在根目录 <code class="language-plaintext highlighter-rouge">/</code> 下任意修改配置文件，但如果系统崩溃，只要执行“恢复出厂设置”，一切又能完美如初。</p>
+
+<ul>
+  <li>
+<strong>第一性原理：</strong> 嵌入式设备的 Flash 闪存寿命有限，且出厂固件必须保证绝对安全，不能被意外写坏。</li>
+  <li>
+<strong>文件系统映射：</strong>
+    <ul>
+      <li>
+<strong><code class="language-plaintext highlighter-rouge">/rom</code> (只读层)：</strong> 这里存放的是系统刷入时的高压缩比只读文件系统（通常是 SquashFS）。它是系统的“底片”，绝对不可写。</li>
+      <li>
+<strong><code class="language-plaintext highlighter-rouge">/overlay</code> (可写层)：</strong> 这是一个极小的可读写分区（通常是 JFFS2 或 F2FS）。</li>
+    </ul>
+  </li>
+  <li>
+<strong>底层机制（联合挂载）：</strong> 当系统启动时，内核会将 <code class="language-plaintext highlighter-rouge">/rom</code> 和 <code class="language-plaintext highlighter-rouge">/overlay</code> 像千层饼一样叠在一起，合并成你看到的根目录 <code class="language-plaintext highlighter-rouge">/</code>。如果你修改了 <code class="language-plaintext highlighter-rouge">/etc/config/network</code>，系统其实并没有修改 <code class="language-plaintext highlighter-rouge">/rom</code> 里的原始文件，而是在 <code class="language-plaintext highlighter-rouge">/overlay/etc/config/</code> 下新建了一个同名文件把它 “遮盖” 住了。所谓 “恢复出厂设置”，在物理层面上仅仅是执行了一句 <code class="language-plaintext highlighter-rouge">rm -rf /overlay/*</code>。</li>
+</ul>
+
+<h4 id="2-裸机闪存的真面目devmtd-与-devmtdblock">2. 裸机闪存的真面目：<code class="language-plaintext highlighter-rouge">/dev/mtd</code> 与 <code class="language-plaintext highlighter-rouge">/dev/mtdblock</code>
+</h4>
+
+<p>当你脱离了电脑的 SATA/NVMe 硬盘，去给 ARM 开发板或路由器编写底层固件时，你会发现 <code class="language-plaintext highlighter-rouge">/dev/sda</code> 这种块设备消失了。</p>
+
+<ul>
+  <li>
+<strong>第一性原理：</strong> 原始的 NAND/NOR Flash 闪存芯片与普通硬盘有着本质的物理差异。硬盘可以按扇区随意读写，但原始 Flash 必须<strong>“先擦除（Erase），后写入（Write）”</strong>，且具有坏块（Bad Block）特性。</li>
+  <li>
+<strong>文件系统映射：</strong>
+    <ul>
+      <li>Linux 专门引入了 <strong>MTD (Memory Technology Device)</strong> 子系统。</li>
+      <li>
+<strong><code class="language-plaintext highlighter-rouge">/dev/mtdX</code>（字符设备）：</strong> 允许底层工具直接对物理闪存的 Block 进行擦除和读写操作（比如用 <code class="language-plaintext highlighter-rouge">flashcp</code> 烧录 Bootloader）。</li>
+      <li>
+<strong><code class="language-plaintext highlighter-rouge">/dev/mtdblockX</code>（块设备）：</strong> 内核在这个接口上封装了一层软件逻辑（如磨损均衡），让上层应用能勉强把它当成普通硬盘来挂载。</li>
+    </ul>
+  </li>
+</ul>
+
+<h4 id="3-容器视界的物理边界procpidns">3. 容器“视界”的物理边界：<code class="language-plaintext highlighter-rouge">/proc/[pid]/ns/</code>
+</h4>
+
+<p>我们前面提到了 Docker 用 <code class="language-plaintext highlighter-rouge">/sys/fs/cgroup</code> 来限制 CPU 和内存，用 OverlayFS 来隔离文件。但这还不够，如何让容器里的进程认为自己是“系统里唯一的进程”，且拥有独立的网卡？</p>
+
+<ul>
+  <li>
+<strong>第一性原理：</strong> 容器并不是真正的虚拟机，它只是宿主机上的一个普通进程。我们需要一种机制，在内核层面对这个进程进行“感官剥夺”和“视觉欺骗”。</li>
+  <li>
+<strong>文件系统映射：</strong> <strong>Namespaces（命名空间）</strong>。
+    <ul>
+      <li>如果你进入 <code class="language-plaintext highlighter-rouge">/proc/某个进程PID/ns/</code> 目录，你会看到一堆神奇的软链接：<code class="language-plaintext highlighter-rouge">mnt</code> (挂载点隔离), <code class="language-plaintext highlighter-rouge">net</code> (网络隔离), <code class="language-plaintext highlighter-rouge">pid</code> (进程号隔离), <code class="language-plaintext highlighter-rouge">ipc</code> (进程通信隔离)。</li>
+    </ul>
+  </li>
+  <li>
+<strong>开发意义：</strong> 当 Docker 启动一个容器时，它其实是通过系统调用，为这个进程创建了一套全新的 Namespace 文件链接。只要两个进程的 <code class="language-plaintext highlighter-rouge">net</code> 命名空间指向不同的哈希值，它们就处在物理隔离的两个网络平行宇宙中。这也是现代云原生虚拟化技术的绝对基石。</li>
+</ul>
+
+<h4 id="4-内核开发者的-后门syskerneldebug-debugfs">4. 内核开发者的 “后门”：<code class="language-plaintext highlighter-rouge">/sys/kernel/debug/</code> (DebugFS)</h4>
+
+<ul>
+  <li>
+<strong>第一性原理：</strong> 如果你正在为一块新板子写 I2C 或 SPI 驱动，代码跑在内核态（Ring 0），一旦出错系统直接 Kernel Panic（死机）。你没法用 <code class="language-plaintext highlighter-rouge">printf</code> 打印日志，也没法用普通的 GDB 调试。</li>
+  <li>
+<strong>文件系统映射：</strong> Linux 提供了 DebugFS（通常挂载在 <code class="language-plaintext highlighter-rouge">/sys/kernel/debug/</code>）。</li>
+  <li>
+<strong>底层机制：</strong> 这是一个完全没有规矩、不受任何标准约束的 RAM 文件系统。内核开发者可以在驱动代码里写几行简单的 API，就能把内核深处极其敏感的变量（比如当前寄存器的原始状态、内存碎片的分布图、电源管理芯片的实时微伏电压）直接以文本文件的形式暴露在这个目录下。系统一旦发布到生产环境，这个目录通常会被严密封锁或卸载。</li>
+</ul>
+
+<h4 id="5-死亡瞬间的黑匣子sysfspstore-persistent-storage">5. 死亡瞬间的黑匣子：<code class="language-plaintext highlighter-rouge">/sys/fs/pstore</code> (Persistent Storage)</h4>
+
+<ul>
+  <li>
+<strong>第一性原理：</strong> 当系统发生极其严重的致命错误（Kernel Panic）时，内核会瞬间崩溃。此时，硬盘驱动可能已经失效，中断已经被屏蔽，系统根本无法将崩溃日志写进常规的 <code class="language-plaintext highlighter-rouge">/var/log/messages</code> 中。那重启后，我们怎么知道死机前一毫秒发生了什么？</li>
+  <li>
+<strong>底层机制：</strong> Linux 引入了 <code class="language-plaintext highlighter-rouge">pstore</code> 文件系统。当内核判定自己即将死亡时，它会绕过所有复杂的 IO 堆栈，将最后遗言（oops 报错、寄存器状态）直接写入一段<strong>特殊的非易失性内存（NVRAM）</strong>或主板上即使热重启也不会断电的保留 RAM 区域。</li>
+  <li>
+<strong>物理映射：</strong> 系统重启后，你会在 <code class="language-plaintext highlighter-rouge">/sys/fs/pstore/</code> 下看到名为 <code class="language-plaintext highlighter-rouge">dmesg-efi-xxx</code> 或 <code class="language-plaintext highlighter-rouge">console-ramoops</code> 的文件。读取它，你就能看到系统上一次死亡瞬间的“走马灯”。这是底层嵌入式设备和服务器排查玄学死机问题的终极武器。</li>
+</ul>
+
+<h4 id="6-现代内核的上帝视角sysfsbpf-ebpf-maps">6. 现代内核的上帝视角：<code class="language-plaintext highlighter-rouge">/sys/fs/bpf</code> (eBPF Maps)</h4>
+
+<ul>
+  <li>
+<strong>第一性原理：</strong> 传统的 Linux 网络和安全过滤（比如 iptables）是在内核里写死逻辑，用户只能配规则。但现代 Linux 引入了 eBPF 技术，允许用户把一段自己写的 C 代码，经过极其严格的安全审查后，<strong>直接注入到内核的运行沙箱中执行</strong>（极其恐怖的特权）。</li>
+  <li>
+<strong>底层机制：</strong> 注入到内核的代码怎么和用户态的用户程序交换庞大的数据（比如实时的网络流量统计）？靠普通的系统调用太慢了。</li>
+  <li>
+<strong>物理映射：</strong> eBPF 引入了 <code class="language-plaintext highlighter-rouge">Map</code>（映射表）的概念，并将其挂载在 <code class="language-plaintext highlighter-rouge">/sys/fs/bpf</code> 下。这表面上是个目录，但里面的“文件”其实是<strong>用户态和内核态共享的高速内存数据结构</strong>（如 Hash 表、数组）。通过读写这里，你的程序就像是直接插了一根导管到了内核的大动脉上。</li>
+</ul>
+
+<h4 id="7-强制访问控制的终极监狱sysfsselinux-或-smacksapparmor">7. 强制访问控制的终极监狱：<code class="language-plaintext highlighter-rouge">/sys/fs/selinux</code> (或 smacks/apparmor)</h4>
+
+<ul>
+  <li>
+<strong>第一性原理：</strong> 标准的 FHS 只有 rwx（读写执行）三种权限，只要你是 Root，系统就对你完全敞开。但在高安防环境（如国防、金融或 Android 手机底层）中，这太危险了。</li>
+  <li>
+<strong>底层机制：</strong> 也就是所谓的 MAC（强制访问控制）。即使你是 Root 用户，如果你运行的进程（比如 Web 服务器）没有被赋予读取特定标签文件的权限，内核也会在底层直接把你的操作斩断。</li>
+  <li>
+<strong>物理映射：</strong> <code class="language-plaintext highlighter-rouge">/sys/fs/selinux</code> 是这套庞大安全引擎的控制面板。里面的文件控制着内核的安全策略布尔值。比如 <code class="language-plaintext highlighter-rouge">enforce</code> 文件，写入 1 就是开启强制拦截，写入 0 就是只记录不拦截。这里定义了系统里每一根发丝的访问规则。</li>
+</ul>
+
+<h4 id="8-幽灵文件系统net-或-misc-autofs">8. 幽灵文件系统：<code class="language-plaintext highlighter-rouge">/net</code> 或 <code class="language-plaintext highlighter-rouge">/misc</code> (AutoFS)</h4>
+
+<ul>
+  <li>
+<strong>第一性原理：</strong> 挂载一个局域网内的 NFS（网络文件系统）是极其消耗资源的。如果我们有 100 个网络存储，不能一开机全挂载上，但又希望用户想用的时候随时能找到。</li>
+  <li>
+<strong>底层机制：</strong> 按需挂载。</li>
+  <li>
+<strong>物理映射：</strong> 当你 <code class="language-plaintext highlighter-rouge">ls /net/server_ip/share</code> 的时候，这个目录原本在物理上是<strong>不存在</strong>的。但是当你敲下回车触发访问异常的瞬间，内核的 <code class="language-plaintext highlighter-rouge">autofs</code> 模块会瞬间拦截这个请求，在后台光速完成网络握手和挂载，然后再把结果返回给你。从你的视角看，这个文件系统就像幽灵一样，你注视它时它就存在，你离开时它就消失。</li>
+</ul>
+
+<h2 id="真正的绝对底部vfs-virtual-file-system">真正的绝对底部：VFS (Virtual File System)</h2>
+
+<p>如果我们要进行最后一次第一性原理的推演，那就是：<strong>整个根目录 <code class="language-plaintext highlighter-rouge">/</code> 本身，就是一个虚假的幻觉。</strong></p>
+
+<p>在 Linux 极早期的源代码中，并没有所谓的目录树。所有的硬盘、内存映射、设备节点，之所以能呈现出统一的层级结构，完全是因为 Linux 内核中存在一个极其伟大的抽象层 —— <strong>VFS（虚拟文件系统）</strong>。</p>
+
+<p>你在终端里敲下 <code class="language-plaintext highlighter-rouge">cd /</code> 和 <code class="language-plaintext highlighter-rouge">ls</code> 看到的所有东西，本质上都是内核在内存中维护的一张巨大的<strong>结构体图（<code class="language-plaintext highlighter-rouge">struct dentry</code> 和 <code class="language-plaintext highlighter-rouge">struct inode</code>）</strong>。</p>
+
+<ul>
+  <li>Ext4 硬盘文件是 VFS 的子类。</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">/sys</code> 设备树是 VFS 的子类。</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">/proc</code> 进程信息是 VFS 的子类。</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">/run</code> 内存状态也是 VFS 的子类。</li>
+</ul>
+
+<p>走到这里，文件系统这座迷宫已经到了尽头。再往前迈一步，就已经没有 “文件” 和 “目录” 的概念了——前方是纯粹的 C 语言指针、内存分页、自旋锁，以及 Linux 内核的源代码汪洋。</p>
+
+<p>回头再看，FHS 的意义也就更清楚了。它并不是要替 Linux 的一切目录现象提供最终答案，而是先给出一套最基础、也最耐用的分层原则：哪些是系统骨架，哪些是运行状态，哪些是用户数据，哪些是共享资源，哪些是本机专属。</p>
+
+<p>而现代 Linux 做的事情，则是在这套骨架之上不断往前延伸：把启动过程、容器隔离、嵌入式存储、云端初始化、内核调试乃至运行时安全策略，继续投影到这棵目录树上。于是你看到的，就不再只是一个“文件该放哪”的标准，而是一整套从静态布局延伸到动态运行的目录体系。</p>
+
+        
+      </section>
+
+      <footer class="page__meta">
+        
+        
+
+  
+    
+
+
+
+  
+
+  <p class="page__taxonomy">
+    <strong><i class="fas fa-fw fa-tags" aria-hidden="true"></i> Tags: </strong>
+    <span itemprop="keywords">
+    
+      <a href="/tags/linux" class="page__taxonomy-item p-category" rel="tag">Linux</a>
+    
+    </span>
+  </p>
+
+
+  
+
+  
+    
+
+
+
+  
+
+  <p class="page__taxonomy">
+    <strong><i class="fas fa-fw fa-folder-open" aria-hidden="true"></i> Categories: </strong>
+    <span itemprop="keywords">
+    
+      <a href="/categories/note" class="page__taxonomy-item p-category" rel="tag">Note</a>
+    
+    </span>
+  </p>
+
+
+  
+
+
+        
+
+
+  <p class="page__date"><strong><i class="fas fa-fw fa-calendar-alt" aria-hidden="true"></i> Updated:</strong> <time class="dt-published" datetime="2026-04-21T07:00:00+00:00">April 21, 2026</time></p>
+
+
+      </footer>
+
+      
+<section class="page__share">
+  <h4 class="page__share-title">Share on</h4>
+
+  <a href="https://x.com/intent/tweet?text=%E4%BB%8E+FHS+%E5%88%B0+Linux+%E8%BF%90%E8%A1%8C%E6%97%B6%E7%9B%AE%E5%BD%95%E4%BD%93%E7%B3%BB%20https%3A%2F%2Fbfmhno3.github.io%2Fnote%2Ffhs-of-linux%2F" class="btn btn--x" aria-label="Share on X" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on X">
+    <i class="fab fa-fw fa-x-twitter" aria-hidden="true"></i><span> X</span>
+  </a>
+
+  <a href="https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fbfmhno3.github.io%2Fnote%2Ffhs-of-linux%2F" class="btn btn--facebook" aria-label="Share on Facebook" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on Facebook">
+    <i class="fab fa-fw fa-facebook" aria-hidden="true"></i><span> Facebook</span>
+  </a>
+
+  <a href="https://www.linkedin.com/shareArticle?mini=true&url=https://bfmhno3.github.io/note/fhs-of-linux/" class="btn btn--linkedin" aria-label="Share on LinkedIn" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on LinkedIn">
+    <i class="fab fa-fw fa-linkedin" aria-hidden="true"></i><span> LinkedIn</span>
+  </a>
+
+  <a href="https://bsky.app/intent/compose?text=%E4%BB%8E+FHS+%E5%88%B0+Linux+%E8%BF%90%E8%A1%8C%E6%97%B6%E7%9B%AE%E5%BD%95%E4%BD%93%E7%B3%BB%20https%3A%2F%2Fbfmhno3.github.io%2Fnote%2Ffhs-of-linux%2F" class="btn btn--bluesky" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on Bluesky">
+    <i class="fab fa-fw fa-bluesky" aria-hidden="true"></i><span> Bluesky</span>
+  </a>
+</section>
+
+
+      
+
+  <nav class="pagination" aria-label="Post pagination">
+    
+      <a href="/note/overview-of-english-grammar/" class="pagination--pager" title="英语语法综述">Previous</a>
+    
+    
+      <a href="/note/note-of-tmux/" class="pagination--pager" title="Tmux 使用笔记">Next</a>
+    
+  </nav>
+
+
+    </div>
+
+    
+      
+        
+<div class="page__comments">
+  
+  
+      <h4 class="page__comments-title">Comments</h4>
+      <section id="giscus-comments"></section>
+    
+</div>
+
+      
+    
+  </article>
+
+  
+  
+    
+
+<div class="page__related">
+  
+  <h2 class="page__related-title">You May Also Enjoy</h2>
+  <div class="grid__wrapper">
+    
+      
+      
+
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc p-name" itemprop="headline">
+      
+        <a class="u-url" href="/note/note-of-tmux/" rel="permalink">Tmux 使用笔记
+</a>
+      
+    </h2>
+    
+
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-04-25T13:55:00+00:00">April 25, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          8 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt p-summary" itemprop="description">理解 tmux 的 C/S 架构和 Session、Window、Pane 的三层模型，快速掌握日常工作中最常用的快捷键，提升远程开发效率。
+</p>
+  </article>
+</div>
+
+    
+      
+      
+
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/english_grammar_system.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc p-name" itemprop="headline">
+      
+        <a class="u-url" href="/note/overview-of-english-grammar/" rel="permalink">英语语法综述
+</a>
+      
+    </h2>
+    
+
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-04-06T09:00:00+00:00">April 6, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          8 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt p-summary" itemprop="description">我们为什么学语法？
+
+当然是为了考高分啊😂
+
+其实，所有的英语语法都只有一个目的：造句。
+
+英语和中文一样，我们说话写文章有的时候用短句子，有的时候用长句子。不同的短句子又可以组合成新的长句。但这里说的是句子的长度，并不适合语法讨论。
+
+我们只有把句子拆开来，直到拆到不能再继续拆了，否则句意会不完整的 “基本句”...</p>
+  </article>
+</div>
+
+    
+      
+      
+
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc p-name" itemprop="headline">
+      
+        <a class="u-url" href="/note/gnu-assembly/" rel="permalink">GNU 汇编（GAS）通用语法与伪指令指南
+</a>
+      
+    </h2>
+    
+
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-04-05T08:35:00+00:00">April 5, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          12 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt p-summary" itemprop="description">由于机器指令及助记符高度依赖于芯片的具体架构，本文不讨论特定指令集的全部细节，而是聚焦于 GAS（GNU Assembler）通用的伪指令系统及其基本语法规则。
+
+1. 汇编器的本质与工作流
+
+GNU Assembler（简称 as）的核心工作流可以用以下公式概括：
+
+$$
+\text{源代码 (.s)} \xr...</p>
+  </article>
+</div>
+
+    
+      
+      
+
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc p-name" itemprop="headline">
+      
+        <a class="u-url" href="/note/armv7-a-isa/" rel="permalink">ARMv7-A 指令体系全解：数据处理、访存、分支与同步
+</a>
+      
+    </h2>
+    
+
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-04-05T08:20:00+00:00">April 5, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          13 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt p-summary" itemprop="description">I.MX6ULL 的核心是 ARM Cortex-A7，它基于 ARMv7-A 架构。
+
+要真正理解指令集，就不能只是背诵汇编手册，而是要回答一个核心问题：如果不看代码，只看电路，CPU 在做什么？
+
+本质上，每一条指令都是对 CPU 内部寄存器状态或外部总线（内存/外设）的一次原子操作。
+
+
+  总线（Bus）...</p>
+  </article>
+</div>
+
+    
+  </div>
+</div>
+
+  
+  
+</div>
+
+      
+    </div>
+
+    
+      <div class="search-content">
+        
+<div class="search-content__inner-wrap">
+<form class="search-content__form" onkeydown="return event.key != 'Enter';" role="search">
+    <label class="sr-only" for="search">
+      Enter your search term...
+    </label>
+    <input type="search" id="search" class="search-input" tabindex="-1" placeholder="Enter your search term...">
+  </form>
+  <div id="results" class="results"></div>
+</div>
+
+      </div>
+    
+
+    <div id="footer" class="page__footer">
+      <footer>
+        <!-- start custom footer snippets -->
+
+<!-- end custom footer snippets -->
+        
+
+
+<div class="page__footer-follow">
+  <ul class="social-icons">
+    
+
+    
+      
+        
+          <li><a href="https://github.com/bfmhno3" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-github" aria-hidden="true"></i> GitHub</a></li>
+        
+      
+        
+          <li><a href="https://gitee.com/bfmhno3" rel="nofollow noopener noreferrer"><i class="fa-solid fa-g" aria-hidden="true"></i> Gitee</a></li>
+        
+      
+        
+          <li><a href="https://www.cnblogs.com/bfmhno3" rel="nofollow noopener noreferrer"><i class="fa-solid fa-blog" aria-hidden="true"></i> cnblogs</a></li>
+        
+      
+        
+          <li><a href="https://blog.csdn.net/B33336" rel="nofollow noopener noreferrer"><i class="fa-solid fa-blog" aria-hidden="true"></i> CSDN</a></li>
+        
+      
+    
+
+    
+      <li><a href="/feed.xml"><i class="fas fa-fw fa-square-rss" aria-hidden="true"></i> Feed</a></li>
+    
+  </ul>
+</div>
+
+
+<div class="page__footer-copyright">© 2026 <a href="https://bfmhno3.github.io">Better Mistakes</a>. Powered by <a href="https://jekyllrb.com" rel="nofollow">Jekyll</a> &amp; <a href="https://mademistakes.com/work/jekyll-themes/minimal-mistakes/" rel="nofollow">Minimal Mistakes</a>.</div>
+
+      </footer>
+    </div>
+
+    
+
+  <script src="/assets/js/main.min.js"></script>
+
+
+
+
+
+<script src="/assets/js/lunr/lunr.min.js"></script>
+<script src="/assets/js/lunr/lunr-store.js"></script>
+<script src="/assets/js/lunr/lunr-en.js"></script>
+
+
+
+
+
+  <!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-VS5B3CR1M6"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-VS5B3CR1M6', { 'anonymize_ip': false});
+</script>
+
+
+
+
+
+
+
+    <script>
+  'use strict';
+
+  (function () {
+    var commentContainer = document.querySelector('#giscus-comments');
+
+    if (!commentContainer) {
+      return;
+    }
+
+    var script = document.createElement('script');
+
+    script.setAttribute('src', 'https://giscus.app/client.js');
+    script.setAttribute('data-repo', 'bfmhno3/bfmhno3.github.io');
+    script.setAttribute('data-repo-id', 'R_kgDOQCQGxg');
+    script.setAttribute('data-category', 'General');
+    script.setAttribute('data-category-id', 'DIC_kwDOQCQGxs4CzG3a');
+    script.setAttribute('data-mapping', 'pathname');
+    script.setAttribute('data-strict', '0');
+    script.setAttribute('data-reactions-enabled', '1');
+    script.setAttribute('data-emit-metadata', '0');
+    script.setAttribute('data-input-position', 'bottom');
+    script.setAttribute('data-theme', 'transparent_dark');
+    script.setAttribute('data-lang',  'en');
+    
+    script.setAttribute('data-loading', 'lazy');
+    
+    script.setAttribute('crossorigin', 'anonymous');
+
+    script.setAttribute('async', '');
+
+    commentContainer.appendChild(script);
+  })();
+</script>
+
+  
+
+
+
+
+  </body>
+</html>

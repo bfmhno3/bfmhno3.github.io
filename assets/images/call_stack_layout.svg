@@ -1,0 +1,375 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   height="558px"
+   width="684px"
+   viewBox="0 0 21590 27940"
+   version="1.1"
+   id="svg29"
+   sodipodi:docname="Call_stack_layout.svg"
+   inkscape:version="1.3 (0e150ed6c4, 2023-07-21)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview29"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="1.4784946"
+     inkscape:cx="342.24"
+     inkscape:cy="279"
+     inkscape:window-width="1920"
+     inkscape:window-height="1017"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg29" />
+  <defs
+     id="defs2">
+    <linearGradient
+       id="a"
+       gradientUnits="userSpaceOnUse"
+       x2="0"
+       y2="24400"
+       y1="26700">
+      <stop
+         stop-color="#fff"
+         offset="0"
+         id="stop1" />
+      <stop
+         stop-color="#adf"
+         offset="1"
+         id="stop2" />
+    </linearGradient>
+  </defs>
+  <rect
+     height="27940"
+     width="34250"
+     x="-6330"
+     fill="#fff"
+     id="rect2" />
+  <g
+     stroke="#000"
+     stroke-width="61"
+     id="g12">
+    <g
+       fill="#afc"
+       id="g4">
+      <path
+         d="m6370 8620v-6430h12300v6430"
+         id="path2" />
+      <path
+         d="m6370 10400v-1760h12300v1760"
+         id="path3" />
+      <path
+         d="m6370 14500v-4090h12300v4090"
+         id="path4" />
+    </g>
+    <path
+       d="m6370 26700v-2340h12300v2340"
+       fill="url(#a)"
+       id="path5" />
+    <g
+       fill="#adf"
+       id="g8">
+      <path
+         d="m6370 19700v-1760h12300v1760"
+         id="path6" />
+      <path
+         d="m18670 19700v4720h-12300v-4720z"
+         id="path7" />
+      <path
+         d="m6370 17900v-3510h12300v3510"
+         id="path8" />
+    </g>
+    <g
+       fill="none"
+       id="g10">
+      <path
+         d="m5780 24400-120-9.5-111-47-98-75.9-85-107-73-120-50.6-139-37.9-155-12.6-174v-3310l-9.5-168-34.8-161-53.7-133-66-120-88-101-95-82-111-47-123-15.8 123-9.5 111-50.6 95-69 89-111 66-123 53.7-133 34.8-158 9.5-174v-3300l12.6-171 37.9-161 50.6-133 73-120 85-98 98-85 111-47 120-12.6"
+         id="path9" />
+      <path
+         d="m19200 2190 120 22 111 63 98 85 85 133 73 145 50.6 183 37.9 180 9.5 209v4090l9.5 205 41 196 47 171 75.9 145 82 133 95 85 111 60 126 25.3-126 25.3-111 60-95 85-82 133-75.9 145-47 180-41 183-9.5 209v4080l-9.5 209-37.9 196-50.6 168-73 149-85 133-98 85-111 63-120 22"
+         id="path10" />
+    </g>
+    <path
+       d="m1810 2190h3470"
+       id="path11" />
+    <path
+       d="m1850 8640h3470"
+       id="path12" />
+  </g>
+  <path
+     d="m12400 26000h188v202h-188v-202m0-582h188v202h-188v-202m0-585h188v202h-188v-202"
+     id="path13" />
+  <path
+     d="m5030 2570 752-389-752-376 231 376-231 389"
+     id="path14" />
+  <path
+     d="m5070 9040 752-389-752-376 231 376-231 389"
+     id="path15" />
+  <g
+     style="font-family:Arial,sans-serif;text-align:center;text-anchor:middle;font-size:1200px"
+     id="g29">
+    <g
+       font-size="1380px"
+       id="g24">
+      <switch
+         id="switch15">
+        <text
+           y="21607"
+           x="12468"
+           id="trsvg22-uk"
+           systemLanguage="uk"><tspan
+             id="trsvg1-uk">Параметри для</tspan></text>
+        <text
+           y="21607"
+           x="12468"
+           id="trsvg22"><tspan
+             id="trsvg1">Parameters for</tspan></text>
+      </switch>
+      <switch
+         id="switch16">
+        <text
+           y="23238"
+           x="12501"
+           id="trsvg23"><tspan
+             id="trsvg2">DrawSquare</tspan></text>
+      </switch>
+      <switch
+         id="switch17">
+        <text
+           y="15768"
+           x="12455"
+           id="trsvg24-uk"
+           systemLanguage="uk"><tspan
+             id="trsvg3-uk">Локальні дані</tspan></text>
+        <text
+           y="15768"
+           x="12455"
+           id="trsvg24"><tspan
+             id="trsvg3">Locals of</tspan></text>
+      </switch>
+      <switch
+         id="switch18">
+        <text
+           y="17399"
+           x="12501"
+           id="trsvg25"><tspan
+             id="trsvg4">DrawSquare</tspan></text>
+      </switch>
+      <switch
+         id="switch19">
+        <text
+           y="19211"
+           x="12498"
+           id="trsvg26-uk"
+           systemLanguage="uk"
+           style="letter-spacing:-50.0717px">Адреса повернення</text>
+        <text
+           y="19211"
+           x="12498"
+           id="trsvg26"><tspan
+             id="trsvg5">Return Address</tspan></text>
+      </switch>
+      <switch
+         id="switch20">
+        <text
+           y="11972"
+           x="12468"
+           id="trsvg27-uk"
+           systemLanguage="uk"><tspan
+             id="trsvg6-uk">Параметри для</tspan></text>
+        <text
+           y="11972"
+           x="12468"
+           id="trsvg27"><tspan
+             id="trsvg6">Parameters for</tspan></text>
+      </switch>
+      <switch
+         id="switch21">
+        <text
+           y="13606"
+           x="12500"
+           id="trsvg28"><tspan
+             id="trsvg7">DrawLine</tspan></text>
+      </switch>
+      <switch
+         id="switch22">
+        <text
+           y="4974"
+           x="12455"
+           id="trsvg29-uk"
+           systemLanguage="uk"><tspan
+             id="trsvg8-uk">Локальні дані</tspan></text>
+        <text
+           y="4974"
+           x="12455"
+           id="trsvg29"><tspan
+             id="trsvg8">Locals of</tspan></text>
+      </switch>
+      <switch
+         id="switch23">
+        <text
+           y="6602"
+           x="12500"
+           id="trsvg30"><tspan
+             id="trsvg9">DrawLine</tspan></text>
+      </switch>
+      <switch
+         id="switch24">
+        <text
+           y="9870"
+           x="12498"
+           id="trsvg31-uk"
+           systemLanguage="uk"
+           style="letter-spacing:-50.0717px;white-space:pre;inline-size:12782.2"
+           xml:space="preserve"><tspan
+             x="12498"
+             y="9870"
+             id="tspan2"><tspan
+               dx="0 0 0 0 0 0.00016784668 0 0 0 0 0.0004119873 0 0 0.0004119873 -0.0005645752 0.0004119873 -0.0005645752"
+               id="tspan1">Адреса повернення</tspan></tspan></text>
+        <text
+           y="9870"
+           x="12498"
+           id="trsvg31"><tspan
+             id="trsvg10">Return Address</tspan></text>
+      </switch>
+    </g>
+    <switch
+       id="switch25">
+      <text
+         y="6464"
+         x="27050"
+         id="trsvg32-uk"
+         systemLanguage="uk"><tspan
+           y="6464"
+           x="23984"
+           id="trsvg11-uk">Стековий</tspan><tspan
+           y="7961"
+           x="23984"
+           id="trsvg12-uk">кадр для</tspan><tspan
+           y="9458"
+           x="23984"
+           id="trsvg13-uk">підпрограми</tspan><tspan
+           y="10955"
+           x="23984"
+           id="trsvg14-uk">DrawLine</tspan></text>
+      <text
+         y="6464"
+         x="27050"
+         id="trsvg32"><tspan
+           y="6464"
+           x="23984"
+           id="trsvg11">stack frame</tspan><tspan
+           y="7961"
+           x="23984"
+           id="trsvg12">for</tspan><tspan
+           y="9458"
+           x="23984"
+           id="trsvg13">DrawLine</tspan><tspan
+           y="10955"
+           x="23984"
+           id="trsvg14">subroutine</tspan></text>
+    </switch>
+    <switch
+       id="switch26">
+      <text
+         y="17447"
+         x="3865"
+         id="trsvg33-uk"
+         systemLanguage="uk"><tspan
+           x="563"
+           id="trsvg15-uk">Стековий кадр</tspan><tspan
+           y="18944"
+           x="563"
+           id="trsvg16-uk">для</tspan><tspan
+           y="20440"
+           x="563"
+           id="trsvg17-uk">підпрограми</tspan><tspan
+           y="21937"
+           x="563"
+           id="trsvg18-uk">DrawSquare</tspan></text>
+      <text
+         y="17447"
+         x="3865"
+         id="trsvg33"><tspan
+           x="563"
+           id="trsvg15">stack frame</tspan><tspan
+           y="18944"
+           x="563"
+           id="trsvg16">for</tspan><tspan
+           y="20440"
+           x="563"
+           id="trsvg17">DrawSquare</tspan><tspan
+           y="21937"
+           x="563"
+           id="trsvg18">subroutine</tspan></text>
+    </switch>
+    <switch
+       id="switch27">
+      <text
+         y="8919"
+         x="-2242"
+         id="trsvg34-uk"
+         systemLanguage="uk"
+         inkscape:label="trsvg34-uk"><tspan
+           sodipodi:role="line"
+           id="tspan30"
+           x="-2242"
+           y="8919">Вказівник</tspan><tspan
+           sodipodi:role="line"
+           x="-2242"
+           y="10419"
+           id="tspan35">кадру</tspan></text>
+      <text
+         y="8919"
+         x="-2242"
+         id="trsvg34"><tspan
+           id="trsvg19">Frame Pointer</tspan></text>
+    </switch>
+    <switch
+       id="switch28">
+      <text
+         y="2468"
+         x="-2081"
+         id="trsvg35-uk"
+         systemLanguage="uk"><tspan
+           sodipodi:role="line"
+           id="tspan32"
+           x="-2081"
+           y="2468"><tspan
+             id="trsvg20-uk">Вказівник</tspan></tspan><tspan
+           sodipodi:role="line"
+           id="tspan33"
+           x="-2081"
+           y="3968"><tspan
+             id="tspan34">стеку</tspan></tspan></text>
+      <text
+         y="2468"
+         x="-2081"
+         id="trsvg35"><tspan
+           id="trsvg20">Stack Pointer</tspan></text>
+    </switch>
+    <switch
+       id="switch29">
+      <text
+         y="1860"
+         x="12453"
+         id="trsvg36-uk"
+         systemLanguage="uk"><tspan
+           id="trsvg21-uk">верх стека</tspan></text>
+      <text
+         y="1860"
+         x="12453"
+         id="trsvg36"><tspan
+           id="trsvg21">top of stack</tspan></text>
+    </switch>
+  </g>
+</svg>
