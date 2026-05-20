@@ -14,7 +14,7 @@ services:
       sh -c "
       bundle config mirror.https://rubygems.org https://gems.ruby-china.com &&
       bundle check || bundle install &&
-      jekyll serve --watch --force_polling --future --verbose
+      jekyll serve --watch --force_polling --future --verbose --host 0.0.0.0
       "
     ports:
       - "4000:4000"
