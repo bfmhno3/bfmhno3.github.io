@@ -2,6 +2,7 @@ services:
   jekyll:
     image: jekyll/jekyll:latest
     container_name: bfmhno3.github.io
+    userns_mode: keep-id
 
     # 容器启动后要执行的命令
     # bundle config mirror.https://rubygems.org https://gems.ruby-china.com: 使用国内服务器加速安装
