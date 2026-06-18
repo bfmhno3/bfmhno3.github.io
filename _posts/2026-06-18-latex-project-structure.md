@@ -16,6 +16,7 @@ C:.
 │  .latexmkrc
 │  LICENSE
 │  main.tex
+│  refs.bib
 │
 ├─contents
 ├─docs
@@ -26,6 +27,7 @@ C:.
 ```
 
 - `main.tex`：入口文件，只负责把各部分拼起来。
+- `refs.bib`：参考文献数据库。用 BibTeX 格式存储文献条目，正文里用 `\cite{key}` 引用。配合 `biblatex` 使用时，在 `format.tex` 里用 `\addbibresource{refs.bib}` 指定路径。
 - `contents/`：章节内容，按章（`book`/`report` 类）或按节（`article` 类）建子文件夹。
 - `figs/`：图片资源。配合 `\graphicspath{{figs/}}` 使用，正文里直接写文件名就行。
 - `docs/`：项目文档，比如编译好的 PDF、使用说明等。
