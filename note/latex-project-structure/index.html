@@ -1,0 +1,1390 @@
+<!DOCTYPE html>
+<!--
+  Minimal Mistakes Jekyll Theme 4.28.0 by Michael Rose
+  Copyright 2013-2026 Michael Rose - mademistakes.com | @mmistakes
+  Copyright 2024-2026 iBug - ibugone.com | @iBug
+  Free for personal and commercial use under the MIT license
+  https://github.com/mmistakes/minimal-mistakes/blob/master/LICENSE
+--><html lang="en-US" class="no-js">
+  <head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+<meta charset="utf-8">
+
+
+<!-- begin _includes/seo.html --><title>LaTeX 项目结构与 latexmk 配置 - Better Mistakes</title>
+<meta name="description" content="我用 LaTeX 写东西时的项目目录结构、main.tex 模板，以及一份跨平台的 .latexmkrc 配置。">
+
+
+  <meta name="author" content="bfmhno3">
+  
+  <meta property="article:author" content="bfmhno3">
+  
+
+
+<meta property="og:type" content="article">
+<meta property="og:locale" content="en_US">
+<meta property="og:site_name" content="Better Mistakes">
+<meta property="og:title" content="LaTeX 项目结构与 latexmk 配置">
+<meta property="og:url" content="https://bfmhno3.github.io/note/latex-project-structure/">
+
+
+  <meta property="og:description" content="我用 LaTeX 写东西时的项目目录结构、main.tex 模板，以及一份跨平台的 .latexmkrc 配置。">
+
+
+
+  <meta property="og:image" content="https://bfmhno3.github.io/assets/images/avatar.jpg">
+  
+
+
+
+
+
+
+
+  <meta property="article:published_time" content="2026-06-18T03:20:00+00:00">
+
+
+
+
+
+  
+
+  
+
+
+<link rel="canonical" href="https://bfmhno3.github.io/note/latex-project-structure/">
+
+
+
+
+
+
+
+  <meta name="google-site-verification" content="UUnU8OnGqO_2FFdhrv7eEABM5p_cNPhM4Se6HB1KFSk">
+
+
+  <meta name="msvalidate.01" content="FC3BA97765A3C90F8CA771F70AE34FB8">
+
+
+
+
+
+<!-- end _includes/seo.html -->
+
+
+
+  <link href="/feed.xml" type="application/atom+xml" rel="alternate" title="Better Mistakes Feed">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script>
+  document.documentElement.className = document.documentElement.className.replace(/\bno-js\b/g, '') + ' js ';
+  window.enable_copy_code_button = true;
+</script>
+
+<!-- For all browsers -->
+<link rel="stylesheet" href="/assets/css/main.css">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@latest/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@latest/css/all.min.css"></noscript>
+
+
+
+    <link rel="icon" type="image/png" href="/assets/images/favicon/favicon-96x96.png" sizes="96x96">
+<link rel="icon" type="image/svg+xml" href="/assets/images/favicon/favicon.svg">
+<link rel="shortcut icon" href="/assets/images/favicon/favicon.ico">
+<link rel="apple-touch-icon" sizes="180x180" href="/assets/images/favicon/apple-touch-icon.png">
+<link rel="manifest" href="/assets/images/favicon/site.webmanifest">
+  </head>
+
+  <body class="layout--single" dir="ltr">
+    
+<nav class="skip-links" aria-label="Skip links">
+  <ul>
+    <li><a href="#site-nav" class="screen-reader-shortcut">Skip to primary navigation</a></li>
+    <li><a href="#main" class="screen-reader-shortcut">Skip to content</a></li>
+    <li><a href="#footer" class="screen-reader-shortcut">Skip to footer</a></li>
+  </ul>
+</nav>
+
+    
+
+
+<div class="masthead">
+  <div class="masthead__inner-wrap">
+    <div class="masthead__menu">
+      <nav id="site-nav" class="greedy-nav" aria-label="Primary navigation">
+        
+          <a class="site-logo" href="/"><img src="/assets/images/logo.svg" alt="Better Mistakes"></a>
+        
+        <a class="site-title" href="/">
+          Better Mistakes
+          <span class="site-subtitle">Trial.Error.Iteration.</span>
+        </a>
+        <ul class="visible-links">
+<li class="masthead__menu-item">
+              <a href="/posts/">Posts</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/categories/">Categories</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/tags/">Tags</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/portfolio/">Portfolio</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/about/">About</a>
+            </li>
+</ul>
+        
+        <button class="search__toggle" type="button">
+          <span class="visually-hidden">Toggle search</span>
+          <i class="fas fa-search"></i>
+        </button>
+        
+        <button class="greedy-nav__toggle hidden" type="button">
+          <span class="visually-hidden">Toggle menu</span>
+          <div class="navicon"></div>
+        </button>
+        <ul class="hidden-links hidden"></ul>
+      </nav>
+    </div>
+  </div>
+</div>
+
+
+    <div class="initial-content">
+      
+
+
+
+
+
+
+
+<div id="main" role="main">
+  
+
+  <div class="sidebar sticky">
+  
+
+
+
+<div itemscope itemtype="https://schema.org/Person" class="h-card">
+
+  
+    <div class="author__avatar">
+      <a href="https://bfmhno3.github.io/">
+        <img src="/assets/images/avatar.jpg" alt="bfmhno3" itemprop="image" class="u-photo">
+      </a>
+    </div>
+  
+
+  <div class="author__content">
+    <h3 class="author__name p-name" itemprop="name">
+      <a class="u-url" rel="me" href="https://bfmhno3.github.io/" itemprop="url">bfmhno3</a>
+    </h3>
+    
+      <div class="author__bio p-note" itemprop="description">
+        <p>Third-year university student majoring in energy engineering. Exploring the world of code and mathematics.</p>
+
+      </div>
+    
+  </div>
+
+  <div class="author__urls-wrapper">
+    <button class="btn btn--inverse">Follow</button>
+    <ul class="author__urls social-icons">
+      
+
+      
+        
+          
+            <li><a href="https://github.com/bfmhno3" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fab fa-fw fa-github" aria-hidden="true"></i><span class="label">GitHub</span></a></li>
+          
+        
+          
+            <li><a href="https://gitee.com/bfmhno3" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fa-solid fa-g" aria-hidden="true"></i><span class="label">Gitee</span></a></li>
+          
+        
+          
+            <li><a href="https://www.cnblogs.com/bfmhno3" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fa-solid fa-blog" aria-hidden="true"></i><span class="label">cnblogs</span></a></li>
+          
+        
+          
+            <li><a href="https://blog.csdn.net/B33336" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fa-solid fa-blog" aria-hidden="true"></i><span class="label">CSDN</span></a></li>
+          
+        
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      <!--
+  <li>
+    <a href="http://link-to-whatever-social-network.com/user/" itemprop="sameAs" rel="nofollow noopener noreferrer me">
+      <i class="fas fa-fw" aria-hidden="true"></i> Custom Social Profile Link
+    </a>
+  </li>
+-->
+    </ul>
+  </div>
+</div>
+
+  
+  
+  </div>
+
+
+
+  <article class="page h-entry" itemscope itemtype="https://schema.org/CreativeWork">
+    <meta itemprop="headline" content="LaTeX 项目结构与 latexmk 配置">
+    <meta itemprop="description" content="我用 LaTeX 写东西时的项目目录结构、main.tex 模板，以及一份跨平台的 .latexmkrc 配置。">
+    <meta itemprop="datePublished" content="2026-06-18T03:20:00+00:00">
+    
+
+    <div class="page__inner-wrap">
+      
+        <header>
+          <h1 id="page-title" class="page__title p-name" itemprop="headline">
+            <a href="https://bfmhno3.github.io/note/latex-project-structure/" itemprop="url">LaTeX 项目结构与 latexmk 配置
+</a>
+          </h1>
+          
+
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-06-18T03:20:00+00:00">June 18, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-clock" aria-hidden="true"></i>
+        
+          8 minute read
+        
+      </span>
+    
+  </p>
+
+
+        </header>
+      
+
+      <section class="page__content e-content" itemprop="text">
+        
+          <aside class="sidebar__right sticky">
+            <nav class="toc" aria-label="Table of contents">
+              <header><h4 class="nav__title">
+<i class="fas fa-file-alt"></i> On this page</h4></header>
+              <ul class="toc__menu">
+<li><a href="#%E7%9B%AE%E5%BD%95%E7%BB%93%E6%9E%84">目录结构</a></li>
+<li>
+<a href="#maintex-%E6%A8%A1%E6%9D%BF">main.tex 模板</a><ul>
+<li><a href="#book-%E7%B1%BB">book 类</a></li>
+<li><a href="#article-%E7%B1%BB">article 类</a></li>
+<li><a href="#report-%E7%B1%BB">report 类</a></li>
+<li><a href="#%E4%B8%89%E8%80%85%E5%B7%AE%E5%9C%A8%E5%93%AA">三者差在哪</a></li>
+</ul>
+</li>
+<li><a href="#%E5%B7%A5%E5%85%B7%E7%AE%80%E4%BB%8B">工具简介</a></li>
+<li>
+<a href="#latexmkrc">.latexmkrc</a><ul><li><a href="#%E9%80%90%E9%A1%B9%E8%AF%B4%E6%98%8E">逐项说明</a></li></ul>
+</li>
+<li>
+<a href="#%E5%B8%B8%E7%94%A8%E5%AE%8F%E5%8C%85">常用宏包</a><ul>
+<li><a href="#%E5%AD%97%E4%BD%93%E4%B8%8E%E7%BC%96%E7%A0%81">字体与编码</a></li>
+<li><a href="#%E9%A1%B5%E9%9D%A2%E5%B8%83%E5%B1%80">页面布局</a></li>
+<li><a href="#%E6%95%B0%E5%AD%A6%E4%B8%8E%E4%BB%A3%E7%A0%81">数学与代码</a></li>
+<li><a href="#%E5%9B%BE%E8%A1%A8%E4%B8%8E%E6%B5%AE%E5%8A%A8%E4%BD%93">图表与浮动体</a></li>
+<li><a href="#%E5%8F%82%E8%80%83%E6%96%87%E7%8C%AE">参考文献</a></li>
+<li><a href="#%E5%85%B6%E4%BB%96%E5%AE%9E%E7%94%A8%E5%B7%A5%E5%85%B7">其他实用工具</a></li>
+</ul>
+</li>
+</ul>
+            </nav>
+          </aside>
+        
+        <h2 id="目录结构">目录结构</h2>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>C:.
+│  .gitignore
+│  .latexmkrc
+│  LICENSE
+│  main.tex
+│  refs.bib
+│
+├─contents
+├─docs
+├─figs
+└─settings
+    format.tex
+    packages.tex
+</code></pre></div></div>
+
+<ul>
+  <li>
+<code class="language-plaintext highlighter-rouge">main.tex</code>：入口文件，只负责把各部分拼起来。</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">refs.bib</code>：参考文献数据库。用 BibTeX 格式存储文献条目，正文里用 <code class="language-plaintext highlighter-rouge">\cite{key}</code> 引用。配合 <code class="language-plaintext highlighter-rouge">biblatex</code> 使用时，在 <code class="language-plaintext highlighter-rouge">format.tex</code> 里用 <code class="language-plaintext highlighter-rouge">\addbibresource{refs.bib}</code> 指定路径。</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">contents/</code>：章节内容，按章（<code class="language-plaintext highlighter-rouge">book</code>/<code class="language-plaintext highlighter-rouge">report</code> 类）或按节（<code class="language-plaintext highlighter-rouge">article</code> 类）建子文件夹。</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">figs/</code>：图片资源。配合 <code class="language-plaintext highlighter-rouge">\graphicspath</code> 使用，正文里直接写文件名就行。</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">docs/</code>：项目文档，比如编译好的 PDF、使用说明等。</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">settings/packages.tex</code>：宏包导入。</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">settings/format.tex</code>：格式配置（页面布局、标题样式、字体等）。</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">.latexmkrc</code>：latexmk 的编译配置，后面会详细讲。</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">.gitignore</code>：LaTeX 项目的忽略模板可以参考 <a href="https://github.com/github/gitignore/blob/main/TeX.gitignore">github/gitignore/TeX.gitignore</a>。注意官方模板里没有 <code class="language-plaintext highlighter-rouge">build/</code> 目录，如果你像我一样把编译产物输出到 <code class="language-plaintext highlighter-rouge">build/</code>，记得手动加上。</li>
+</ul>
+
+<p><code class="language-plaintext highlighter-rouge">packages.tex</code> 和 <code class="language-plaintext highlighter-rouge">format.tex</code> 的最小示例：</p>
+
+<div class="language-tex highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">% settings/packages.tex -- 只管导入，不管配置</span>
+<span class="k">\usepackage</span><span class="p">{</span>fontspec<span class="p">}</span>
+<span class="k">\usepackage</span><span class="p">{</span>xeCJK<span class="p">}</span>
+<span class="k">\usepackage</span><span class="p">{</span>geometry<span class="p">}</span>
+<span class="k">\usepackage</span><span class="p">{</span>fancyhdr<span class="p">}</span>
+<span class="k">\usepackage</span><span class="p">{</span>amsmath<span class="p">}</span>
+<span class="k">\usepackage</span><span class="p">{</span>amssymb<span class="p">}</span>
+<span class="k">\usepackage</span><span class="p">{</span>amsfonts<span class="p">}</span>
+<span class="k">\usepackage</span><span class="p">{</span>mathtools<span class="p">}</span>
+<span class="k">\usepackage</span><span class="p">{</span>graphicx<span class="p">}</span>
+<span class="k">\usepackage</span><span class="p">{</span>tabularray<span class="p">}</span>
+<span class="k">\usepackage</span><span class="p">{</span>subcaption<span class="p">}</span>
+<span class="k">\usepackage</span><span class="p">{</span>listings<span class="p">}</span>
+<span class="k">\usepackage</span><span class="p">{</span>enumitem<span class="p">}</span>
+<span class="k">\usepackage</span><span class="p">{</span>siunitx<span class="p">}</span>
+<span class="k">\usepackage</span><span class="na">[backend=biber, style=gb7714-2015]</span><span class="p">{</span>biblatex<span class="p">}</span>
+<span class="k">\usepackage</span><span class="na">[colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue]</span><span class="p">{</span>hyperref<span class="p">}</span>
+<span class="k">\usepackage</span><span class="na">[capitalise]</span><span class="p">{</span>cleveref<span class="p">}</span>
+</code></pre></div></div>
+
+<div class="language-tex highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">% settings/format.tex -- 字体、布局、宏包的后续配置</span>
+<span class="k">\setmainfont</span><span class="p">{</span>TeX Gyre Termes<span class="p">}</span>
+<span class="k">\setsansfont</span><span class="p">{</span>TeX Gyre Heros<span class="p">}</span>
+<span class="k">\setmonofont</span><span class="p">{</span>TeX Gyre Cursor<span class="p">}</span>
+<span class="k">\setCJKmainfont</span><span class="p">{</span>Source Han Serif SC<span class="p">}</span>
+<span class="k">\setCJKsansfont</span><span class="p">{</span>Source Han Sans SC<span class="p">}</span>
+<span class="k">\setCJKmonofont</span><span class="p">{</span>Source Han Mono SC<span class="p">}</span>
+
+<span class="k">\geometry</span><span class="p">{</span>a4paper, margin=2.5cm<span class="p">}</span>
+
+<span class="k">\pagestyle</span><span class="p">{</span>fancy<span class="p">}</span>
+<span class="k">\fancyhf</span><span class="p">{}</span>
+<span class="k">\fancyhead</span><span class="na">[L]</span><span class="p">{</span><span class="k">\leftmark</span><span class="p">}</span>
+<span class="k">\fancyfoot</span><span class="na">[C]</span><span class="p">{</span><span class="k">\thepage</span><span class="p">}</span>
+<span class="k">\renewcommand</span><span class="p">{</span><span class="k">\headrulewidth</span><span class="p">}{</span>0.4pt<span class="p">}</span>
+
+<span class="k">\UseTblrLibrary</span><span class="p">{</span>booktabs, siunitx<span class="p">}</span>
+
+<span class="k">\graphicspath</span>
+<span class="k">\sisetup</span><span class="p">{</span>range-phrase=<span class="k">\ensuremath</span><span class="p">{</span><span class="k">\sim</span><span class="p">}</span>, range-units=single<span class="p">}</span>
+<span class="k">\addbibresource</span><span class="p">{</span>refs.bib<span class="p">}</span>
+
+<span class="c">% tabularray 常用全局设置</span>
+<span class="k">\SetTblrStyle</span><span class="p">{</span>firsthead<span class="p">}{</span>font=<span class="k">\bfseries</span><span class="p">}</span>
+<span class="k">\SetTblrStyle</span><span class="p">{</span>firstfoot<span class="p">}{</span>font=<span class="k">\small</span><span class="p">}</span>
+<span class="k">\SetTblrStyle</span><span class="p">{</span>middlefoot<span class="p">}{</span>font=<span class="k">\small</span><span class="p">}</span>
+<span class="k">\SetTblrStyle</span><span class="p">{</span>lastfoot<span class="p">}{</span>font=<span class="k">\small</span><span class="p">}</span>
+</code></pre></div></div>
+
+<p>实际使用时按需增减。宏包的加载顺序有讲究，后面”常用宏包”一节会说明。</p>
+
+<h2 id="maintex-模板">
+<code class="language-plaintext highlighter-rouge">main.tex</code> 模板</h2>
+
+<h3 id="book-类">
+<code class="language-plaintext highlighter-rouge">book</code> 类</h3>
+
+<div class="language-tex highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">\documentclass</span><span class="p">{</span>book<span class="p">}</span>
+
+<span class="k">\input</span><span class="p">{</span>settings/packages<span class="p">}</span>
+<span class="k">\input</span><span class="p">{</span>settings/format<span class="p">}</span>
+
+<span class="nt">\begin{document}</span>
+
+<span class="k">\maketitle</span>
+<span class="k">\frontmatter</span>
+
+<span class="k">\tableofcontents</span>
+
+<span class="k">\mainmatter</span>
+
+<span class="c">% \input{contents/chap_01}</span>
+
+<span class="k">\appendix</span>
+<span class="c">% \input{contents/appendix}</span>
+
+<span class="k">\backmatter</span>
+
+<span class="nt">\end{document}</span>
+</code></pre></div></div>
+
+<h3 id="article-类">
+<code class="language-plaintext highlighter-rouge">article</code> 类</h3>
+
+<div class="language-tex highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">\documentclass</span><span class="p">{</span>article<span class="p">}</span>
+
+<span class="k">\input</span><span class="p">{</span>settings/packages<span class="p">}</span>
+<span class="k">\input</span><span class="p">{</span>settings/format<span class="p">}</span>
+
+<span class="nt">\begin{document}</span>
+
+<span class="k">\maketitle</span>
+
+<span class="k">\tableofcontents</span>
+
+<span class="c">% \input{contents/sec_01}</span>
+
+<span class="k">\appendix</span>
+<span class="c">% \input{contents/appendix}</span>
+
+<span class="nt">\end{document}</span>
+</code></pre></div></div>
+
+<h3 id="report-类">
+<code class="language-plaintext highlighter-rouge">report</code> 类</h3>
+
+<div class="language-tex highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">\documentclass</span><span class="p">{</span>report<span class="p">}</span>
+
+<span class="k">\input</span><span class="p">{</span>settings/packages<span class="p">}</span>
+<span class="k">\input</span><span class="p">{</span>settings/format<span class="p">}</span>
+
+<span class="nt">\begin{document}</span>
+
+<span class="k">\maketitle</span>
+
+<span class="k">\tableofcontents</span>
+
+<span class="c">% \input{contents/chap_01}</span>
+
+<span class="k">\appendix</span>
+<span class="c">% \input{contents/appendix}</span>
+
+<span class="nt">\end{document}</span>
+</code></pre></div></div>
+
+<h3 id="三者差在哪">三者差在哪</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th> </th>
+      <th><code class="language-plaintext highlighter-rouge">article</code></th>
+      <th><code class="language-plaintext highlighter-rouge">report</code></th>
+      <th><code class="language-plaintext highlighter-rouge">book</code></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>最高章节</td>
+      <td><code class="language-plaintext highlighter-rouge">\section</code></td>
+      <td><code class="language-plaintext highlighter-rouge">\chapter</code></td>
+      <td><code class="language-plaintext highlighter-rouge">\chapter</code></td>
+    </tr>
+    <tr>
+      <td>默认排版</td>
+      <td>单面</td>
+      <td>单面</td>
+      <td>双面</td>
+    </tr>
+    <tr>
+      <td>标题页</td>
+      <td>正文内</td>
+      <td>独立一页</td>
+      <td>独立一页</td>
+    </tr>
+    <tr>
+      <td>
+<code class="language-plaintext highlighter-rouge">\frontmatter</code> / <code class="language-plaintext highlighter-rouge">\backmatter</code>
+</td>
+      <td>无</td>
+      <td>无</td>
+      <td>有</td>
+    </tr>
+    <tr>
+      <td>典型用途</td>
+      <td>短文、笔记、报告</td>
+      <td>课程报告、毕业论文</td>
+      <td>书籍、学位论文</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><code class="language-plaintext highlighter-rouge">report</code> 和 <code class="language-plaintext highlighter-rouge">book</code> 都有 <code class="language-plaintext highlighter-rouge">\chapter</code>，区别主要在排版方式和文档结构命令。<code class="language-plaintext highlighter-rouge">book</code> 多了 <code class="language-plaintext highlighter-rouge">\frontmatter</code>、<code class="language-plaintext highlighter-rouge">\mainmatter</code>、<code class="language-plaintext highlighter-rouge">\backmatter</code>，默认双面排版，适合正式出版物。<code class="language-plaintext highlighter-rouge">report</code> 默认单面，没有前言/正文/后记的划分，适合不需要装订的长文档。</p>
+
+<p><code class="language-plaintext highlighter-rouge">article</code> 没有 <code class="language-plaintext highlighter-rouge">\chapter</code>，从 <code class="language-plaintext highlighter-rouge">\section</code> 开始。写短文、笔记够用了。</p>
+
+<p>三者的标题页也不同。<code class="language-plaintext highlighter-rouge">book</code> 和 <code class="language-plaintext highlighter-rouge">report</code> 的 <code class="language-plaintext highlighter-rouge">\maketitle</code> 都是独立一页，<code class="language-plaintext highlighter-rouge">article</code> 的只是在正文开头插一行。</p>
+
+<h2 id="工具简介">工具简介</h2>
+
+<p>在看 <code class="language-plaintext highlighter-rouge">.latexmkrc</code> 之前，先简单介绍一下涉及的几个工具。</p>
+
+<p><strong>XeLaTeX</strong></p>
+
+<p>LaTeX 的编译引擎之一。相比传统的 pdfLaTeX，XeLaTeX 原生支持 Unicode 和系统字体（通过 fontspec），处理中文要方便得多。如果你主要写中文文档，XeLaTeX（或 LuaLaTeX）基本是必选的。</p>
+
+<p><strong>latexmk</strong></p>
+
+<p>一个 Perl 写的自动化编译工具。LaTeX 的编译经常需要跑多遍（交叉引用、目录、参考文献），手动执行很烦。latexmk 会自动判断需要跑几遍、要不要调用 BibTeX/Biber，直到所有引用都稳定为止。配合 <code class="language-plaintext highlighter-rouge">-pvc</code> 参数还能监控文件变化，保存即编译。</p>
+
+<p><strong>BibTeX 和 Biber</strong></p>
+
+<p>两者都是处理参考文献的工具。BibTeX 是老方案，Biber 是配合 biblatex 宏包的新方案，功能更强（支持 Unicode、更灵活的样式定制）。latexmk 的 <code class="language-plaintext highlighter-rouge">$bibtex_use = 2</code> 会自动检测你用的是哪个，不用手动切换。</p>
+
+<p><strong>SyncTeX</strong></p>
+
+<p>在编辑器和 PDF 阅读器之间做双向跳转的数据格式。加了 <code class="language-plaintext highlighter-rouge">-synctex=1</code> 之后，你可以在编辑器里点一个位置，PDF 阅读器自动翻到对应页面，反过来也行。</p>
+
+<h2 id="latexmkrc"><code class="language-plaintext highlighter-rouge">.latexmkrc</code></h2>
+
+<div class="language-perl highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># 主文件</span>
+<span class="nv">$root</span> <span class="o">=</span> <span class="p">'</span><span class="s1">main.tex</span><span class="p">';</span>
+
+<span class="c1"># 输出目录</span>
+<span class="nv">$out_dir</span> <span class="o">=</span> <span class="p">'</span><span class="s1">build</span><span class="p">';</span>
+<span class="nv">$aux_dir</span> <span class="o">=</span> <span class="p">'</span><span class="s1">build</span><span class="p">';</span>
+
+<span class="c1"># 编译引擎: XeLaTeX</span>
+<span class="nv">$pdf_mode</span> <span class="o">=</span> <span class="mi">5</span><span class="p">;</span>
+<span class="nv">$xelatex</span> <span class="o">=</span> <span class="p">'</span><span class="s1">xelatex -interaction=nonstopmode -file-line-error -synctex=1 %O %S</span><span class="p">';</span>
+
+<span class="c1"># 自动运行 BibTeX 或 Biber</span>
+<span class="nv">$bibtex_use</span> <span class="o">=</span> <span class="mi">2</span><span class="p">;</span>
+
+<span class="c1"># 清理时保留 PDF</span>
+<span class="nv">$clean_ext</span> <span class="o">=</span> <span class="p">'</span><span class="s1">aux bbl bcf blg fdb_latexmk fls log out run.xml synctex.gz toc</span><span class="p">';</span>
+
+<span class="c1"># 跨平台 PDF 预览器</span>
+<span class="k">if</span> <span class="p">(</span><span class="vg">$^O</span> <span class="ow">eq</span> <span class="p">'</span><span class="s1">MSWin32</span><span class="p">')</span> <span class="p">{</span>
+    <span class="nv">$pdf_previewer</span> <span class="o">=</span> <span class="p">'</span><span class="s1">start %S</span><span class="p">';</span>
+<span class="p">}</span> <span class="k">elsif</span> <span class="p">(</span><span class="vg">$^O</span> <span class="ow">eq</span> <span class="p">'</span><span class="s1">darwin</span><span class="p">')</span> <span class="p">{</span>
+    <span class="nv">$pdf_previewer</span> <span class="o">=</span> <span class="p">'</span><span class="s1">open %S</span><span class="p">';</span>
+<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+    <span class="nv">$pdf_previewer</span> <span class="o">=</span> <span class="p">'</span><span class="s1">xdg-open %S 2&gt;/dev/null || evince %S</span><span class="p">';</span>
+<span class="p">}</span>
+
+<span class="c1"># Windows 下清理时不删除被占用的文件</span>
+<span class="k">if</span> <span class="p">(</span><span class="vg">$^O</span> <span class="ow">eq</span> <span class="p">'</span><span class="s1">MSWin32</span><span class="p">')</span> <span class="p">{</span>
+    <span class="nv">$cleanup_includes_generated</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="c1"># 自定义依赖示例（取消注释即可用）</span>
+<span class="c1"># add_cus_dep('glo', 'gls', 0, 'makeglos');</span>
+<span class="c1"># sub makeglos {</span>
+<span class="c1">#     system("makeindex -s $_[0].ist -t $_[0].glg -o $_[0].gls $_[0].glo");</span>
+<span class="c1"># }</span>
+</code></pre></div></div>
+
+<h3 id="逐项说明">逐项说明</h3>
+
+<ul>
+  <li>
+<code class="language-plaintext highlighter-rouge">$root</code>：主文件名。latexmk 从这里开始分析依赖。改成你的实际文件名就行。</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">$out_dir</code> / <code class="language-plaintext highlighter-rouge">$aux_dir</code>：编译产物放哪。设成 <code class="language-plaintext highlighter-rouge">build</code> 能让根目录干净一些，PDF 会出现在 <code class="language-plaintext highlighter-rouge">build/main.pdf</code>。记得在 <code class="language-plaintext highlighter-rouge">.gitignore</code> 里加上 <code class="language-plaintext highlighter-rouge">build/</code>。</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">$pdf_mode</code>：选择编译引擎。1 是 pdfLaTeX，4 是 LuaLaTeX，5 是 XeLaTeX。</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">$xelatex</code>：XeLaTeX 的调用参数。<code class="language-plaintext highlighter-rouge">-interaction=nonstopmode</code> 让它遇到错误继续编译而不是停下来等你按回车；<code class="language-plaintext highlighter-rouge">-file-line-error</code> 让报错信息带上文件名和行号；<code class="language-plaintext highlighter-rouge">-synctex=1</code> 生成编辑器跳转用的数据。<code class="language-plaintext highlighter-rouge">%O</code> 和 <code class="language-plaintext highlighter-rouge">%S</code> 是 latexmk 的占位符，分别代表额外选项和源文件。</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">$bibtex_use</code>：设为 2 就行，自动检测 BibTeX 还是 Biber。设为 0 关闭自动处理，1 只在 <code class="language-plaintext highlighter-rouge">.bbl</code> 已存在时才跑。</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">$clean_ext</code>：<code class="language-plaintext highlighter-rouge">latexmk -c</code> 会删掉这些后缀的文件。PDF 不在里面，所以清理后 PDF 还在。注意区分 <code class="language-plaintext highlighter-rouge">-c</code>（清理中间文件，保留 PDF）和 <code class="language-plaintext highlighter-rouge">-C</code>（连 PDF 一起删），别手滑用了 <code class="language-plaintext highlighter-rouge">-C</code>。</li>
+  <li>
+<strong>跨平台预览器</strong>：Perl 的 <code class="language-plaintext highlighter-rouge">$^O</code> 变量存着操作系统类型：Windows 是 <code class="language-plaintext highlighter-rouge">MSWin32</code>，macOS 是 <code class="language-plaintext highlighter-rouge">darwin</code>，Linux 就是 <code class="language-plaintext highlighter-rouge">linux</code>。<code class="language-plaintext highlighter-rouge">start</code>、<code class="language-plaintext highlighter-rouge">open</code>、<code class="language-plaintext highlighter-rouge">xdg-open</code> 分别是三个平台打开文件的命令。<code class="language-plaintext highlighter-rouge">%S</code> 会被替换成 PDF 路径。配合 <code class="language-plaintext highlighter-rouge">latexmk -pvc</code> 使用，保存文件后自动编译并刷新 PDF 预览，不用手动跑命令。</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">$cleanup_includes_generated</code>：Windows 上文件锁比较死板，latexmk 清理时可能删不掉正在被占用的文件。设为 0 可以避免这个问题。</li>
+  <li>
+<strong>自定义依赖</strong>：<code class="language-plaintext highlighter-rouge">add_cus_dep</code> 用来告诉 latexmk “如果某个 <code class="language-plaintext highlighter-rouge">.glo</code> 文件变了，要重新生成对应的 <code class="language-plaintext highlighter-rouge">.gls</code>“。示例里是术语表的场景，取消注释就能用。</li>
+</ul>
+
+<h2 id="常用宏包">常用宏包</h2>
+
+<p>以下是写中文 LaTeX 文档时经常会用到的宏包，以及它们的典型配置。</p>
+
+<p>加载顺序需要注意几点：<code class="language-plaintext highlighter-rouge">fontspec</code> 和 <code class="language-plaintext highlighter-rouge">xeCJK</code> 要在大多数宏包之前加载；<code class="language-plaintext highlighter-rouge">amsmath</code> 要在 <code class="language-plaintext highlighter-rouge">mathtools</code> 之前；<code class="language-plaintext highlighter-rouge">tabularray</code> 的 <code class="language-plaintext highlighter-rouge">\UseTblrLibrary</code> 要在 <code class="language-plaintext highlighter-rouge">siunitx</code> 之后（因为 <code class="language-plaintext highlighter-rouge">siunitx</code> 库需要 siunitx 已加载）；<code class="language-plaintext highlighter-rouge">hyperref</code> 几乎总是放在最后，唯一的例外是 <code class="language-plaintext highlighter-rouge">cleveref</code>，它必须在 <code class="language-plaintext highlighter-rouge">hyperref</code> 之后。上面 <code class="language-plaintext highlighter-rouge">packages.tex</code> 示例中的顺序可以直接用。</p>
+
+<h3 id="字体与编码">字体与编码</h3>
+
+<p><strong>fontspec</strong></p>
+
+<p>配合 XeLaTeX/LuaLaTeX 使用，用来设置系统字体。</p>
+
+<div class="language-tex highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">\usepackage</span><span class="p">{</span>fontspec<span class="p">}</span>
+<span class="k">\setmainfont</span><span class="p">{</span>TeX Gyre Termes<span class="p">}</span>          <span class="c">% 正文衬线字体</span>
+<span class="k">\setsansfont</span><span class="p">{</span>TeX Gyre Heros<span class="p">}</span>           <span class="c">% 无衬线字体</span>
+<span class="k">\setmonofont</span><span class="p">{</span>TeX Gyre Cursor<span class="p">}</span>          <span class="c">% 等宽字体</span>
+</code></pre></div></div>
+
+<p><strong>xeCJK</strong></p>
+
+<p>处理中文排版的核心宏包，自动处理中英文之间的间距、标点挤压等。</p>
+
+<div class="language-tex highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">\usepackage</span><span class="p">{</span>xeCJK<span class="p">}</span>
+<span class="k">\setCJKmainfont</span><span class="p">{</span>Source Han Serif SC<span class="p">}</span>   <span class="c">% 中文衬线（思源宋体）</span>
+<span class="k">\setCJKsansfont</span><span class="p">{</span>Source Han Sans SC<span class="p">}</span>    <span class="c">% 中文无衬线（思源黑体）</span>
+<span class="k">\setCJKmonofont</span><span class="p">{</span>Source Han Mono SC<span class="p">}</span>    <span class="c">% 中文等宽</span>
+</code></pre></div></div>
+
+<h3 id="页面布局">页面布局</h3>
+
+<p><strong>geometry</strong></p>
+
+<p>控制页面尺寸和边距，比 LaTeX 默认的布局参数好用得多。</p>
+
+<div class="language-tex highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">\usepackage</span><span class="na">[a4paper, margin=2.5cm]</span><span class="p">{</span>geometry<span class="p">}</span>
+<span class="c">% 也可以精细控制</span>
+<span class="c">% \usepackage[a4paper, top=3cm, bottom=2.5cm, left=2.8cm, right=2.2cm]{geometry}</span>
+</code></pre></div></div>
+
+<p><strong>fancyhdr</strong></p>
+
+<p>自定义页眉页脚。</p>
+
+<div class="language-tex highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">\usepackage</span><span class="p">{</span>fancyhdr<span class="p">}</span>
+<span class="k">\pagestyle</span><span class="p">{</span>fancy<span class="p">}</span>
+<span class="k">\fancyhf</span><span class="p">{}</span>                             <span class="c">% 清空默认设置</span>
+<span class="k">\fancyhead</span><span class="na">[L]</span><span class="p">{</span><span class="k">\leftmark</span><span class="p">}</span>               <span class="c">% 页眉左侧放章节名</span>
+<span class="k">\fancyfoot</span><span class="na">[C]</span><span class="p">{</span><span class="k">\thepage</span><span class="p">}</span>                <span class="c">% 页脚中间放页码</span>
+<span class="k">\renewcommand</span><span class="p">{</span><span class="k">\headrulewidth</span><span class="p">}{</span>0.4pt<span class="p">}</span>   <span class="c">% 页眉横线粗细</span>
+</code></pre></div></div>
+
+<h3 id="数学与代码">数学与代码</h3>
+
+<p><strong>amsmath / amssymb / amsfonts</strong></p>
+
+<p>数学排版的基础三件套，基本上写公式就得用。</p>
+
+<div class="language-tex highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">\usepackage</span><span class="p">{</span>amsmath<span class="p">}</span>
+<span class="k">\usepackage</span><span class="p">{</span>amssymb<span class="p">}</span>
+<span class="k">\usepackage</span><span class="p">{</span>amsfonts<span class="p">}</span>
+</code></pre></div></div>
+
+<p><strong>mathtools</strong></p>
+
+<p>amsmath 的扩展包，修复了一些设计问题并增加了实用工具。</p>
+
+<div class="language-tex highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">\usepackage</span><span class="p">{</span>mathtools<span class="p">}</span>
+<span class="c">% 例如：可以给公式加编号标签</span>
+<span class="c">% \usetagform{default}</span>
+</code></pre></div></div>
+
+<p><strong>listings</strong></p>
+
+<p>排版代码块。支持语法高亮，可以指定语言和样式。</p>
+
+<div class="language-tex highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">\usepackage</span><span class="p">{</span>listings<span class="p">}</span>
+<span class="k">\lstset</span><span class="p">{</span>
+    basicstyle=<span class="k">\ttfamily\small</span>,
+    breaklines=true,
+    frame=single,
+    numbers=left,
+    numberstyle=<span class="k">\tiny\color</span><span class="p">{</span>gray<span class="p">}</span>,
+    keywordstyle=<span class="k">\color</span><span class="p">{</span>blue<span class="p">}</span>,
+    commentstyle=<span class="k">\color</span><span class="p">{</span>green!60!black<span class="p">}</span>,
+    stringstyle=<span class="k">\color</span><span class="p">{</span>red!70!black<span class="p">}</span>,
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p><strong>minted</strong></p>
+
+<p>基于 Pygments 的代码排版，高亮效果比 listings 好，但需要 Python 环境且编译时要加 <code class="language-plaintext highlighter-rouge">-shell-escape</code>。</p>
+
+<div class="language-tex highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">\usepackage</span><span class="p">{</span>minted<span class="p">}</span>
+<span class="c">% 使用示例：</span>
+<span class="c">% \begin{minted}{python}</span>
+<span class="c">% def hello():</span>
+<span class="c">%     print("world")</span>
+<span class="c">% \end{minted}</span>
+</code></pre></div></div>
+
+<h3 id="图表与浮动体">图表与浮动体</h3>
+
+<p><strong>graphicx</strong></p>
+
+<p>插入图片。</p>
+
+<div class="language-tex highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">\usepackage</span><span class="p">{</span>graphicx<span class="p">}</span>
+<span class="k">\graphicspath</span>                 <span class="c">% 指定图片搜索路径</span>
+</code></pre></div></div>
+
+<p><strong>tabularray</strong></p>
+
+<p>现代表格宏包，统一了表格的样式配置和内容分离。用 <code class="language-plaintext highlighter-rouge">tblr</code> 环境替代传统的 <code class="language-plaintext highlighter-rouge">tabular</code>，样式参数写在 <code class="language-plaintext highlighter-rouge">\begin{tblr}{...}</code> 的花括号里，正文和样式彻底分开。配合 <code class="language-plaintext highlighter-rouge">booktabs</code> 库可以使用 <code class="language-plaintext highlighter-rouge">\toprule</code>、<code class="language-plaintext highlighter-rouge">\midrule</code>、<code class="language-plaintext highlighter-rouge">\bottomrule</code>。</p>
+
+<div class="language-tex highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">\usepackage</span><span class="p">{</span>tabularray<span class="p">}</span>
+<span class="k">\UseTblrLibrary</span><span class="p">{</span>booktabs, siunitx<span class="p">}</span>
+<span class="c">% \begin{table}</span>
+<span class="c">% \begin{tblr}{</span>
+<span class="c">%   colspec = {lrc},</span>
+<span class="c">%   row{1} = {font=\bfseries},</span>
+<span class="c">% }</span>
+<span class="c">%   \toprule</span>
+<span class="c">%   姓名 &amp; 分数 &amp; 等级 \\</span>
+<span class="c">%   \midrule</span>
+<span class="c">%   张三 &amp; 95 &amp; A \\</span>
+<span class="c">%   李四 &amp; 82 &amp; B \\</span>
+<span class="c">%   \bottomrule</span>
+<span class="c">% \end{tblr}</span>
+<span class="c">% \end{table}</span>
+</code></pre></div></div>
+
+<p><code class="language-plaintext highlighter-rouge">booktabs</code> 库提供三线表的线条命令，<code class="language-plaintext highlighter-rouge">siunitx</code> 库让列可以用 <code class="language-plaintext highlighter-rouge">S</code> 类型对齐数字。tabularray 还支持 <code class="language-plaintext highlighter-rouge">longtblr</code>（跨页长表格）和 <code class="language-plaintext highlighter-rouge">talltblr</code>（不跨页但可加脚注的表格），基本覆盖了所有表格场景。</p>
+
+<p><strong>subcaption</strong></p>
+
+<p>在一个浮动体里放多张子图，每个子图独立编号和引用。</p>
+
+<div class="language-tex highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">\usepackage</span><span class="p">{</span>subcaption<span class="p">}</span>
+<span class="c">% \begin{figure}[htbp]</span>
+<span class="c">%   \begin{subfigure}{0.48\textwidth}</span>
+<span class="c">%     \includegraphics[width=\textwidth]{fig_a}</span>
+<span class="c">%     \caption{子图 A}</span>
+<span class="c">%   \end{subfigure}</span>
+<span class="c">%   \hfill</span>
+<span class="c">%   \begin{subfigure}{0.48\textwidth}</span>
+<span class="c">%     \includegraphics[width=\textwidth]{fig_b}</span>
+<span class="c">%     \caption{子图 B}</span>
+<span class="c">%   \end{subfigure}</span>
+<span class="c">%   \caption{总标题}</span>
+<span class="c">% \end{figure}</span>
+</code></pre></div></div>
+
+<h3 id="参考文献">参考文献</h3>
+
+<p><strong>biblatex</strong></p>
+
+<p>现代的参考文献管理方案，配合 Biber 后端使用。比 BibTeX 灵活很多，支持多语言、多文献列表等。</p>
+
+<div class="language-tex highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">\usepackage</span><span class="na">[backend=biber, style=gb7714-2015]</span><span class="p">{</span>biblatex<span class="p">}</span>
+<span class="k">\addbibresource</span><span class="p">{</span>refs.bib<span class="p">}</span>              <span class="c">% 指定 .bib 文件</span>
+<span class="c">% 正文中用 \cite{key} 引用</span>
+<span class="c">% 文末用 \printbibliography 输出</span>
+</code></pre></div></div>
+
+<p><code class="language-plaintext highlighter-rouge">style=gb7714-2015</code> 是中文文献常用的国标样式，需要 <code class="language-plaintext highlighter-rouge">biblatex-gb7714-2015</code> 宏包。英文文档常用 <code class="language-plaintext highlighter-rouge">style=ieee</code>、<code class="language-plaintext highlighter-rouge">style=apa</code> 或 <code class="language-plaintext highlighter-rouge">style=alphabetic</code>。</p>
+
+<p><strong>hyperref</strong></p>
+
+<p>给交叉引用、目录、参考文献加上超链接。通常放在 <code class="language-plaintext highlighter-rouge">\usepackage</code> 的最后（少数例外，如 cleveref 要在 hyperref 之后）。</p>
+
+<div class="language-tex highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">\usepackage</span>[
+    colorlinks=true,
+    linkcolor=blue,
+    citecolor=blue,
+    urlcolor=blue,
+]<span class="p">{</span>hyperref<span class="p">}</span>
+</code></pre></div></div>
+
+<h3 id="其他实用工具">其他实用工具</h3>
+
+<p><strong>ctex</strong></p>
+
+<p>如果不想手动配 xeCJK，直接用 ctex 宏包或 <code class="language-plaintext highlighter-rouge">ctexart</code>/<code class="language-plaintext highlighter-rouge">ctexbook</code> 文档类，一键搞定中文支持。</p>
+
+<div class="language-tex highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">\usepackage</span><span class="na">[UTF8, heading=true]</span><span class="p">{</span>ctex<span class="p">}</span>
+<span class="c">% 或者直接用 \documentclass{ctexart}</span>
+</code></pre></div></div>
+
+<p><strong>enumitem</strong></p>
+
+<p>定制列表环境（enumerate、itemize、description）的间距和标签样式。</p>
+
+<div class="language-tex highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">\usepackage</span><span class="p">{</span>enumitem<span class="p">}</span>
+<span class="k">\setlist</span><span class="p">{</span>nosep<span class="p">}</span>                        <span class="c">% 去掉列表的多余间距</span>
+<span class="c">% \begin{enumerate}[label=(\arabic*)]</span>
+<span class="c">%   \item 第一项</span>
+<span class="c">%   \item 第二项</span>
+<span class="c">% \end{enumerate}</span>
+</code></pre></div></div>
+
+<p><strong>tikz</strong></p>
+
+<p>画矢量图。学习曲线陡峭，但画出来的东西质量很高，跟 LaTeX 文档浑然一体。</p>
+
+<div class="language-tex highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">\usepackage</span><span class="p">{</span>tikz<span class="p">}</span>
+<span class="k">\usetikzlibrary</span><span class="p">{</span>arrows.meta, positioning<span class="p">}</span>
+<span class="c">% 简单示例：画一个带箭头的直线</span>
+<span class="c">% \begin{tikzpicture}</span>
+<span class="c">%   \draw[-&gt;] (0,0) -- (2,1) node[right] {$y = x/2$};</span>
+<span class="c">% \end{tikzpicture}</span>
+</code></pre></div></div>
+
+<p><strong>siunitx</strong></p>
+
+<p>处理数值和单位的排版。数字的千分位、科学记数法、单位的正体和间距，它都能管。</p>
+
+<div class="language-tex highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">\usepackage</span><span class="p">{</span>siunitx<span class="p">}</span>
+<span class="k">\sisetup</span><span class="p">{</span>
+    range-phrase = <span class="k">\ensuremath</span><span class="p">{</span><span class="k">\sim</span><span class="p">}</span>,
+    range-units = single,
+<span class="p">}</span>
+<span class="c">% \qty{10}{\metre}           -&gt; 10 m</span>
+<span class="c">% \qty{1.23e5}{\pascal}      -&gt; 1.23 × 10⁵ Pa</span>
+<span class="c">% \qtyrange{1}{10}{\metre}   -&gt; 1~10 m（单位只出现一次，用 ~ 连接）</span>
+</code></pre></div></div>
+
+<p><code class="language-plaintext highlighter-rouge">range-units=single</code> 让范围表达中单位只出现一次，而不是”1 m 到 10 m”。<code class="language-plaintext highlighter-rouge">range-phrase</code> 设成 <code class="language-plaintext highlighter-rouge">\ensuremath{\sim}</code> 把分隔符换成 <code class="language-plaintext highlighter-rouge">~</code>（波浪号），<code class="language-plaintext highlighter-rouge">\ensuremath</code> 确保它在数学模式和文本模式下都能正确渲染。</p>
+
+<p><strong>cleveref</strong></p>
+
+<p>智能引用，自动加上”图”“表”“公式”等前缀，不用自己写 <code class="language-plaintext highlighter-rouge">\ref{fig:xxx} 的图</code>。注意要放在 hyperref 之后加载。</p>
+
+<div class="language-tex highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">\usepackage</span><span class="na">[capitalise]</span><span class="p">{</span>cleveref<span class="p">}</span>
+<span class="c">% 使用 \cref{fig:example} 会自动输出"图 1"</span>
+<span class="c">% \cref{eq:main,eq:sub} 会输出"公式 (1) 和 (2)"</span>
+</code></pre></div></div>
+
+        
+      </section>
+
+      <footer class="page__meta">
+        
+        
+
+  
+    
+
+
+
+  
+
+  <p class="page__taxonomy">
+    <strong><i class="fas fa-fw fa-tags" aria-hidden="true"></i> Tags: </strong>
+    <span itemprop="keywords">
+    
+      <a href="/tags/latex" class="page__taxonomy-item p-category" rel="tag">LaTeX</a>
+    
+    </span>
+  </p>
+
+
+  
+
+  
+    
+
+
+
+  
+
+  <p class="page__taxonomy">
+    <strong><i class="fas fa-fw fa-folder-open" aria-hidden="true"></i> Categories: </strong>
+    <span itemprop="keywords">
+    
+      <a href="/categories/note" class="page__taxonomy-item p-category" rel="tag">Note</a>
+    
+    </span>
+  </p>
+
+
+  
+
+
+        
+
+
+  <p class="page__date"><strong><i class="fas fa-fw fa-calendar-alt" aria-hidden="true"></i> Updated:</strong> <time class="dt-published" datetime="2026-06-18T03:20:00+00:00">June 18, 2026</time></p>
+
+
+      </footer>
+
+      
+<section class="page__share">
+  <h4 class="page__share-title">Share on</h4>
+
+  <a href="https://x.com/intent/tweet?text=LaTeX+%E9%A1%B9%E7%9B%AE%E7%BB%93%E6%9E%84%E4%B8%8E+latexmk+%E9%85%8D%E7%BD%AE%20https%3A%2F%2Fbfmhno3.github.io%2Fnote%2Flatex-project-structure%2F" class="btn btn--x" aria-label="Share on X" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on X">
+    <i class="fab fa-fw fa-x-twitter" aria-hidden="true"></i><span> X</span>
+  </a>
+
+  <a href="https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fbfmhno3.github.io%2Fnote%2Flatex-project-structure%2F" class="btn btn--facebook" aria-label="Share on Facebook" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on Facebook">
+    <i class="fab fa-fw fa-facebook" aria-hidden="true"></i><span> Facebook</span>
+  </a>
+
+  <a href="https://www.linkedin.com/shareArticle?mini=true&url=https://bfmhno3.github.io/note/latex-project-structure/" class="btn btn--linkedin" aria-label="Share on LinkedIn" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on LinkedIn">
+    <i class="fab fa-fw fa-linkedin" aria-hidden="true"></i><span> LinkedIn</span>
+  </a>
+
+  <a href="https://bsky.app/intent/compose?text=LaTeX+%E9%A1%B9%E7%9B%AE%E7%BB%93%E6%9E%84%E4%B8%8E+latexmk+%E9%85%8D%E7%BD%AE%20https%3A%2F%2Fbfmhno3.github.io%2Fnote%2Flatex-project-structure%2F" class="btn btn--bluesky" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on Bluesky">
+    <i class="fab fa-fw fa-bluesky" aria-hidden="true"></i><span> Bluesky</span>
+  </a>
+</section>
+
+
+      
+
+  <nav class="pagination" aria-label="Post pagination">
+    
+      <a href="/note/devicetree-study-notes/" class="pagination--pager" title="设备树学习笔记：从基础语法到 DTB">Previous</a>
+    
+    
+      <a href="#" class="pagination--pager disabled">Next</a>
+    
+  </nav>
+
+
+    </div>
+
+    
+      
+        
+<div class="page__comments">
+  
+  
+      <h4 class="page__comments-title">Comments</h4>
+      <section id="giscus-comments"></section>
+    
+</div>
+
+      
+    
+  </article>
+
+  
+  
+    
+
+<div class="page__related">
+  
+  <h2 class="page__related-title">You May Also Enjoy</h2>
+  <div class="grid__wrapper">
+    
+      
+      
+
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc p-name" itemprop="headline">
+      
+        <a class="u-url" href="/note/devicetree-study-notes/" rel="permalink">设备树学习笔记：从基础语法到 DTB
+</a>
+      
+    </h2>
+    
+
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-05-20T03:15:00+00:00">May 20, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          19 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt p-summary" itemprop="description">0. 引言：为什么我们需要设备树？
+
+想象这样一个场景：你的电脑开机，操作系统启动，它需要知道自己运行在什么硬件之上：有几颗 CPU、多大内存、串口在哪里、网卡是什么型号。操作系统如何获取这些信息？
+
+答案是……看情况。
+
+0.1 自发现 vs 非自发现总线
+
+现代计算机系统中，总线大致分为两类。
+
+自发现总线（...</p>
+  </article>
+</div>
+
+    
+      
+      
+
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc p-name" itemprop="headline">
+      
+        <a class="u-url" href="/note/bibtex-and-biblatex-guide/" rel="permalink">BibTeX 与 BibLaTeX 入门：.bib 文件结构、引用与编译流程
+</a>
+      
+    </h2>
+    
+
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-05-19T14:00:00+00:00">May 19, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          4 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt p-summary" itemprop="description">最近恰逢本科阶段的倒数第二个课程设计，初步估计又得三四十页，并且老师不发模板只发排版要求，美其名曰让我们提前适应毕业论文写作（但是我记得毕业论文也是有 Word 模板的吧😂）。
+
+我并非是某一方的狂热爱好者，在我看来两者都是工具，只要能解决我的问题，那就是好工具。显然这种比较专业的排版需求还是使用 LaTeX 比...</p>
+  </article>
+</div>
+
+    
+      
+      
+
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc p-name" itemprop="headline">
+      
+        <a class="u-url" href="/note/note-of-tmux/" rel="permalink">Tmux 使用笔记
+</a>
+      
+    </h2>
+    
+
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-04-25T13:55:00+00:00">April 25, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          5 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt p-summary" itemprop="description">为什么我们需要 tmux？
+
+1. 终端的物理与逻辑基础
+
+在计算机世界里，我们通过 “终端（Terminal）” 与 “Shell（如 bash, zsh）” 进行交互。
+
+当你打开一个终端窗口，或者通过 SSH 连接到远程服务器时，操作系统为你分配了一个 TTY（伪终端），并在这个 TTY 上启动了一个 Sh...</p>
+  </article>
+</div>
+
+    
+      
+      
+
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc p-name" itemprop="headline">
+      
+        <a class="u-url" href="/note/fhs-of-linux/" rel="permalink">从 FHS 到 Linux 运行时目录体系
+</a>
+      
+    </h2>
+    
+
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-04-21T07:00:00+00:00">April 21, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          13 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt p-summary" itemprop="description">要真正理解 Linux 的 FHS (Filesystem Hierarchy Standard，文件系统层次结构标准)，不能只靠死记硬背“哪个目录放什么文件”。更有效的办法，是剥开表象，回到操作系统设计的起点，看看在构建一个多用户、网络化、可扩展的系统时，我们究竟面临了哪些根本问题，以及 FHS 又是如何作为一...</p>
+  </article>
+</div>
+
+    
+  </div>
+</div>
+
+  
+  
+</div>
+
+      
+    </div>
+
+    
+      <div class="search-content">
+        
+<div class="search-content__inner-wrap">
+<form class="search-content__form" onkeydown="return event.key != 'Enter';" role="search">
+    <label class="sr-only" for="search">
+      Enter your search term...
+    </label>
+    <input type="search" id="search" class="search-input" tabindex="-1" placeholder="Enter your search term...">
+  </form>
+  <div id="results" class="results"></div>
+</div>
+
+      </div>
+    
+
+    <div id="footer" class="page__footer">
+      <footer>
+        <!-- start custom footer snippets -->
+
+<!-- end custom footer snippets -->
+        
+
+
+<div class="page__footer-follow">
+  <ul class="social-icons">
+    
+
+    
+      
+        
+          <li><a href="https://github.com/bfmhno3" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-github" aria-hidden="true"></i> GitHub</a></li>
+        
+      
+        
+          <li><a href="https://gitee.com/bfmhno3" rel="nofollow noopener noreferrer"><i class="fa-solid fa-g" aria-hidden="true"></i> Gitee</a></li>
+        
+      
+        
+          <li><a href="https://www.cnblogs.com/bfmhno3" rel="nofollow noopener noreferrer"><i class="fa-solid fa-blog" aria-hidden="true"></i> cnblogs</a></li>
+        
+      
+        
+          <li><a href="https://blog.csdn.net/B33336" rel="nofollow noopener noreferrer"><i class="fa-solid fa-blog" aria-hidden="true"></i> CSDN</a></li>
+        
+      
+    
+
+    
+      <li><a href="/feed.xml"><i class="fas fa-fw fa-square-rss" aria-hidden="true"></i> Feed</a></li>
+    
+  </ul>
+</div>
+
+
+<div class="page__footer-copyright">© 2026 <a href="https://bfmhno3.github.io">Better Mistakes</a>. Powered by <a href="https://jekyllrb.com" rel="nofollow">Jekyll</a> &amp; <a href="https://mademistakes.com/work/jekyll-themes/minimal-mistakes/" rel="nofollow">Minimal Mistakes</a>.</div>
+
+      </footer>
+    </div>
+
+    
+
+  <script src="/assets/js/main.min.js"></script>
+
+
+
+
+
+<script src="/assets/js/lunr/lunr.min.js"></script>
+<script src="/assets/js/lunr/lunr-store.js"></script>
+<script src="/assets/js/lunr/lunr-en.js"></script>
+
+
+
+
+
+  <!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-VS5B3CR1M6"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-VS5B3CR1M6', { 'anonymize_ip': false});
+</script>
+
+
+
+
+
+
+
+    <script>
+  'use strict';
+
+  (function () {
+    var commentContainer = document.querySelector('#giscus-comments');
+
+    if (!commentContainer) {
+      return;
+    }
+
+    var script = document.createElement('script');
+
+    script.setAttribute('src', 'https://giscus.app/client.js');
+    script.setAttribute('data-repo', 'bfmhno3/bfmhno3.github.io');
+    script.setAttribute('data-repo-id', 'R_kgDOQCQGxg');
+    script.setAttribute('data-category', 'General');
+    script.setAttribute('data-category-id', 'DIC_kwDOQCQGxs4CzG3a');
+    script.setAttribute('data-mapping', 'pathname');
+    script.setAttribute('data-strict', '0');
+    script.setAttribute('data-reactions-enabled', '1');
+    script.setAttribute('data-emit-metadata', '0');
+    script.setAttribute('data-input-position', 'bottom');
+    script.setAttribute('data-theme', 'transparent_dark');
+    script.setAttribute('data-lang',  'en');
+    
+    script.setAttribute('data-loading', 'lazy');
+    
+    script.setAttribute('crossorigin', 'anonymous');
+
+    script.setAttribute('async', '');
+
+    commentContainer.appendChild(script);
+  })();
+</script>
+
+  
+
+
+
+
+  </body>
+</html>

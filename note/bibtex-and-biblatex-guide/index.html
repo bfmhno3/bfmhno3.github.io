@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<!--
+  Minimal Mistakes Jekyll Theme 4.28.0 by Michael Rose
+  Copyright 2013-2026 Michael Rose - mademistakes.com | @mmistakes
+  Copyright 2024-2026 iBug - ibugone.com | @iBug
+  Free for personal and commercial use under the MIT license
+  https://github.com/mmistakes/minimal-mistakes/blob/master/LICENSE
+--><html lang="en-US" class="no-js">
+  <head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+<meta charset="utf-8">
+
+
+<!-- begin _includes/seo.html --><title>BibTeX 与 BibLaTeX 入门：.bib 文件结构、引用与编译流程 - Better Mistakes</title>
+<meta name="description" content="从 .bib 条目结构出发，结合 BibTeX 与 BibLaTeX 两种工作流，梳理引用写法、编译顺序和常见注意事项。">
+
+
+  <meta name="author" content="bfmhno3">
+  
+  <meta property="article:author" content="bfmhno3">
+  
+
+
+<meta property="og:type" content="article">
+<meta property="og:locale" content="en_US">
+<meta property="og:site_name" content="Better Mistakes">
+<meta property="og:title" content="BibTeX 与 BibLaTeX 入门：.bib 文件结构、引用与编译流程">
+<meta property="og:url" content="https://bfmhno3.github.io/note/bibtex-and-biblatex-guide/">
+
+
+  <meta property="og:description" content="从 .bib 条目结构出发，结合 BibTeX 与 BibLaTeX 两种工作流，梳理引用写法、编译顺序和常见注意事项。">
+
+
+
+  <meta property="og:image" content="https://bfmhno3.github.io/assets/images/avatar.jpg">
+  
+
+
+
+
+
+
+
+  <meta property="article:published_time" content="2026-05-19T14:00:00+00:00">
+
+
+
+
+
+  
+
+  
+
+
+<link rel="canonical" href="https://bfmhno3.github.io/note/bibtex-and-biblatex-guide/">
+
+
+
+
+
+
+
+  <meta name="google-site-verification" content="UUnU8OnGqO_2FFdhrv7eEABM5p_cNPhM4Se6HB1KFSk">
+
+
+  <meta name="msvalidate.01" content="FC3BA97765A3C90F8CA771F70AE34FB8">
+
+
+
+
+
+<!-- end _includes/seo.html -->
+
+
+
+  <link href="/feed.xml" type="application/atom+xml" rel="alternate" title="Better Mistakes Feed">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script>
+  document.documentElement.className = document.documentElement.className.replace(/\bno-js\b/g, '') + ' js ';
+  window.enable_copy_code_button = true;
+</script>
+
+<!-- For all browsers -->
+<link rel="stylesheet" href="/assets/css/main.css">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@latest/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@latest/css/all.min.css"></noscript>
+
+
+
+    <link rel="icon" type="image/png" href="/assets/images/favicon/favicon-96x96.png" sizes="96x96">
+<link rel="icon" type="image/svg+xml" href="/assets/images/favicon/favicon.svg">
+<link rel="shortcut icon" href="/assets/images/favicon/favicon.ico">
+<link rel="apple-touch-icon" sizes="180x180" href="/assets/images/favicon/apple-touch-icon.png">
+<link rel="manifest" href="/assets/images/favicon/site.webmanifest">
+  </head>
+
+  <body class="layout--single" dir="ltr">
+    
+<nav class="skip-links" aria-label="Skip links">
+  <ul>
+    <li><a href="#site-nav" class="screen-reader-shortcut">Skip to primary navigation</a></li>
+    <li><a href="#main" class="screen-reader-shortcut">Skip to content</a></li>
+    <li><a href="#footer" class="screen-reader-shortcut">Skip to footer</a></li>
+  </ul>
+</nav>
+
+    
+
+
+<div class="masthead">
+  <div class="masthead__inner-wrap">
+    <div class="masthead__menu">
+      <nav id="site-nav" class="greedy-nav" aria-label="Primary navigation">
+        
+          <a class="site-logo" href="/"><img src="/assets/images/logo.svg" alt="Better Mistakes"></a>
+        
+        <a class="site-title" href="/">
+          Better Mistakes
+          <span class="site-subtitle">Trial.Error.Iteration.</span>
+        </a>
+        <ul class="visible-links">
+<li class="masthead__menu-item">
+              <a href="/posts/">Posts</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/categories/">Categories</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/tags/">Tags</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/portfolio/">Portfolio</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/about/">About</a>
+            </li>
+</ul>
+        
+        <button class="search__toggle" type="button">
+          <span class="visually-hidden">Toggle search</span>
+          <i class="fas fa-search"></i>
+        </button>
+        
+        <button class="greedy-nav__toggle hidden" type="button">
+          <span class="visually-hidden">Toggle menu</span>
+          <div class="navicon"></div>
+        </button>
+        <ul class="hidden-links hidden"></ul>
+      </nav>
+    </div>
+  </div>
+</div>
+
+
+    <div class="initial-content">
+      
+
+
+
+
+
+
+
+<div id="main" role="main">
+  
+
+  <div class="sidebar sticky">
+  
+
+
+
+<div itemscope itemtype="https://schema.org/Person" class="h-card">
+
+  
+    <div class="author__avatar">
+      <a href="https://bfmhno3.github.io/">
+        <img src="/assets/images/avatar.jpg" alt="bfmhno3" itemprop="image" class="u-photo">
+      </a>
+    </div>
+  
+
+  <div class="author__content">
+    <h3 class="author__name p-name" itemprop="name">
+      <a class="u-url" rel="me" href="https://bfmhno3.github.io/" itemprop="url">bfmhno3</a>
+    </h3>
+    
+      <div class="author__bio p-note" itemprop="description">
+        <p>Third-year university student majoring in energy engineering. Exploring the world of code and mathematics.</p>
+
+      </div>
+    
+  </div>
+
+  <div class="author__urls-wrapper">
+    <button class="btn btn--inverse">Follow</button>
+    <ul class="author__urls social-icons">
+      
+
+      
+        
+          
+            <li><a href="https://github.com/bfmhno3" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fab fa-fw fa-github" aria-hidden="true"></i><span class="label">GitHub</span></a></li>
+          
+        
+          
+            <li><a href="https://gitee.com/bfmhno3" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fa-solid fa-g" aria-hidden="true"></i><span class="label">Gitee</span></a></li>
+          
+        
+          
+            <li><a href="https://www.cnblogs.com/bfmhno3" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fa-solid fa-blog" aria-hidden="true"></i><span class="label">cnblogs</span></a></li>
+          
+        
+          
+            <li><a href="https://blog.csdn.net/B33336" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fa-solid fa-blog" aria-hidden="true"></i><span class="label">CSDN</span></a></li>
+          
+        
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      <!--
+  <li>
+    <a href="http://link-to-whatever-social-network.com/user/" itemprop="sameAs" rel="nofollow noopener noreferrer me">
+      <i class="fas fa-fw" aria-hidden="true"></i> Custom Social Profile Link
+    </a>
+  </li>
+-->
+    </ul>
+  </div>
+</div>
+
+  
+  
+  </div>
+
+
+
+  <article class="page h-entry" itemscope itemtype="https://schema.org/CreativeWork">
+    <meta itemprop="headline" content="BibTeX 与 BibLaTeX 入门：.bib 文件结构、引用与编译流程">
+    <meta itemprop="description" content="从 .bib 条目结构出发，结合 BibTeX 与 BibLaTeX 两种工作流，梳理引用写法、编译顺序和常见注意事项。">
+    <meta itemprop="datePublished" content="2026-05-19T14:00:00+00:00">
+    
+
+    <div class="page__inner-wrap">
+      
+        <header>
+          <h1 id="page-title" class="page__title p-name" itemprop="headline">
+            <a href="https://bfmhno3.github.io/note/bibtex-and-biblatex-guide/" itemprop="url">BibTeX 与 BibLaTeX 入门：.bib 文件结构、引用与编译流程
+</a>
+          </h1>
+          
+
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-05-19T14:00:00+00:00">May 19, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-clock" aria-hidden="true"></i>
+        
+          4 minute read
+        
+      </span>
+    
+  </p>
+
+
+        </header>
+      
+
+      <section class="page__content e-content" itemprop="text">
+        
+          <aside class="sidebar__right sticky">
+            <nav class="toc" aria-label="Table of contents">
+              <header><h4 class="nav__title">
+<i class="fas fa-file-alt"></i> On this page</h4></header>
+              <ul class="toc__menu">
+<li>
+<a href="#1-bib-%E6%96%87%E4%BB%B6%E7%9A%84%E5%9F%BA%E6%9C%AC%E7%BB%93%E6%9E%84">1. .bib 文件的基本结构</a><ul><li><a href="#11-%E5%B8%B8%E8%A7%81%E6%9D%A1%E7%9B%AE%E7%B1%BB%E5%9E%8B%E4%B8%8E%E5%B8%B8%E7%94%A8%E5%AD%97%E6%AE%B5">1.1 常见条目类型与常用字段</a></li></ul>
+</li>
+<li><a href="#2-%E4%B8%80%E4%B8%AA%E6%9C%80%E5%B0%8F%E5%8F%AF%E7%94%A8%E7%9A%84-bib-%E7%A4%BA%E4%BE%8B">2. 一个最小可用的 .bib 示例</a></li>
+<li>
+<a href="#3-%E5%9C%A8-latex-%E9%87%8C%E5%A6%82%E4%BD%95%E4%BD%BF%E7%94%A8-bib%E4%B8%A4%E7%A7%8D%E4%B8%BB%E6%B5%81%E5%B7%A5%E4%BD%9C%E6%B5%81">3. 在 LaTeX 里如何使用 .bib（两种主流工作流）</a><ul>
+<li><a href="#31-%E4%BC%A0%E7%BB%9Flatex--bibtex-%E5%B7%A5%E4%BD%9C%E6%B5%81">3.1 传统：LaTeX + BibTeX 工作流</a></li>
+<li><a href="#32-%E7%8E%B0%E4%BB%A3biblatex--biber-%E5%B7%A5%E4%BD%9C%E6%B5%81">3.2 现代：BibLaTeX + biber 工作流</a></li>
+</ul>
+</li>
+<li><a href="#4-%E8%AF%A5%E5%A6%82%E4%BD%95%E9%80%89%E6%8B%A9">4. 该如何选择？</a></li>
+<li><a href="#5-%E5%86%99-bib-%E6%97%B6%E7%9A%84%E4%B8%80%E4%BA%9B%E5%AE%9E%E7%94%A8%E5%B0%8F%E6%8A%80%E5%B7%A7">5. 写 .bib 时的一些实用小技巧</a></li>
+<li>
+<a href="#6-%E5%AE%8C%E6%95%B4%E7%A4%BA%E4%BE%8Bbiblatex--biber">6. 完整示例（BibLaTeX + biber）</a><ul>
+<li><a href="#61-%E6%96%B0%E5%BB%BA-referencesbib">6.1 新建 references.bib</a></li>
+<li><a href="#62-%E6%96%B0%E5%BB%BA-maintex">6.2 新建 main.tex</a></li>
+<li><a href="#63-%E7%BC%96%E8%AF%91%E9%A1%BA%E5%BA%8F">6.3 编译顺序</a></li>
+</ul>
+</li>
+</ul>
+            </nav>
+          </aside>
+        
+        <p>最近恰逢本科阶段的倒数第二个课程设计，初步估计又得三四十页，并且老师不发模板只发排版要求，美其名曰让我们提前适应毕业论文写作（但是我记得毕业论文也是有 Word 模板的吧😂）。</p>
+
+<p>我并非是某一方的狂热爱好者，在我看来两者都是工具，只要能解决我的问题，那就是好工具。显然这种比较专业的排版需求还是使用 LaTeX 比较合适，而我发现我对 LaTeX 的引用数据库还是不太了解，就大概学习了一并下整理了这篇博客，不一定足够专业，但是应该能够应付我的课程设计了。</p>
+
+<h2 id="1-bib-文件的基本结构">1. <code class="language-plaintext highlighter-rouge">.bib</code> 文件的基本结构</h2>
+
+<p><code class="language-plaintext highlighter-rouge">.bib</code> 文件可以理解成一个文献数据库，由多条文献条目组成。每条条目一般是下面这种形式：</p>
+
+<div class="language-bibtex highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nc">@entrytype</span><span class="p">{</span><span class="nl">citekey</span><span class="p">,</span>
+  <span class="na">field1</span> <span class="p">=</span> <span class="s">{value1}</span><span class="p">,</span>
+  <span class="na">field2</span> <span class="p">=</span> <span class="s">{value2}</span><span class="p">,</span>
+  <span class="na">...</span>
+<span class="err">}</span>
+</code></pre></div></div>
+
+<ul>
+  <li>
+<code class="language-plaintext highlighter-rouge">@entrytype</code>：文献类型，例如 <code class="language-plaintext highlighter-rouge">@article</code>、<code class="language-plaintext highlighter-rouge">@book</code>、<code class="language-plaintext highlighter-rouge">@inproceedings</code>。</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">citekey</code>：引用键（citation key），在正文中通过 <code class="language-plaintext highlighter-rouge">\cite{citekey}</code> 调用。</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">field = {value}</code>：字段和值，如 <code class="language-plaintext highlighter-rouge">author</code>、<code class="language-plaintext highlighter-rouge">title</code>、<code class="language-plaintext highlighter-rouge">year</code>。</li>
+</ul>
+
+<h3 id="11-常见条目类型与常用字段">1.1 常见条目类型与常用字段</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>条目类型</th>
+      <th>说明</th>
+      <th>常用字段</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">@article</code></td>
+      <td>期刊论文</td>
+      <td>
+<code class="language-plaintext highlighter-rouge">author</code>, <code class="language-plaintext highlighter-rouge">title</code>, <code class="language-plaintext highlighter-rouge">journal</code>, <code class="language-plaintext highlighter-rouge">year</code>, <code class="language-plaintext highlighter-rouge">volume</code>, <code class="language-plaintext highlighter-rouge">number</code>, <code class="language-plaintext highlighter-rouge">pages</code>, <code class="language-plaintext highlighter-rouge">doi</code>
+</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">@inproceedings</code></td>
+      <td>会议论文</td>
+      <td>
+<code class="language-plaintext highlighter-rouge">author</code>, <code class="language-plaintext highlighter-rouge">title</code>, <code class="language-plaintext highlighter-rouge">booktitle</code>, <code class="language-plaintext highlighter-rouge">year</code>, <code class="language-plaintext highlighter-rouge">pages</code>, <code class="language-plaintext highlighter-rouge">organization</code>
+</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">@book</code></td>
+      <td>书籍</td>
+      <td>
+<code class="language-plaintext highlighter-rouge">author</code> 或 <code class="language-plaintext highlighter-rouge">editor</code>, <code class="language-plaintext highlighter-rouge">title</code>, <code class="language-plaintext highlighter-rouge">publisher</code>, <code class="language-plaintext highlighter-rouge">year</code>
+</td>
+    </tr>
+    <tr>
+      <td>
+<code class="language-plaintext highlighter-rouge">@phdthesis</code> / <code class="language-plaintext highlighter-rouge">@mastersthesis</code>
+</td>
+      <td>学位论文</td>
+      <td>
+<code class="language-plaintext highlighter-rouge">author</code>, <code class="language-plaintext highlighter-rouge">title</code>, <code class="language-plaintext highlighter-rouge">school</code>, <code class="language-plaintext highlighter-rouge">year</code>
+</td>
+    </tr>
+    <tr>
+      <td>
+<code class="language-plaintext highlighter-rouge">@misc</code> / <code class="language-plaintext highlighter-rouge">@online</code>（BibLaTeX）</td>
+      <td>网页、预印本</td>
+      <td>
+<code class="language-plaintext highlighter-rouge">author</code>, <code class="language-plaintext highlighter-rouge">title</code>, <code class="language-plaintext highlighter-rouge">year</code>, <code class="language-plaintext highlighter-rouge">howpublished</code> 或 <code class="language-plaintext highlighter-rouge">url</code>, <code class="language-plaintext highlighter-rouge">note</code>
+</td>
+    </tr>
+  </tbody>
+</table>
+
+<p class="notice--info">不同条目在 BibTeX 与 BibLaTeX 中的必填字段会有差异，建议以所用样式文档为准。可以通过 <code class="language-plaintext highlighter-rouge">texdoc biblatex</code> 或 <code class="language-plaintext highlighter-rouge">texdoc bibtex</code> 查看官方说明。</p>
+
+<hr>
+
+<h2 id="2-一个最小可用的-bib-示例">2. 一个最小可用的 <code class="language-plaintext highlighter-rouge">.bib</code> 示例</h2>
+
+<p>假设你新建一个文件 <code class="language-plaintext highlighter-rouge">references.bib</code>，内容如下：</p>
+
+<div class="language-bibtex highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nc">@article</span><span class="p">{</span><span class="nl">einstein1905</span><span class="p">,</span>
+  <span class="na">author</span>  <span class="p">=</span> <span class="s">{Albert Einstein}</span><span class="p">,</span>
+  <span class="na">title</span>   <span class="p">=</span> <span class="s">{On the Electrodynamics of Moving Bodies}</span><span class="p">,</span>
+  <span class="na">journal</span> <span class="p">=</span> <span class="s">{Annalen der Physik}</span><span class="p">,</span>
+  <span class="na">year</span>    <span class="p">=</span> <span class="s">{1905}</span><span class="p">,</span>
+  <span class="na">volume</span>  <span class="p">=</span> <span class="s">{17}</span><span class="p">,</span>
+  <span class="na">pages</span>   <span class="p">=</span> <span class="s">{891--921}</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="nc">@book</span><span class="p">{</span><span class="nl">knuth1984</span><span class="p">,</span>
+  <span class="na">author</span>    <span class="p">=</span> <span class="s">{Donald E. Knuth}</span><span class="p">,</span>
+  <span class="na">title</span>     <span class="p">=</span> <span class="s">{The {TeX}book}</span><span class="p">,</span>
+  <span class="na">publisher</span> <span class="p">=</span> <span class="s">{Addison-Wesley}</span><span class="p">,</span>
+  <span class="na">year</span>      <span class="p">=</span> <span class="s">{1984}</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="nc">@inproceedings</span><span class="p">{</span><span class="nl">he2016resnet</span><span class="p">,</span>
+  <span class="na">author</span>    <span class="p">=</span> <span class="s">{Kaiming He and Xiangyu Zhang and Shaoqing Ren and Jian Sun}</span><span class="p">,</span>
+  <span class="na">title</span>     <span class="p">=</span> <span class="s">{Deep Residual Learning for Image Recognition}</span><span class="p">,</span>
+  <span class="na">booktitle</span> <span class="p">=</span> <span class="s">{Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR)}</span><span class="p">,</span>
+  <span class="na">year</span>      <span class="p">=</span> <span class="s">{2016}</span><span class="p">,</span>
+  <span class="na">pages</span>     <span class="p">=</span> <span class="s">{770--778}</span><span class="p">,</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>几个常用写法：</p>
+
+<ul>
+  <li>
+<strong>多个作者用 <code class="language-plaintext highlighter-rouge">and</code> 分隔</strong>（BibTeX/BibLaTeX 会自动识别作者列表）：</li>
+</ul>
+
+<div class="language-bibtex highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">author = {First Author and Second Author and Third Author},</span>
+</code></pre></div></div>
+
+<ul>
+  <li>
+<strong>页码用 <code class="language-plaintext highlighter-rouge">--</code> 而不是 <code class="language-plaintext highlighter-rouge">-</code></strong>：</li>
+</ul>
+
+<div class="language-bibtex highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">pages = {770--778},</span>
+</code></pre></div></div>
+
+<ul>
+  <li>
+<strong>大小写保护</strong>：专有名词或缩写（如 <code class="language-plaintext highlighter-rouge">TeX</code>、<code class="language-plaintext highlighter-rouge">CNN</code>）可用 <code class="language-plaintext highlighter-rouge">{}</code> 包起来，避免被样式改写：</li>
+</ul>
+
+<div class="language-bibtex highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">title = {Deep Residual Learning for {CNN} Image Recognition},</span>
+</code></pre></div></div>
+
+<hr>
+
+<h2 id="3-在-latex-里如何使用-bib两种主流工作流">3. 在 LaTeX 里如何使用 .bib（两种主流工作流）</h2>
+
+<ol>
+  <li>
+<strong>传统路线</strong>：LaTeX + BibTeX</li>
+  <li>
+<strong>现代路线</strong>：LaTeX + BibLaTeX + biber</li>
+</ol>
+
+<hr>
+
+<h3 id="31-传统latex--bibtex-工作流">3.1 传统：LaTeX + BibTeX 工作流</h3>
+
+<p><strong>文档示例（<code class="language-plaintext highlighter-rouge">main.tex</code>）：</strong></p>
+
+<div class="language-latex highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">\documentclass</span><span class="p">{</span>article<span class="p">}</span>
+<span class="k">\usepackage</span><span class="na">[utf8]</span><span class="p">{</span>inputenc<span class="p">}</span> <span class="c">% 使用 XeLaTeX/LuaLaTeX 时通常不需要</span>
+
+<span class="nt">\begin{document}</span>
+
+这是正文中的一条引用 <span class="k">\cite</span><span class="p">{</span>einstein1905<span class="p">}</span>，再来一条 <span class="k">\cite</span><span class="p">{</span>knuth1984<span class="p">}</span>。
+
+<span class="k">\bibliographystyle</span><span class="p">{</span>ieeetr<span class="p">}</span>   <span class="c">% 选择参考文献样式，如 plain, unsrt, alpha, ieeetr 等</span>
+<span class="k">\bibliography</span><span class="p">{</span>references<span class="p">}</span>    <span class="c">% 不写 .bib 后缀</span>
+
+<span class="nt">\end{document}</span>
+</code></pre></div></div>
+
+<p><strong>编译顺序（非常关键）：</strong></p>
+
+<ol>
+  <li><code class="language-plaintext highlighter-rouge">pdflatex main</code></li>
+  <li><code class="language-plaintext highlighter-rouge">bibtex main</code></li>
+  <li><code class="language-plaintext highlighter-rouge">pdflatex main</code></li>
+  <li><code class="language-plaintext highlighter-rouge">pdflatex main</code></li>
+</ol>
+
+<p>很多编辑器可以自动完成这些步骤，但底层顺序仍然是这 4 步。</p>
+
+<p><strong>特点</strong>：</p>
+
+<ul>
+  <li>
+<strong>优点</strong>：历史悠久、兼容性好，很多旧模板和投稿模板仍要求 BibTeX。</li>
+  <li>
+<strong>缺点</strong>：对 UTF-8、多语种姓名支持相对有限；<code class="language-plaintext highlighter-rouge">.bst</code> 样式定制门槛较高；对 URL、DOI、在线资源的处理不如 BibLaTeX 灵活。</li>
+</ul>
+
+<hr>
+
+<h3 id="32-现代biblatex--biber-工作流">3.2 现代：BibLaTeX + biber 工作流</h3>
+
+<p><strong>文档示例（<code class="language-plaintext highlighter-rouge">main.tex</code>）：</strong></p>
+
+<div class="language-latex highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">\documentclass</span><span class="p">{</span>article<span class="p">}</span>
+<span class="k">\usepackage</span><span class="na">[utf8]</span><span class="p">{</span>inputenc<span class="p">}</span> <span class="c">% 使用 XeLaTeX/LuaLaTeX 时可省略</span>
+<span class="k">\usepackage</span><span class="na">[backend=biber,style=authoryear,sorting=nyt]</span><span class="p">{</span>biblatex<span class="p">}</span>
+
+<span class="k">\addbibresource</span><span class="p">{</span>references.bib<span class="p">}</span> <span class="c">% 指定 .bib 文件</span>
+
+<span class="nt">\begin{document}</span>
+
+这是正文中的一条引用 <span class="k">\parencite</span><span class="p">{</span>einstein1905<span class="p">}</span>，
+以及一条行文引用 <span class="k">\textcite</span><span class="p">{</span>knuth1984<span class="p">}</span>。
+
+<span class="k">\printbibliography</span>
+
+<span class="nt">\end{document}</span>
+</code></pre></div></div>
+
+<ul>
+  <li>
+<strong><code class="language-plaintext highlighter-rouge">backend=biber</code>：</strong>指定后端为 <code class="language-plaintext highlighter-rouge">biber</code>（而不是 <code class="language-plaintext highlighter-rouge">bibtex</code>）。</li>
+  <li>
+<strong><code class="language-plaintext highlighter-rouge">style=authoryear</code>：</strong>作者-年份格式（如 “Einstein 1905”），也可改为 <code class="language-plaintext highlighter-rouge">numeric</code>、<code class="language-plaintext highlighter-rouge">ieee</code> 等。</li>
+  <li>
+<strong><code class="language-plaintext highlighter-rouge">sorting=nyt</code>：</strong>按 <code class="language-plaintext highlighter-rouge">name-year-title</code> 排序。</li>
+</ul>
+
+<p><strong>编译顺序：</strong></p>
+
+<ol>
+  <li><code class="language-plaintext highlighter-rouge">pdflatex main</code></li>
+  <li><code class="language-plaintext highlighter-rouge">biber main</code></li>
+  <li><code class="language-plaintext highlighter-rouge">pdflatex main</code></li>
+  <li><code class="language-plaintext highlighter-rouge">pdflatex main</code></li>
+</ol>
+
+<p>如果你用的是 XeLaTeX/LuaLaTeX，则把 <code class="language-plaintext highlighter-rouge">pdflatex</code> 换成 <code class="language-plaintext highlighter-rouge">xelatex</code> 或 <code class="language-plaintext highlighter-rouge">lualatex</code> 即可。</p>
+
+<p><strong>特点</strong>：</p>
+
+<ul>
+  <li>
+<strong>优点</strong>：对 UTF-8 与多语言支持更好；字段更丰富（如 <code class="language-plaintext highlighter-rouge">@online</code>、<code class="language-plaintext highlighter-rouge">url</code>、<code class="language-plaintext highlighter-rouge">doi</code>、<code class="language-plaintext highlighter-rouge">eprint</code>）；样式可通过 LaTeX 宏定制，可维护性更高；支持按章节、按类型分组等高级功能。</li>
+  <li>
+<strong>缺点</strong>：某些期刊/会议模板仍明确要求 BibTeX。</li>
+</ul>
+
+<hr>
+
+<h2 id="4-该如何选择">4. 该如何选择？</h2>
+
+<p class="notice--important">如果模板没有明确限制，通常可以优先考虑 <code class="language-plaintext highlighter-rouge">XeLaTeX/LuaLaTeX + BibLaTeX + biber</code>。</p>
+
+<hr>
+
+<h2 id="5-写-bib-时的一些实用小技巧">5. 写 <code class="language-plaintext highlighter-rouge">.bib</code> 时的一些实用小技巧</h2>
+
+<ul>
+  <li>
+<strong>优先从数据库导出 BibTeX</strong>：例如 Google Scholar、arXiv、ACM、IEEE、Springer，可减少手写错误。</li>
+  <li>
+<strong>统一命名规则（citekey）</strong>：</li>
+</ul>
+
+<p>比如 <code class="language-plaintext highlighter-rouge">authorYearShortTitle</code>：</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>vaswani2017attention
+he2016resnet
+knuth1984texbook
+</code></pre></div></div>
+
+<ul>
+  <li>
+<strong>中文文献的处理</strong>：在 BibLaTeX + biber + UTF-8 工作流中，可直接使用中文 <code class="language-plaintext highlighter-rouge">title</code>、<code class="language-plaintext highlighter-rouge">author</code>；若投稿要求英文参考文献，可将英文信息写入主要字段，中文信息放在 <code class="language-plaintext highlighter-rouge">note</code> 或 <code class="language-plaintext highlighter-rouge">language</code>。</li>
+  <li>
+<strong>注意特殊字符转义</strong>：<code class="language-plaintext highlighter-rouge">&amp;</code>, <code class="language-plaintext highlighter-rouge">%</code>, <code class="language-plaintext highlighter-rouge">_</code>, <code class="language-plaintext highlighter-rouge">#</code> 等应转义为 <code class="language-plaintext highlighter-rouge">\&amp;</code>, <code class="language-plaintext highlighter-rouge">\%</code>, <code class="language-plaintext highlighter-rouge">\_</code>, <code class="language-plaintext highlighter-rouge">\#</code>。</li>
+</ul>
+
+<hr>
+
+<h2 id="6-完整示例biblatex--biber">6. 完整示例（BibLaTeX + biber）</h2>
+
+<p>下面给出一套可直接实验的最小流程。</p>
+
+<h3 id="61-新建-referencesbib">6.1 新建 <code class="language-plaintext highlighter-rouge">references.bib</code>
+</h3>
+
+<div class="language-bibtex highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nc">@article</span><span class="p">{</span><span class="nl">vaswani2017attention</span><span class="p">,</span>
+  <span class="na">author</span>  <span class="p">=</span> <span class="s">{Ashish Vaswani and Noam Shazeer and Niki Parmar and Jakob Uszkoreit
+             and Llion Jones and Aidan N. Gomez and Lukasz Kaiser and Illia Polosukhin}</span><span class="p">,</span>
+  <span class="na">title</span>   <span class="p">=</span> <span class="s">{Attention Is All You Need}</span><span class="p">,</span>
+  <span class="na">journal</span> <span class="p">=</span> <span class="s">{Advances in Neural Information Processing Systems}</span><span class="p">,</span>
+  <span class="na">volume</span>  <span class="p">=</span> <span class="s">{30}</span><span class="p">,</span>
+  <span class="na">year</span>    <span class="p">=</span> <span class="s">{2017}</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="nc">@book</span><span class="p">{</span><span class="nl">knuth1984texbook</span><span class="p">,</span>
+  <span class="na">author</span>    <span class="p">=</span> <span class="s">{Donald E. Knuth}</span><span class="p">,</span>
+  <span class="na">title</span>     <span class="p">=</span> <span class="s">{The {TeX}book}</span><span class="p">,</span>
+  <span class="na">publisher</span> <span class="p">=</span> <span class="s">{Addison-Wesley}</span><span class="p">,</span>
+  <span class="na">year</span>      <span class="p">=</span> <span class="s">{1984}</span><span class="p">,</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h3 id="62-新建-maintex">6.2 新建 <code class="language-plaintext highlighter-rouge">main.tex</code>
+</h3>
+
+<div class="language-latex highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">\documentclass</span><span class="p">{</span>article<span class="p">}</span>
+<span class="k">\usepackage</span><span class="na">[utf8]</span><span class="p">{</span>inputenc<span class="p">}</span>
+<span class="k">\usepackage</span><span class="na">[backend=biber,style=authoryear,sorting=nyt]</span><span class="p">{</span>biblatex<span class="p">}</span>
+
+<span class="k">\addbibresource</span><span class="p">{</span>references.bib<span class="p">}</span>
+
+<span class="nt">\begin{document}</span>
+
+这是对 Transformer 的引用 <span class="k">\parencite</span><span class="p">{</span>vaswani2017attention<span class="p">}</span>，
+这是对 <span class="k">\textcite</span><span class="p">{</span>knuth1984texbook<span class="p">}</span> 的引用。
+
+<span class="k">\printbibliography</span>
+
+<span class="nt">\end{document}</span>
+</code></pre></div></div>
+
+<h3 id="63-编译顺序">6.3 编译顺序</h3>
+
+<ol>
+  <li><code class="language-plaintext highlighter-rouge">pdflatex main</code></li>
+  <li><code class="language-plaintext highlighter-rouge">biber main</code></li>
+  <li><code class="language-plaintext highlighter-rouge">pdflatex main</code></li>
+  <li><code class="language-plaintext highlighter-rouge">pdflatex main</code></li>
+</ol>
+
+<p>如果你用的是 XeLaTeX，就把 <code class="language-plaintext highlighter-rouge">pdflatex</code> 换成 <code class="language-plaintext highlighter-rouge">xelatex</code>。</p>
+
+        
+      </section>
+
+      <footer class="page__meta">
+        
+        
+
+  
+    
+
+
+
+  
+
+  <p class="page__taxonomy">
+    <strong><i class="fas fa-fw fa-tags" aria-hidden="true"></i> Tags: </strong>
+    <span itemprop="keywords">
+    
+      <a href="/tags/latex" class="page__taxonomy-item p-category" rel="tag">LaTeX</a>
+    
+    </span>
+  </p>
+
+
+  
+
+  
+    
+
+
+
+  
+
+  <p class="page__taxonomy">
+    <strong><i class="fas fa-fw fa-folder-open" aria-hidden="true"></i> Categories: </strong>
+    <span itemprop="keywords">
+    
+      <a href="/categories/note" class="page__taxonomy-item p-category" rel="tag">Note</a>
+    
+    </span>
+  </p>
+
+
+  
+
+
+        
+
+
+  <p class="page__date"><strong><i class="fas fa-fw fa-calendar-alt" aria-hidden="true"></i> Updated:</strong> <time class="dt-published" datetime="2026-05-19T14:00:00+00:00">May 19, 2026</time></p>
+
+
+      </footer>
+
+      
+<section class="page__share">
+  <h4 class="page__share-title">Share on</h4>
+
+  <a href="https://x.com/intent/tweet?text=BibTeX+%E4%B8%8E+BibLaTeX+%E5%85%A5%E9%97%A8%EF%BC%9A.bib+%E6%96%87%E4%BB%B6%E7%BB%93%E6%9E%84%E3%80%81%E5%BC%95%E7%94%A8%E4%B8%8E%E7%BC%96%E8%AF%91%E6%B5%81%E7%A8%8B%20https%3A%2F%2Fbfmhno3.github.io%2Fnote%2Fbibtex-and-biblatex-guide%2F" class="btn btn--x" aria-label="Share on X" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on X">
+    <i class="fab fa-fw fa-x-twitter" aria-hidden="true"></i><span> X</span>
+  </a>
+
+  <a href="https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fbfmhno3.github.io%2Fnote%2Fbibtex-and-biblatex-guide%2F" class="btn btn--facebook" aria-label="Share on Facebook" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on Facebook">
+    <i class="fab fa-fw fa-facebook" aria-hidden="true"></i><span> Facebook</span>
+  </a>
+
+  <a href="https://www.linkedin.com/shareArticle?mini=true&url=https://bfmhno3.github.io/note/bibtex-and-biblatex-guide/" class="btn btn--linkedin" aria-label="Share on LinkedIn" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on LinkedIn">
+    <i class="fab fa-fw fa-linkedin" aria-hidden="true"></i><span> LinkedIn</span>
+  </a>
+
+  <a href="https://bsky.app/intent/compose?text=BibTeX+%E4%B8%8E+BibLaTeX+%E5%85%A5%E9%97%A8%EF%BC%9A.bib+%E6%96%87%E4%BB%B6%E7%BB%93%E6%9E%84%E3%80%81%E5%BC%95%E7%94%A8%E4%B8%8E%E7%BC%96%E8%AF%91%E6%B5%81%E7%A8%8B%20https%3A%2F%2Fbfmhno3.github.io%2Fnote%2Fbibtex-and-biblatex-guide%2F" class="btn btn--bluesky" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on Bluesky">
+    <i class="fab fa-fw fa-bluesky" aria-hidden="true"></i><span> Bluesky</span>
+  </a>
+</section>
+
+
+      
+
+  <nav class="pagination" aria-label="Post pagination">
+    
+      <a href="/note/note-of-tmux/" class="pagination--pager" title="Tmux 使用笔记">Previous</a>
+    
+    
+      <a href="/note/devicetree-study-notes/" class="pagination--pager" title="设备树学习笔记：从基础语法到 DTB">Next</a>
+    
+  </nav>
+
+
+    </div>
+
+    
+      
+        
+<div class="page__comments">
+  
+  
+      <h4 class="page__comments-title">Comments</h4>
+      <section id="giscus-comments"></section>
+    
+</div>
+
+      
+    
+  </article>
+
+  
+  
+    
+
+<div class="page__related">
+  
+  <h2 class="page__related-title">You May Also Enjoy</h2>
+  <div class="grid__wrapper">
+    
+      
+      
+
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc p-name" itemprop="headline">
+      
+        <a class="u-url" href="/note/latex-project-structure/" rel="permalink">LaTeX 项目结构与 latexmk 配置
+</a>
+      
+    </h2>
+    
+
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-06-18T03:20:00+00:00">June 18, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          9 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt p-summary" itemprop="description">我用 LaTeX 写东西时的项目目录结构、main.tex 模板，以及一份跨平台的 .latexmkrc 配置。
+</p>
+  </article>
+</div>
+
+    
+      
+      
+
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc p-name" itemprop="headline">
+      
+        <a class="u-url" href="/note/devicetree-study-notes/" rel="permalink">设备树学习笔记：从基础语法到 DTB
+</a>
+      
+    </h2>
+    
+
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-05-20T03:15:00+00:00">May 20, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          20 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt p-summary" itemprop="description">从设备树产生背景讲起，系统梳理 DTS/DTB 语法、compatible/reg/status、中断路由、系统必选节点与 DTB 二进制结构，形成一条从写法到底层实现的完整学习路径。
+</p>
+  </article>
+</div>
+
+    
+      
+      
+
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc p-name" itemprop="headline">
+      
+        <a class="u-url" href="/note/note-of-tmux/" rel="permalink">Tmux 使用笔记
+</a>
+      
+    </h2>
+    
+
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-04-25T13:55:00+00:00">April 25, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          5 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt p-summary" itemprop="description">为什么我们需要 tmux？
+
+1. 终端的物理与逻辑基础
+
+在计算机世界里，我们通过 “终端（Terminal）” 与 “Shell（如 bash, zsh）” 进行交互。
+
+当你打开一个终端窗口，或者通过 SSH 连接到远程服务器时，操作系统为你分配了一个 TTY（伪终端），并在这个 TTY 上启动了一个 Sh...</p>
+  </article>
+</div>
+
+    
+      
+      
+
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc p-name" itemprop="headline">
+      
+        <a class="u-url" href="/note/fhs-of-linux/" rel="permalink">从 FHS 到 Linux 运行时目录体系
+</a>
+      
+    </h2>
+    
+
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-04-21T07:00:00+00:00">April 21, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          13 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt p-summary" itemprop="description">要真正理解 Linux 的 FHS (Filesystem Hierarchy Standard，文件系统层次结构标准)，不能只靠死记硬背“哪个目录放什么文件”。更有效的办法，是剥开表象，回到操作系统设计的起点，看看在构建一个多用户、网络化、可扩展的系统时，我们究竟面临了哪些根本问题，以及 FHS 又是如何作为一...</p>
+  </article>
+</div>
+
+    
+  </div>
+</div>
+
+  
+  
+</div>
+
+      
+    </div>
+
+    
+      <div class="search-content">
+        
+<div class="search-content__inner-wrap">
+<form class="search-content__form" onkeydown="return event.key != 'Enter';" role="search">
+    <label class="sr-only" for="search">
+      Enter your search term...
+    </label>
+    <input type="search" id="search" class="search-input" tabindex="-1" placeholder="Enter your search term...">
+  </form>
+  <div id="results" class="results"></div>
+</div>
+
+      </div>
+    
+
+    <div id="footer" class="page__footer">
+      <footer>
+        <!-- start custom footer snippets -->
+
+<!-- end custom footer snippets -->
+        
+
+
+<div class="page__footer-follow">
+  <ul class="social-icons">
+    
+
+    
+      
+        
+          <li><a href="https://github.com/bfmhno3" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-github" aria-hidden="true"></i> GitHub</a></li>
+        
+      
+        
+          <li><a href="https://gitee.com/bfmhno3" rel="nofollow noopener noreferrer"><i class="fa-solid fa-g" aria-hidden="true"></i> Gitee</a></li>
+        
+      
+        
+          <li><a href="https://www.cnblogs.com/bfmhno3" rel="nofollow noopener noreferrer"><i class="fa-solid fa-blog" aria-hidden="true"></i> cnblogs</a></li>
+        
+      
+        
+          <li><a href="https://blog.csdn.net/B33336" rel="nofollow noopener noreferrer"><i class="fa-solid fa-blog" aria-hidden="true"></i> CSDN</a></li>
+        
+      
+    
+
+    
+      <li><a href="/feed.xml"><i class="fas fa-fw fa-square-rss" aria-hidden="true"></i> Feed</a></li>
+    
+  </ul>
+</div>
+
+
+<div class="page__footer-copyright">© 2026 <a href="https://bfmhno3.github.io">Better Mistakes</a>. Powered by <a href="https://jekyllrb.com" rel="nofollow">Jekyll</a> &amp; <a href="https://mademistakes.com/work/jekyll-themes/minimal-mistakes/" rel="nofollow">Minimal Mistakes</a>.</div>
+
+      </footer>
+    </div>
+
+    
+
+  <script src="/assets/js/main.min.js"></script>
+
+
+
+
+
+<script src="/assets/js/lunr/lunr.min.js"></script>
+<script src="/assets/js/lunr/lunr-store.js"></script>
+<script src="/assets/js/lunr/lunr-en.js"></script>
+
+
+
+
+
+  <!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-VS5B3CR1M6"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-VS5B3CR1M6', { 'anonymize_ip': false});
+</script>
+
+
+
+
+
+
+
+    <script>
+  'use strict';
+
+  (function () {
+    var commentContainer = document.querySelector('#giscus-comments');
+
+    if (!commentContainer) {
+      return;
+    }
+
+    var script = document.createElement('script');
+
+    script.setAttribute('src', 'https://giscus.app/client.js');
+    script.setAttribute('data-repo', 'bfmhno3/bfmhno3.github.io');
+    script.setAttribute('data-repo-id', 'R_kgDOQCQGxg');
+    script.setAttribute('data-category', 'General');
+    script.setAttribute('data-category-id', 'DIC_kwDOQCQGxs4CzG3a');
+    script.setAttribute('data-mapping', 'pathname');
+    script.setAttribute('data-strict', '0');
+    script.setAttribute('data-reactions-enabled', '1');
+    script.setAttribute('data-emit-metadata', '0');
+    script.setAttribute('data-input-position', 'bottom');
+    script.setAttribute('data-theme', 'transparent_dark');
+    script.setAttribute('data-lang',  'en');
+    
+    script.setAttribute('data-loading', 'lazy');
+    
+    script.setAttribute('crossorigin', 'anonymous');
+
+    script.setAttribute('async', '');
+
+    commentContainer.appendChild(script);
+  })();
+</script>
+
+  
+
+
+
+
+  </body>
+</html>

@@ -1,0 +1,1782 @@
+<!DOCTYPE html>
+<!--
+  Minimal Mistakes Jekyll Theme 4.28.0 by Michael Rose
+  Copyright 2013-2026 Michael Rose - mademistakes.com | @mmistakes
+  Copyright 2024-2026 iBug - ibugone.com | @iBug
+  Free for personal and commercial use under the MIT license
+  https://github.com/mmistakes/minimal-mistakes/blob/master/LICENSE
+--><html lang="en-US" class="no-js">
+  <head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+<meta charset="utf-8">
+
+
+<!-- begin _includes/seo.html --><title>设备树学习笔记：从基础语法到 DTB - Better Mistakes</title>
+<meta name="description" content="从设备树产生背景讲起，系统梳理 DTS/DTB 语法、compatible/reg/status、中断路由、系统必选节点与 DTB 二进制结构，形成一条从写法到底层实现的完整学习路径。">
+
+
+  <meta name="author" content="bfmhno3">
+  
+  <meta property="article:author" content="bfmhno3">
+  
+
+
+<meta property="og:type" content="article">
+<meta property="og:locale" content="en_US">
+<meta property="og:site_name" content="Better Mistakes">
+<meta property="og:title" content="设备树学习笔记：从基础语法到 DTB">
+<meta property="og:url" content="https://bfmhno3.github.io/note/devicetree-study-notes/">
+
+
+  <meta property="og:description" content="从设备树产生背景讲起，系统梳理 DTS/DTB 语法、compatible/reg/status、中断路由、系统必选节点与 DTB 二进制结构，形成一条从写法到底层实现的完整学习路径。">
+
+
+
+  <meta property="og:image" content="https://bfmhno3.github.io/assets/images/avatar.jpg">
+  
+
+
+
+
+
+
+
+  <meta property="article:published_time" content="2026-05-20T03:15:00+00:00">
+
+
+
+
+
+  
+
+  
+
+
+<link rel="canonical" href="https://bfmhno3.github.io/note/devicetree-study-notes/">
+
+
+
+
+
+
+
+  <meta name="google-site-verification" content="UUnU8OnGqO_2FFdhrv7eEABM5p_cNPhM4Se6HB1KFSk">
+
+
+  <meta name="msvalidate.01" content="FC3BA97765A3C90F8CA771F70AE34FB8">
+
+
+
+
+
+<!-- end _includes/seo.html -->
+
+
+
+  <link href="/feed.xml" type="application/atom+xml" rel="alternate" title="Better Mistakes Feed">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script>
+  document.documentElement.className = document.documentElement.className.replace(/\bno-js\b/g, '') + ' js ';
+  window.enable_copy_code_button = true;
+</script>
+
+<!-- For all browsers -->
+<link rel="stylesheet" href="/assets/css/main.css">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@latest/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@latest/css/all.min.css"></noscript>
+
+
+
+    <link rel="icon" type="image/png" href="/assets/images/favicon/favicon-96x96.png" sizes="96x96">
+<link rel="icon" type="image/svg+xml" href="/assets/images/favicon/favicon.svg">
+<link rel="shortcut icon" href="/assets/images/favicon/favicon.ico">
+<link rel="apple-touch-icon" sizes="180x180" href="/assets/images/favicon/apple-touch-icon.png">
+<link rel="manifest" href="/assets/images/favicon/site.webmanifest">
+  </head>
+
+  <body class="layout--single" dir="ltr">
+    
+<nav class="skip-links" aria-label="Skip links">
+  <ul>
+    <li><a href="#site-nav" class="screen-reader-shortcut">Skip to primary navigation</a></li>
+    <li><a href="#main" class="screen-reader-shortcut">Skip to content</a></li>
+    <li><a href="#footer" class="screen-reader-shortcut">Skip to footer</a></li>
+  </ul>
+</nav>
+
+    
+
+
+<div class="masthead">
+  <div class="masthead__inner-wrap">
+    <div class="masthead__menu">
+      <nav id="site-nav" class="greedy-nav" aria-label="Primary navigation">
+        
+          <a class="site-logo" href="/"><img src="/assets/images/logo.svg" alt="Better Mistakes"></a>
+        
+        <a class="site-title" href="/">
+          Better Mistakes
+          <span class="site-subtitle">Trial.Error.Iteration.</span>
+        </a>
+        <ul class="visible-links">
+<li class="masthead__menu-item">
+              <a href="/posts/">Posts</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/categories/">Categories</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/tags/">Tags</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/portfolio/">Portfolio</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/about/">About</a>
+            </li>
+</ul>
+        
+        <button class="search__toggle" type="button">
+          <span class="visually-hidden">Toggle search</span>
+          <i class="fas fa-search"></i>
+        </button>
+        
+        <button class="greedy-nav__toggle hidden" type="button">
+          <span class="visually-hidden">Toggle menu</span>
+          <div class="navicon"></div>
+        </button>
+        <ul class="hidden-links hidden"></ul>
+      </nav>
+    </div>
+  </div>
+</div>
+
+
+    <div class="initial-content">
+      
+
+
+
+
+
+
+
+<div id="main" role="main">
+  
+
+  <div class="sidebar sticky">
+  
+
+
+
+<div itemscope itemtype="https://schema.org/Person" class="h-card">
+
+  
+    <div class="author__avatar">
+      <a href="https://bfmhno3.github.io/">
+        <img src="/assets/images/avatar.jpg" alt="bfmhno3" itemprop="image" class="u-photo">
+      </a>
+    </div>
+  
+
+  <div class="author__content">
+    <h3 class="author__name p-name" itemprop="name">
+      <a class="u-url" rel="me" href="https://bfmhno3.github.io/" itemprop="url">bfmhno3</a>
+    </h3>
+    
+      <div class="author__bio p-note" itemprop="description">
+        <p>Third-year university student majoring in energy engineering. Exploring the world of code and mathematics.</p>
+
+      </div>
+    
+  </div>
+
+  <div class="author__urls-wrapper">
+    <button class="btn btn--inverse">Follow</button>
+    <ul class="author__urls social-icons">
+      
+
+      
+        
+          
+            <li><a href="https://github.com/bfmhno3" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fab fa-fw fa-github" aria-hidden="true"></i><span class="label">GitHub</span></a></li>
+          
+        
+          
+            <li><a href="https://gitee.com/bfmhno3" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fa-solid fa-g" aria-hidden="true"></i><span class="label">Gitee</span></a></li>
+          
+        
+          
+            <li><a href="https://www.cnblogs.com/bfmhno3" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fa-solid fa-blog" aria-hidden="true"></i><span class="label">cnblogs</span></a></li>
+          
+        
+          
+            <li><a href="https://blog.csdn.net/B33336" rel="nofollow noopener noreferrer me" itemprop="sameAs"><i class="fa-solid fa-blog" aria-hidden="true"></i><span class="label">CSDN</span></a></li>
+          
+        
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      <!--
+  <li>
+    <a href="http://link-to-whatever-social-network.com/user/" itemprop="sameAs" rel="nofollow noopener noreferrer me">
+      <i class="fas fa-fw" aria-hidden="true"></i> Custom Social Profile Link
+    </a>
+  </li>
+-->
+    </ul>
+  </div>
+</div>
+
+  
+  
+  </div>
+
+
+
+  <article class="page h-entry" itemscope itemtype="https://schema.org/CreativeWork">
+    <meta itemprop="headline" content="设备树学习笔记：从基础语法到 DTB">
+    <meta itemprop="description" content="从设备树产生背景讲起，系统梳理 DTS/DTB 语法、compatible/reg/status、中断路由、系统必选节点与 DTB 二进制结构，形成一条从写法到底层实现的完整学习路径。">
+    <meta itemprop="datePublished" content="2026-05-20T03:15:00+00:00">
+    
+
+    <div class="page__inner-wrap">
+      
+        <header>
+          <h1 id="page-title" class="page__title p-name" itemprop="headline">
+            <a href="https://bfmhno3.github.io/note/devicetree-study-notes/" itemprop="url">设备树学习笔记：从基础语法到 DTB
+</a>
+          </h1>
+          
+
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-05-20T03:15:00+00:00">May 20, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-clock" aria-hidden="true"></i>
+        
+          19 minute read
+        
+      </span>
+    
+  </p>
+
+
+        </header>
+      
+
+      <section class="page__content e-content" itemprop="text">
+        
+          <aside class="sidebar__right sticky">
+            <nav class="toc" aria-label="Table of contents">
+              <header><h4 class="nav__title">
+<i class="fas fa-file-alt"></i> On this page</h4></header>
+              <ul class="toc__menu">
+<li>
+<a href="#0-%E5%BC%95%E8%A8%80%E4%B8%BA%E4%BB%80%E4%B9%88%E6%88%91%E4%BB%AC%E9%9C%80%E8%A6%81%E8%AE%BE%E5%A4%87%E6%A0%91">0. 引言：为什么我们需要设备树？</a><ul>
+<li><a href="#01-%E8%87%AA%E5%8F%91%E7%8E%B0-vs-%E9%9D%9E%E8%87%AA%E5%8F%91%E7%8E%B0%E6%80%BB%E7%BA%BF">0.1 自发现 vs 非自发现总线</a></li>
+<li><a href="#02-%E5%8E%86%E5%8F%B2%E7%9A%84%E6%95%99%E8%AE%ADlinus-%E7%9A%84%E6%84%A4%E6%80%92">0.2 历史的教训：Linus 的愤怒</a></li>
+<li><a href="#03-%E8%A7%A3%E5%86%B3%E5%8A%9E%E6%B3%95%E6%95%B0%E6%8D%AE%E4%B8%8E%E4%BB%A3%E7%A0%81%E7%9A%84%E5%89%A5%E7%A6%BB">0.3 解决办法：数据与代码的剥离</a></li>
+</ul>
+</li>
+<li>
+<a href="#1-%E8%AE%BE%E5%A4%87%E6%A0%91%E7%9A%84%E5%9F%BA%E7%A1%80%E8%AF%AD%E6%B3%95">1. 设备树的基础语法</a><ul>
+<li><a href="#11-dts-%E6%BA%90%E7%A0%81%E4%B8%8E-dtb-%E4%BA%8C%E8%BF%9B%E5%88%B6">1.1 DTS 源码与 DTB 二进制</a></li>
+<li>
+<a href="#12-%E8%8A%82%E7%82%B9node%E4%B8%8E%E8%B7%AF%E5%BE%84">1.2 节点（Node）与路径</a><ul>
+<li><a href="#%E8%8A%82%E7%82%B9%E5%91%BD%E5%90%8D%E8%A7%84%E5%88%99">节点命名规则</a></li>
+<li><a href="#%E6%A0%91%E7%8A%B6%E5%B1%82%E7%BA%A7%E4%B8%8E%E7%BB%9D%E5%AF%B9%E8%B7%AF%E5%BE%84">树状层级与绝对路径</a></li>
+</ul>
+</li>
+<li><a href="#13-%E5%B1%9E%E6%80%A7property%E6%95%B0%E6%8D%AE%E7%9A%84%E8%BD%BD%E4%BD%93">1.3 属性（Property）：数据的载体</a></li>
+<li><a href="#14-%E8%AF%AD%E6%B3%95%E7%B3%96%E6%A0%87%E7%AD%BE%E4%B8%8E%E5%BC%95%E7%94%A8">1.4 语法糖：标签与引用</a></li>
+</ul>
+</li>
+<li>
+<a href="#2-%E6%8F%8F%E8%BF%B0%E7%A1%AC%E4%BB%B6%E7%9A%84%E4%B8%89%E5%A4%A7%E6%A0%B8%E5%BF%83%E7%BB%B4%E5%BA%A6">2. 描述硬件的三大核心维度</a><ul>
+<li><a href="#21-%E8%BA%AB%E4%BB%BD%E8%AE%A4%E5%90%8Ccompatible-%E5%92%8C-model">2.1 身份认同：compatible 和 model</a></li>
+<li>
+<a href="#22-%E5%AF%BB%E5%9D%80%E7%A9%BA%E9%97%B4regaddress-cells-%E4%B8%8E-size-cells">2.2 寻址空间：reg、#address-cells 与 #size-cells</a><ul><li><a href="#%E8%BF%9B%E9%98%B6%E5%9C%B0%E5%9D%80%E6%98%A0%E5%B0%84%E4%B8%8E-dma">进阶：地址映射与 DMA</a></li></ul>
+</li>
+<li><a href="#23-%E8%BF%90%E8%A1%8C%E7%8A%B6%E6%80%81status">2.3 运行状态：status</a></li>
+</ul>
+</li>
+<li>
+<a href="#3-%E7%A1%AC%E4%BB%B6%E4%B8%AD%E6%96%AD%E7%9A%84%E9%80%BB%E8%BE%91%E8%BF%9E%E7%BA%BF">3. 硬件中断的逻辑连线</a><ul>
+<li><a href="#31-%E4%B8%AD%E6%96%AD%E6%A0%91%E8%B7%B3%E5%87%BA%E7%89%A9%E7%90%86%E5%B1%82%E7%BA%A7%E7%9A%84%E9%80%BB%E8%BE%91%E7%BB%93%E6%9E%84">3.1 中断树：跳出物理层级的逻辑结构</a></li>
+<li><a href="#32-%E4%B8%AD%E6%96%AD%E4%BF%A1%E5%8F%B7%E7%9A%84%E5%B1%9E%E6%80%A7">3.2 中断信号的属性</a></li>
+<li><a href="#33-%E4%B8%AD%E6%96%AD%E6%8E%A7%E5%88%B6%E5%99%A8">3.3 中断控制器</a></li>
+<li><a href="#34-%E4%B8%AD%E7%BB%A7nexus-%E8%8A%82%E7%82%B9%E4%B8%8E%E4%B8%AD%E6%96%AD%E6%98%A0%E5%B0%84">3.4 中继：Nexus 节点与中断映射</a></li>
+<li><a href="#35-gpio-%E7%AD%89%E9%9D%9E%E4%B8%AD%E6%96%AD%E4%BF%A1%E5%8F%B7%E7%9A%84%E9%80%9A%E7%94%A8%E6%98%A0%E5%B0%84%E6%9C%BA%E5%88%B6">3.5 GPIO 等非中断信号的通用映射机制</a></li>
+</ul>
+</li>
+<li>
+<a href="#4-%E6%8B%BC%E8%A3%85%E4%B8%80%E5%8F%B0%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%B3%BB%E7%BB%9F%E9%AA%A8%E6%9E%B6%E4%B8%8E%E5%BF%85%E9%80%89%E8%8A%82%E7%82%B9">4. 拼装一台计算机：系统骨架与必选节点</a><ul>
+<li><a href="#41-%E6%A0%B9%E8%8A%82%E7%82%B9-">4.1 根节点 /</a></li>
+<li>
+<a href="#42-%E5%A4%A7%E8%84%91cpus">4.2 大脑：/cpus</a><ul><li><a href="#%E7%BC%93%E5%AD%98%E5%B1%82%E7%BA%A7">缓存层级</a></li></ul>
+</li>
+<li><a href="#43-%E7%89%A9%E7%90%86%E8%AE%B0%E5%BF%86memory-%E5%92%8C-reserved-memory">4.3 物理记忆：/memory 和 /reserved-memory</a></li>
+<li><a href="#44-%E8%BF%90%E8%A1%8C%E6%97%B6%E9%80%9A%E9%81%93chosen-%E5%92%8C-aliases">4.4 运行时通道：/chosen 和 /aliases</a></li>
+<li>
+<a href="#45-%E5%85%B8%E5%9E%8B%E8%AE%BE%E5%A4%87%E7%BB%91%E5%AE%9A">4.5 典型设备绑定</a><ul>
+<li><a href="#451-%E4%B8%8D%E5%8F%AF%E6%8E%A2%E6%B5%8B%E7%9A%84%E7%B3%BB%E7%BB%9F%E6%80%BB%E7%BA%BFsimple-bus">4.5.1 不可探测的系统总线：simple-bus</a></li>
+<li><a href="#452-%E4%B8%B2%E5%8F%A3%E4%BB%A5-ns16550-%E4%B8%BA%E4%BE%8B">4.5.2 串口：以 NS16550 为例</a></li>
+<li><a href="#453-%E7%BD%91%E7%BB%9C%E4%BB%A5%E5%A4%AA%E7%BD%91">4.5.3 网络：以太网</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<a href="#5-%E5%BA%96%E4%B8%81%E8%A7%A3%E7%89%9Bdtb-%E4%BA%8C%E8%BF%9B%E5%88%B6%E6%A0%BC%E5%BC%8F%E7%9A%84%E5%BA%95%E5%B1%82%E8%AE%BE%E8%AE%A1">5. 庖丁解牛：DTB 二进制格式的底层设计</a><ul>
+<li><a href="#51-%E6%89%81%E5%B9%B3%E5%8C%96%E7%9A%84%E5%93%B2%E5%AD%A6%E4%B8%BA%E4%BB%80%E4%B9%88%E6%B2%A1%E6%9C%89-c-%E9%A3%8E%E6%A0%BC%E7%9A%84%E6%8C%87%E9%92%88">5.1 扁平化的哲学：为什么没有 C 风格的指针？</a></li>
+<li>
+<a href="#52-dtb-%E7%9A%84%E5%9B%9B%E5%A4%A7%E5%86%85%E5%AD%98%E5%8C%BA%E5%9D%97">5.2 DTB 的四大内存区块</a><ul>
+<li><a href="#521-header%E5%A4%B4%E9%83%A8%E8%AE%BE%E5%A4%87%E7%9A%84%E8%BA%AB%E4%BB%BD%E8%AF%81">5.2.1 Header（头部）：设备的身份证</a></li>
+<li><a href="#522-memory-reservation-block%E7%A1%AC%E6%A0%B8%E9%A2%84%E7%95%99">5.2.2 Memory Reservation Block：硬核预留</a></li>
+<li><a href="#523-structure-block%E7%94%A8-token-%E7%BA%BF%E6%80%A7%E5%B1%95%E5%BC%80%E7%9A%84%E6%A0%91">5.2.3 Structure Block：用 Token 线性展开的树</a></li>
+<li><a href="#524-strings-block%E6%9E%81%E8%87%B4%E5%8E%8B%E7%BC%A9%E7%9A%84%E5%AD%97%E7%AC%A6%E4%B8%B2%E5%A4%8D%E7%94%A8%E6%B1%A0">5.2.4 Strings Block：极致压缩的字符串复用池</a></li>
+</ul>
+</li>
+<li><a href="#53-%E5%86%85%E5%AD%98%E5%AF%B9%E9%BD%90%E4%BD%BF%E7%94%A8-32-%E4%BD%8D%E5%8D%95%E5%85%83%E4%BD%86%E4%BB%A5-8-%E5%AD%97%E8%8A%82%E6%95%B4%E4%BD%93%E7%9C%8B%E5%BE%85">5.3 内存对齐：使用 32 位单元但以 8 字节整体看待</a></li>
+</ul>
+</li>
+<li><a href="#%E7%BB%93%E8%AF%AD">结语</a></li>
+<li><a href="#%E5%8F%82%E8%80%83%E8%B5%84%E6%96%99">参考资料</a></li>
+</ul>
+            </nav>
+          </aside>
+        
+        <h2 id="0-引言为什么我们需要设备树">0. 引言：为什么我们需要设备树？</h2>
+
+<p>想象这样一个场景：你的电脑开机，操作系统启动，它需要知道自己运行在什么硬件之上：有几颗 CPU、多大内存、串口在哪里、网卡是什么型号。操作系统如何获取这些信息？</p>
+
+<p>答案是……看情况。</p>
+
+<h3 id="01-自发现-vs-非自发现总线">0.1 自发现 vs 非自发现总线</h3>
+
+<p>现代计算机系统中，总线大致分为两类。</p>
+
+<p><strong>自发现总线（Self-Discoverable Bus）</strong>：PCIe、USB 这类总线，操作系统可以向总线发送探测请求，插在总线上的设备会主动回答 “我在这里，我是某某设备”。插上一个 USB 键盘，系统立刻就能知道这个键盘的存在及其设备描述符。这是一种<strong>运行时动态发现</strong>机制。</p>
+
+<p><strong>非自发现总线（Non-Discoverable Bus）</strong>：I2C、SPI、CAN、系统总线（Processor Bus）等则完全不是这样。在这些总线上，CPU 无法主动 “问” 谁连接在上面。它只知道有一组内存映射的寄存器地址，但对于这些地址背后是什么设备、什么型号、如何配置，CPU 一无所知。这些信息必须由<strong>人为提供</strong>。</p>
+
+<p>嵌入式系统大量使用<strong>非自发现总线</strong>。一个典型的 ARM SoC 上，UART、I2C 控制器、GPIO 控制器、定时器都是通过内存映射连接到处理器总线的，没有任何动态发现机制。</p>
+
+<h3 id="02-历史的教训linus-的愤怒">0.2 历史的教训：Linus 的愤怒</h3>
+
+<p>在设备树出现之前，Linux 对这些非自发现硬件的处理方式简单粗暴：<strong>硬编码</strong>。</p>
+
+<p>ARM 架构的 Linux 内核曾经有一个庞大的 <code class="language-plaintext highlighter-rouge">arch/arm/mach-*</code> 目录，里面为每一款开发板都写了一份 C 代码，直接在内核源码中描述板上有什么设备、基地址是多少、中断号是多少。如果你买了一块新的开发板，就需要在内核里添加一份新的 <code class="language-plaintext highlighter-rouge">board-*.c</code> 文件。</p>
+
+<p>这导致了几个严重问题：</p>
+
+<ol>
+  <li>
+<strong>内核膨胀</strong>：同一份内核镜像无法在多块不同板子上运行。每块板子都需要编译一个专用内核。</li>
+  <li>
+<strong>代码冗余</strong>：不同板子之间共享同一个 SoC，但因为板上外设组合不同，代码大量重复。</li>
+  <li>
+<strong>维护灾难</strong>：2011 年左右，Linux 内核邮件列表上 Linus Torvalds 公开表达了强烈的<a href="https://lkml.org/lkml/2011/3/17/492">不满</a>——ARM 架构的 <code class="language-plaintext highlighter-rouge">mach-*</code> 目录已经变成一个无法维护的垃圾场。</li>
+</ol>
+
+<blockquote>
+  <p>Gaah. Guys, this whole ARM thing is a f*cking pain in the ass.</p>
+</blockquote>
+
+<p>问题的根源在于：<strong>硬件描述信息（数据）被硬编码在了操作系统的核心逻辑（代码）中</strong>。</p>
+
+<h3 id="03-解决办法数据与代码的剥离">0.3 解决办法：数据与代码的剥离</h3>
+
+<p>设备树的本质思想总结为一句话：</p>
+
+<blockquote>
+  <p><strong>将硬件的拓扑结构和物理参数从操作系统的核心代码中彻底剥离，以结构化的数据文件形式独立存在。</strong></p>
+</blockquote>
+
+<p>在这个模型中：</p>
+
+<ul>
+  <li>
+<strong>引导程序</strong>（Boot Program）如 U-Boot、树莓派固件、QEMU，负责将设备树二进制文件（DTB）加载到内存，并将其地址传递给内核。</li>
+  <li>
+<strong>内核</strong>（Client Program）在启动时解析这份数据，按图施工：发现设备、匹配驱动、配置寄存器。</li>
+</ul>
+
+<p>这是一种<strong>声明式</strong>（Declarative）的硬件描述方式：你告诉内核 “有什么”，而不是 “怎么做”。内核中的驱动程序则负责 “怎么做”。</p>
+
+<p>这个思想和 Web 前端分离 HTML（结构/数据）与 JavaScript（逻辑）如出一辙，或者类比数据库系统中的 DDL（数据定义）与 DML（数据操作）。</p>
+
+<p>设备树最早来自 Open Firmware（IEEE 1275），用在 PowerPC 和 SPARC 平台上。2005 年，PowerPC Linux 在合并 32 位/64 位支持的清理工作中，将设备树设为强制要求——由此诞生了 “扁平化设备树”（Flattened Device Tree, FDT）格式。此后，FDT 被推广到所有架构。</p>
+
+<p>截至本文写作时，arm、arm64、microblaze、mips、powerpc、sparc、x86、riscv 等主流架构均已支持设备树。</p>
+
+<hr>
+
+<h2 id="1-设备树的基础语法">1. 设备树的基础语法</h2>
+
+<h3 id="11-dts-源码与-dtb-二进制">1.1 DTS 源码与 DTB 二进制</h3>
+
+<p>设备树有两种形态，二者关系类似 C 语言中 <code class="language-plaintext highlighter-rouge">.c</code> 源文件与编译后的二进制可执行文件：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>形态</th>
+      <th>文件名</th>
+      <th>本质</th>
+      <th>使用者</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>
+<strong>DTS</strong> (Device Tree Source)</td>
+      <td>
+<code class="language-plaintext highlighter-rouge">.dts</code> / <code class="language-plaintext highlighter-rouge">.dtsi</code>
+</td>
+      <td>人类可读的文本源码</td>
+      <td>开发者</td>
+    </tr>
+    <tr>
+      <td>
+<strong>DTB</strong> (Device Tree Blob)</td>
+      <td><code class="language-plaintext highlighter-rouge">.dtb</code></td>
+      <td>二进制的扁平化树结构</td>
+      <td>内核</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>DTS 通过<strong>设备树编译器</strong>（DTC, Device Tree Compiler）编译成 DTB。同时，DTC 也支持反编译（<code class="language-plaintext highlighter-rouge">dtc -I dtb -O dts</code>），方便逆向查看既有 DTB 内容。</p>
+
+<p><code class="language-plaintext highlighter-rouge">.dts</code> 文件是设备树源文件，通常一个板子一个。<code class="language-plaintext highlighter-rouge">.dtsi</code> 文件是<strong>可包含的共用文件</strong>（”i” = include），通常描述一个 SoC 的内部结构，然后被多个板子的 <code class="language-plaintext highlighter-rouge">.dts</code> 以 <code class="language-plaintext highlighter-rouge">/include/</code> 指令引用——板级 <code class="language-plaintext highlighter-rouge">.dts</code> 引用 SoC 级 <code class="language-plaintext highlighter-rouge">.dtsi</code>，只在末尾补充板上特有的外设。</p>
+
+<h3 id="12-节点node与路径">1.2 节点（Node）与路径</h3>
+
+<p>设备树是一个<strong>树形数据结构</strong>。每个节点描述一个设备或一个总线，节点可以包含属性和子节点。</p>
+
+<h4 id="节点命名规则">节点命名规则</h4>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">node</span><span class="o">-</span><span class="n">name</span><span class="err">@</span><span class="n">unit</span><span class="o">-</span><span class="n">address</span>
+</code></pre></div></div>
+
+<ul>
+  <li>
+<code class="language-plaintext highlighter-rouge">node-name</code>：1-31 个字符，只能使用数字、大小写字母和 <code class="language-plaintext highlighter-rouge">,._+-</code>，必须以字母开头。推荐使用描述设备<strong>类别</strong>的通用名称，而非具体型号——例如用 <code class="language-plaintext highlighter-rouge">serial</code> 而不是 <code class="language-plaintext highlighter-rouge">ns16550</code>，用 <code class="language-plaintext highlighter-rouge">ethernet</code> 而不是 <code class="language-plaintext highlighter-rouge">rtl8139</code>。这种”重类别、轻型号”的命名哲学让设备树在不同硬件平台间保持可读性。</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">@unit-address</code>：可选的单元地址，必须与 <code class="language-plaintext highlighter-rouge">reg</code> 属性中的第一个地址值匹配。如果节点没有 <code class="language-plaintext highlighter-rouge">reg</code> 属性，则必须省略 <code class="language-plaintext highlighter-rouge">@unit-address</code>。</li>
+</ul>
+
+<p>为什么单元地址必须和 <code class="language-plaintext highlighter-rouge">reg</code> 首地址一致？因为 DTC 编译器会校验这种一致性，确保设备树的自我完整性——你在节点名中承诺的物理地址，必须和寄存器基地址真正对上，否则树结构本身就是错的。</p>
+
+<p>举例：</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">cpu</span><span class="err">@</span><span class="mi">0</span>          <span class="err">——</span> <span class="mi">0</span> <span class="err">号</span> <span class="n">CPU</span>
+<span class="n">serial</span><span class="err">@</span><span class="mi">4600</span>    <span class="err">——</span> <span class="err">基地址</span> <span class="mh">0x4600</span> <span class="err">的串口</span>
+<span class="n">i2c</span><span class="err">@</span><span class="mi">7000</span><span class="n">c000</span>   <span class="err">——</span> <span class="err">基地址</span> <span class="mh">0x7000c000</span> <span class="err">的</span> <span class="n">I2C</span> <span class="err">控制器</span>
+</code></pre></div></div>
+
+<h4 id="树状层级与绝对路径">树状层级与绝对路径</h4>
+
+<p>每个节点在树中有唯一路径，从根节点 <code class="language-plaintext highlighter-rouge">/</code> 开始：</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">/</span><span class="n">cpus</span><span class="o">/</span><span class="n">cpu</span><span class="err">@</span><span class="mi">0</span>
+<span class="o">/</span><span class="n">soc</span><span class="o">/</span><span class="n">serial</span><span class="err">@</span><span class="mi">4600</span>
+<span class="o">/</span><span class="n">soc</span><span class="o">/</span><span class="n">i2c</span><span class="err">@</span><span class="mi">7000</span><span class="n">c000</span><span class="o">/</span><span class="n">codec</span><span class="err">@</span><span class="mi">1</span><span class="n">a</span>
+</code></pre></div></div>
+
+<p>这种层级镜像了硬件的物理拓扑：芯片内部总线（SoC）下挂载着各种外设控制器，而 I2C 控制器下面又挂着连接在 I2C 总线上的设备（如音频编解码器）。</p>
+
+<h3 id="13-属性property数据的载体">1.3 属性（Property）：数据的载体</h3>
+
+<p>每个节点由若干属性定义。属性是键值对结构。</p>
+
+<p>DTSpec 定义了以下几种基本的属性值类型：</p>
+
+<p><strong>〈空值〉（Empty）</strong>：属性的存在本身就是一个布尔信号。例如 <code class="language-plaintext highlighter-rouge">interrupt-controller;</code> 表示不需要任何值，有这个属性就代表”我是中断控制器”。</p>
+
+<p><strong>〈u32〉（32 位整数）</strong>：大端序存储的 32 位无符号整数，在 DTS 源码中用尖括号包裹，例如：</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">clock</span><span class="o">-</span><span class="n">frequency</span> <span class="o">=</span> <span class="o">&lt;</span><span class="mi">825000000</span><span class="o">&gt;</span><span class="p">;</span>
+</code></pre></div></div>
+
+<p>DTS 支持在尖括号内使用 C 风格的算术、位运算和三元表达式：</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">reg</span> <span class="o">=</span> <span class="o">&lt;</span><span class="p">(</span><span class="mh">0x1000</span> <span class="o">+</span> <span class="mh">0x200</span><span class="p">)</span> <span class="mh">0x100</span><span class="o">&gt;</span><span class="p">;</span>
+</code></pre></div></div>
+
+<p><strong>〈u64〉（64 位整数）</strong>：用两个 <code class="language-plaintext highlighter-rouge">&lt;u32&gt;</code> 表示，高 32 位在前，例如：</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">clock</span><span class="o">-</span><span class="n">frequency</span> <span class="o">=</span> <span class="o">&lt;</span><span class="mh">0x00000001</span> <span class="mh">0x00000000</span><span class="o">&gt;</span><span class="p">;</span>
+</code></pre></div></div>
+
+<p>这表示的是 64 位值 <code class="language-plaintext highlighter-rouge">0x100000000</code>：第一个 cell 是高 32 位（<code class="language-plaintext highlighter-rouge">0x00000001</code>），第二个是低 32 位（<code class="language-plaintext highlighter-rouge">0x00000000</code>）。</p>
+
+<p><strong>〈string〉（字符串）</strong>：双引号包裹，以 null 结尾，例如：</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">compatible</span> <span class="o">=</span> <span class="s">"ns16550"</span><span class="p">;</span>
+</code></pre></div></div>
+
+<p><strong>〈stringlist〉（字符串列表）</strong>：多个字符串拼接，例如：</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">compatible</span> <span class="o">=</span> <span class="s">"fsl,mpc8641"</span><span class="p">,</span> <span class="s">"ns16550"</span><span class="p">;</span>
+</code></pre></div></div>
+
+<p><strong>〈phandle〉（节点引用）</strong>：一个 <code class="language-plaintext highlighter-rouge">&lt;u32&gt;</code> 值，指向树中另一个节点。DTC 在编译时自动为有标签的节点分配唯一的 phandle 值。</p>
+
+<p><strong>〈prop-encoded-array〉（自定义编码数组）</strong>：格式取决于具体属性定义，最常见的就是 <code class="language-plaintext highlighter-rouge">reg</code> 中的（地址, 长度）对。</p>
+
+<h3 id="14-语法糖标签与引用">1.4 语法糖：标签与引用</h3>
+
+<p>如果每次都要写 <code class="language-plaintext highlighter-rouge">/soc/i2c@7000c000/codec@1a</code> 这样的绝对路径来引用一个节点，代码会变得难以阅读。DTS 提供了两个机制来解决这个问题。</p>
+
+<p><strong>标签（Label）</strong>：在节点或属性前加 <code class="language-plaintext highlighter-rouge">标签名:</code> 定义，例如：</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nl">wm8903:</span> <span class="n">codec</span><span class="err">@</span><span class="mi">1</span><span class="n">a</span> <span class="p">{</span>
+    <span class="n">compatible</span> <span class="o">=</span> <span class="s">"wlf,wm8903"</span><span class="p">;</span>
+    <span class="n">reg</span> <span class="o">=</span> <span class="o">&lt;</span><span class="mh">0x1a</span><span class="o">&gt;</span><span class="p">;</span>
+<span class="p">};</span>
+</code></pre></div></div>
+
+<p><strong>引用（Reference）</strong>：<code class="language-plaintext highlighter-rouge">&amp;标签名</code> 引用已定义的节点，例如：</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">sound</span> <span class="p">{</span>
+    <span class="n">compatible</span> <span class="o">=</span> <span class="s">"nvidia,harmony-sound"</span><span class="p">;</span>
+    <span class="n">i2s</span><span class="o">-</span><span class="n">controller</span> <span class="o">=</span> <span class="o">&lt;&amp;</span><span class="n">i2s1</span><span class="o">&gt;</span><span class="p">;</span>
+    <span class="n">i2s</span><span class="o">-</span><span class="n">codec</span> <span class="o">=</span> <span class="o">&lt;&amp;</span><span class="n">wm8903</span><span class="o">&gt;</span><span class="p">;</span>   <span class="cm">/* 引用上面的 codec 节点 */</span>
+<span class="p">};</span>
+</code></pre></div></div>
+
+<p>在 DTC 编译时，<code class="language-plaintext highlighter-rouge">&amp;wm8903</code> 会被展开为该节点的 phandle 值，存入 DTB。</p>
+
+<p>引用语法还有一个常见用法：<strong>引用覆盖</strong>。在板级 <code class="language-plaintext highlighter-rouge">.dts</code> 中，你可以这样激活或修改 SoC 级 <code class="language-plaintext highlighter-rouge">.dtsi</code> 中已定义的外设：</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cm">/* 在 SoC .dtsi 中，外设默认 disabled */</span>
+<span class="o">&amp;</span><span class="n">uart1</span> <span class="p">{</span>
+    <span class="n">status</span> <span class="o">=</span> <span class="s">"disabled"</span><span class="p">;</span>
+<span class="p">};</span>
+
+<span class="cm">/* 板级 .dts 中，将它启用 */</span>
+<span class="o">&amp;</span><span class="n">uart1</span> <span class="p">{</span>
+    <span class="n">status</span> <span class="o">=</span> <span class="s">"okay"</span><span class="p">;</span>
+<span class="p">};</span>
+</code></pre></div></div>
+
+<p>这种 “先定义、后覆盖” 的模式是设备树实际工程中的核心工作流。</p>
+
+<hr>
+
+<h2 id="2-描述硬件的三大核心维度">2. 描述硬件的三大核心维度</h2>
+
+<p>如果设备树是一份硬件档案，那么描述一个设备至少需要回答三个问题：<strong>你是谁、你在哪里、你还活着吗</strong>。</p>
+
+<h3 id="21-身份认同compatible-和-model">2.1 身份认同：<code class="language-plaintext highlighter-rouge">compatible</code> 和 <code class="language-plaintext highlighter-rouge">model</code>
+</h3>
+
+<p><strong><code class="language-plaintext highlighter-rouge">compatible</code></strong> 是设备树中最重要的属性。它定义了一个设备的 “编程模型”，也就是软件（驱动）应该用哪种接口协议来操作这个硬件。</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">compatible</span> <span class="o">=</span> <span class="s">"manufacturer,model"</span><span class="p">;</span>
+</code></pre></div></div>
+
+<p>格式严格规定为 <code class="language-plaintext highlighter-rouge">&lt;制造商&gt;,&lt;型号&gt;</code>，全小写，不用下划线。例如：</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">compatible</span> <span class="o">=</span> <span class="s">"arm,cortex-a72"</span><span class="p">;</span>
+<span class="n">compatible</span> <span class="o">=</span> <span class="s">"nvidia,tegra20-uart"</span><span class="p">;</span>
+<span class="n">compatible</span> <span class="o">=</span> <span class="s">"wlf,wm8903"</span><span class="p">;</span>        <span class="cm">/* Wolfson 的 WM8903 音频编解码器 */</span>
+</code></pre></div></div>
+
+<p><strong>多重兼容性策略</strong>：<code class="language-plaintext highlighter-rouge">compatible</code> 的值是一个从<strong>最特化</strong>到<strong>最泛化</strong>的字符串列表。内核会按顺序逐一尝试匹配驱动：</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">compatible</span> <span class="o">=</span> <span class="s">"fsl,mpc8641"</span><span class="p">,</span> <span class="s">"ns16550"</span><span class="p">;</span>
+</code></pre></div></div>
+
+<p>这条配置告诉内核：优先找 Freescale MPC8641 专用驱动；如果没找到，就退而求其次，用通用的 NS16550 UART 驱动。这种”回退”（fallback）策略让同一套内核可以在范围极大的硬件上运行。</p>
+
+<p><strong><code class="language-plaintext highlighter-rouge">model</code></strong> 是一个人类可读的字符串，描述设备的制造商型号：</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">model</span> <span class="o">=</span> <span class="s">"fsl,MPC8349EMITX"</span><span class="p">;</span>
+</code></pre></div></div>
+
+<p><code class="language-plaintext highlighter-rouge">model</code> 和 <code class="language-plaintext highlighter-rouge">compatible</code> 的核心区别在于使用者不同：<code class="language-plaintext highlighter-rouge">model</code> 是给人（开发者、调试者）看的，<code class="language-plaintext highlighter-rouge">compatible</code> 是给内核的设备匹配算法用的。也就是说，<code class="language-plaintext highlighter-rouge">model</code> 可以由开发者自己确定，随意编写，而 <code class="language-plaintext highlighter-rouge">compatible</code> 则应该遵循一定的规范。</p>
+
+<p>那 <code class="language-plaintext highlighter-rouge">compatible</code> 字符串从哪里来？<code class="language-plaintext highlighter-rouge">&lt;制造商&gt;,&lt;型号&gt;</code> 中的每一对合法取值，都有对应的绑定文档（Binding Document）加以规范。Linux 内核源码树的 <code class="language-plaintext highlighter-rouge">Documentation/devicetree/bindings/</code> 目录就是这份 “字典”：按设备类别分子目录（<code class="language-plaintext highlighter-rouge">serial/</code>、<code class="language-plaintext highlighter-rouge">i2c/</code>、<code class="language-plaintext highlighter-rouge">gpio/</code> 等），每个 <code class="language-plaintext highlighter-rouge">.yaml</code> 文件精确声明该设备支持哪些 <code class="language-plaintext highlighter-rouge">compatible</code> 字符串、哪些属性是必须的、哪些属性是可选的、各属性的合法取值范围。</p>
+
+<p>为设备挑选 <code class="language-plaintext highlighter-rouge">compatible</code> 字符串的正确方式是：先查 <code class="language-plaintext highlighter-rouge">Documentation/devicetree/bindings/</code> 找到对应 binding，再照着 binding 填写，而不是凭经验猜测或照抄其他设备树。</p>
+
+<h3 id="22-寻址空间regaddress-cells-与-size-cells">2.2 寻址空间：<code class="language-plaintext highlighter-rouge">reg</code>、<code class="language-plaintext highlighter-rouge">#address-cells</code> 与 <code class="language-plaintext highlighter-rouge">#size-cells</code>
+</h3>
+
+<p>这三个属性构成了设备树寻址系统的核心。</p>
+
+<p><code class="language-plaintext highlighter-rouge">#address-cells</code> 和 `#size-cells 由<strong>父节点</strong>定义，告诉子节点：描述一个地址需要几个 32 位 cell，描述一个长度需要几个 cell。</p>
+
+<p>这里的 cell 是设备树规范继承自 Open Firmware 的基本数据单元，固定为一个 <strong>32 位无符号整数</strong>。当硬件的地址或长度超过 32 位时，就用多个连续的 cell 拼接：两个 cell 拼接成 64 位，高位在前。</p>
+
+<p>因此，<code class="language-plaintext highlighter-rouge">#address-cells = &lt;2&gt;</code> 意味着子节点的地址用两个 32 位整数（合计 64 位）来描述，<code class="language-plaintext highlighter-rouge">#address-cells = &lt;1&gt;</code> 则是单个 32 位整数就够了。</p>
+
+<p><strong>这两个属性不会被继承，每个有子节点的节点必须自己显式定义</strong>。</p>
+
+<p><strong><code class="language-plaintext highlighter-rouge">reg</code></strong> 属性描述设备的寄存器资源，格式为 <code class="language-plaintext highlighter-rouge">&lt;地址 长度&gt;</code> 对：</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">soc</span> <span class="p">{</span>
+    <span class="cp">#address-cells = &lt;1&gt;;
+</span>    <span class="cp">#size-cells = &lt;1&gt;;
+</span>
+    <span class="n">serial</span><span class="err">@</span><span class="mi">4600</span> <span class="p">{</span>
+        <span class="n">compatible</span> <span class="o">=</span> <span class="s">"ns16550"</span><span class="p">;</span>
+        <span class="n">reg</span> <span class="o">=</span> <span class="o">&lt;</span><span class="mh">0x4600</span> <span class="mh">0x100</span><span class="o">&gt;</span><span class="p">;</span>   <span class="cm">/* 地址 0x4600，长度 0x100 */</span>
+    <span class="p">};</span>
+<span class="p">};</span>
+</code></pre></div></div>
+
+<p>当 <code class="language-plaintext highlighter-rouge">#size-cells = &lt;0&gt;</code> 时，<code class="language-plaintext highlighter-rouge">reg</code> 中只有地址没有长度，这是带独立片选信号的设备（如 I2C 从设备）的常见情况：</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">i2c</span><span class="err">@</span><span class="mi">7000</span><span class="n">c000</span> <span class="p">{</span>
+    <span class="cp">#address-cells = &lt;1&gt;;
+</span>    <span class="cp">#size-cells = &lt;0&gt;;
+</span>
+    <span class="n">codec</span><span class="err">@</span><span class="mi">1</span><span class="n">a</span> <span class="p">{</span>
+        <span class="n">compatible</span> <span class="o">=</span> <span class="s">"wlf,wm8903"</span><span class="p">;</span>
+        <span class="n">reg</span> <span class="o">=</span> <span class="o">&lt;</span><span class="mh">0x1a</span><span class="o">&gt;</span><span class="p">;</span>   <span class="cm">/* 只有 I2C 从机地址，没有长度 */</span>
+    <span class="p">};</span>
+<span class="p">};</span>
+</code></pre></div></div>
+
+<p>一个设备有多个寄存器块时，<code class="language-plaintext highlighter-rouge">reg</code> 可以包含多组 <code class="language-plaintext highlighter-rouge">&lt;地址 长度&gt;</code> 对：</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">reg</span> <span class="o">=</span> <span class="o">&lt;</span><span class="mh">0x3000</span> <span class="mh">0x20</span> <span class="mh">0xFE00</span> <span class="mh">0x100</span><span class="o">&gt;</span><span class="p">;</span>
+<span class="cm">/*    第一块：offset 0x3000, 长 32 字节
+      第二块：offset 0xFE00, 长 256 字节    */</span>
+</code></pre></div></div>
+
+<h4 id="进阶地址映射与-dma">进阶：地址映射与 DMA</h4>
+
+<p><strong><code class="language-plaintext highlighter-rouge">ranges</code> 属性</strong>：实现父子总线之间的地址翻译。它定义一个 “映射范围”：子总线地址空间的 X，对应父总线地址空间的 Y，长度 Z。</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">soc</span> <span class="p">{</span>
+    <span class="n">compatible</span> <span class="o">=</span> <span class="s">"simple-bus"</span><span class="p">;</span>
+    <span class="cp">#address-cells = &lt;1&gt;;
+</span>    <span class="cp">#size-cells = &lt;1&gt;;
+</span>    <span class="n">ranges</span> <span class="o">=</span> <span class="o">&lt;</span><span class="mh">0x0</span> <span class="mh">0xe0000000</span> <span class="mh">0x00100000</span><span class="o">&gt;</span><span class="p">;</span>
+    <span class="cm">/* 子地址 0x0 映射到父地址 0xe0000000，范围 1MB */</span>
+
+    <span class="n">serial</span><span class="err">@</span><span class="mi">4600</span> <span class="p">{</span>
+        <span class="n">reg</span> <span class="o">=</span> <span class="o">&lt;</span><span class="mh">0x4600</span> <span class="mh">0x100</span><span class="o">&gt;</span><span class="p">;</span>
+        <span class="cm">/* 实际物理地址 = 父地址 0xe0000000 + offset 0x4600 = 0xe0004600 */</span>
+    <span class="p">};</span>
+<span class="p">};</span>
+</code></pre></div></div>
+
+<p>当 <code class="language-plaintext highlighter-rouge">ranges</code> 为空值时，即 <code class="language-plaintext highlighter-rouge">ranges;</code>，意味着父子地址空间完全一致，不需要任何平移。</p>
+
+<p><code class="language-plaintext highlighter-rouge">dma-ranges</code>：与 <code class="language-plaintext highlighter-rouge">ranges</code> 类似，但从 DMA 设备的视角描述，解决的是 “DMA 控制器看到的地址” 和 “CPU 看到的物理地址” 之间的差异（例如 IOMMU 的存在会制造这种差异）。</p>
+
+<p><code class="language-plaintext highlighter-rouge">virtual-reg</code>：当引导程序已经设置了虚拟地址映射时，告知内核虚拟地址到物理地址的转换关系。</p>
+
+<div class="notice--info">
+  <p><code class="language-plaintext highlighter-rouge">reg</code> 和 <code class="language-plaintext highlighter-rouge">ranges</code> 是设备树中最容易被误解的概念。简单记忆法则：</p>
+
+  <ul>
+    <li>
+<code class="language-plaintext highlighter-rouge">reg</code> = “我的寄存器在<strong>我所在总线地址空间</strong>的什么位置”</li>
+    <li>
+<code class="language-plaintext highlighter-rouge">ranges</code> = “<strong>我的总线地址空间</strong>如何映射到<strong>我父亲的总线地址空间</strong>”</li>
+    <li>最终 CPU 看到的物理地址 = 层层 ranges 翻译之和</li>
+  </ul>
+</div>
+
+<h3 id="23-运行状态status">2.3 运行状态：<code class="language-plaintext highlighter-rouge">status</code>
+</h3>
+
+<p><code class="language-plaintext highlighter-rouge">status</code> 属性标记设备当前的操作状态：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>值</th>
+      <th>含义</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">"okay"</code></td>
+      <td>设备正常工作</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">"disabled"</code></td>
+      <td>设备当前不可用，但可能在未来可用（如模块未插入）</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">"reserved"</code></td>
+      <td>设备可用，但不应被本操作系统使用（被固件或其他 OS 控制）</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">"fail"</code></td>
+      <td>设备出现严重错误，不可能恢复</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">"fail-sss"</code></td>
+      <td>同上，<code class="language-plaintext highlighter-rouge">sss</code> 为设备特定的错误码</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>省略 <code class="language-plaintext highlighter-rouge">status</code> 属性等同于 <code class="language-plaintext highlighter-rouge">status = "okay"</code>。</p>
+
+<p>在实际工程中最常见的场景是：SoC 级 <code class="language-plaintext highlighter-rouge">.dtsi</code> 中所有外设默认 <code class="language-plaintext highlighter-rouge">status = "disabled"</code>，板级 <code class="language-plaintext highlighter-rouge">.dts</code> 中只启用实际使用的外设——设置为 <code class="language-plaintext highlighter-rouge">status = "okay"</code>。</p>
+
+<hr>
+
+<h2 id="3-硬件中断的逻辑连线">3. 硬件中断的逻辑连线</h2>
+
+<p>中断描述是设备树最难理解的部分之一，因为<strong>中断在硬件上的信号流向和在设备树上的描述路径，经常与设备物理层级不同</strong>。</p>
+
+<p>举个典型例子：一颗 I2C 触摸屏控制器挂在 I2C 总线上，所以它在设备树里的物理路径通常是 <code class="language-plaintext highlighter-rouge">soc</code> -&gt; <code class="language-plaintext highlighter-rouge">i2c</code> -&gt; <code class="language-plaintext highlighter-rouge">touchscreen</code>；但它的中断线并不回到 I2C 控制器，而是接到 GPIO 控制器的某个引脚，再由 GPIO 控制器上报给 GIC。于是它的中断路径变成 <code class="language-plaintext highlighter-rouge">touchscreen</code> -&gt; <code class="language-plaintext highlighter-rouge">gpio-controller</code> -&gt; <code class="language-plaintext highlighter-rouge">gic</code>。</p>
+
+<p>这就是 “设备物理层级” 和 “中断描述路径” 不一致的真实场景：你在设备树里看到它在 I2C 下，但它的中断信号却是走的 GPIO/GIC 这条逻辑链路。</p>
+
+<h3 id="31-中断树跳出物理层级的逻辑结构">3.1 中断树：跳出物理层级的逻辑结构</h3>
+
+<p>设备树采用<strong>中断树</strong>（Interrupt Tree）模型来表达中断路由。虽然叫做 “树”，但它更准确的描述是一个<strong>有向无环图</strong>（Directed Acyclic Graph）。</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">Device</span> <span class="n">Tree</span> <span class="err">层级</span><span class="o">:</span>             <span class="n">Interrupt</span> <span class="n">Tree</span> <span class="err">层级</span><span class="o">:</span>
+
+<span class="n">soc</span>                             <span class="n">open</span><span class="o">-</span><span class="n">pic</span> <span class="p">(</span><span class="err">根</span><span class="p">)</span>
+<span class="err">├──</span> <span class="n">device1</span> <span class="o">------------------&gt;</span> <span class="p">(</span><span class="err">直接连接</span><span class="p">)</span>
+<span class="err">├──</span> <span class="n">pci</span><span class="o">-</span><span class="n">host</span> <span class="o">-----------------&gt;</span> <span class="p">(</span><span class="n">nexus</span> <span class="err">节点</span><span class="p">,</span> <span class="err">中转</span><span class="p">)</span>
+<span class="err">│</span>   <span class="err">├──</span> <span class="n">slot0</span> <span class="o">----------------&gt;</span> <span class="p">(</span><span class="err">经</span> <span class="n">pci</span><span class="o">-</span><span class="n">host</span> <span class="err">中转</span><span class="p">)</span>
+<span class="err">│</span>   <span class="err">└──</span> <span class="n">slot1</span> <span class="o">----------------&gt;</span> <span class="p">(</span><span class="err">经</span> <span class="n">pci</span><span class="o">-</span><span class="n">host</span> <span class="err">中转</span><span class="p">)</span>
+<span class="err">└──</span> <span class="n">gpioctrl</span> <span class="o">-----------------&gt;</span> <span class="p">(</span><span class="n">nexus</span> <span class="err">节点</span><span class="p">,</span> <span class="err">中转</span><span class="p">)</span>
+    <span class="err">└──</span> <span class="n">device3</span> <span class="o">--------------&gt;</span> <span class="p">(</span><span class="err">经</span> <span class="n">gpioctrl</span> <span class="err">中转</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>关键思想：中断信号在硬件上跨越多层物理总线，设备树通过在逻辑上建立直接的中断父子关系来”压平”这个复杂性。</p>
+
+<h3 id="32-中断信号的属性">3.2 中断信号的属性</h3>
+
+<p><strong>中断产生者（Interrupt-Generating Device）</strong>使用两个核心属性：</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">device1</span> <span class="p">{</span>
+    <span class="n">interrupts</span> <span class="o">=</span> <span class="o">&lt;</span><span class="mh">0xA</span> <span class="mi">8</span><span class="o">&gt;</span><span class="p">;</span>              <span class="cm">/* 该设备产生的中断规格（specifier） */</span>
+    <span class="n">interrupt</span><span class="o">-</span><span class="n">parent</span> <span class="o">=</span> <span class="o">&lt;&amp;</span><span class="n">open</span><span class="o">-</span><span class="n">pic</span><span class="o">&gt;</span><span class="p">;</span>     <span class="cm">/* 中断发往哪个控制器 */</span>
+<span class="p">};</span>
+</code></pre></div></div>
+
+<p><code class="language-plaintext highlighter-rouge">interrupts</code> 的值格式由目标中断控制器定义的 bindings 决定——对一个 Open PIC 兼容的中断域，两个 cells 分别表示中断号和电平/敏感度信息。</p>
+
+<p>如果设备没有显式的 <code class="language-plaintext highlighter-rouge">interrupt-parent</code>，中断父节点就<strong>默认向上继承</strong>——沿着设备树向上找，使用第一个声明的中断父节点。所以当中断父节点在 SoC 级别统一指定时，设备可以不写 <code class="language-plaintext highlighter-rouge">interrupt-parent</code>：</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">soc</span> <span class="p">{</span>
+    <span class="n">interrupt</span><span class="o">-</span><span class="n">parent</span> <span class="o">=</span> <span class="o">&lt;&amp;</span><span class="n">intc</span><span class="o">&gt;</span><span class="p">;</span>   <span class="cm">/* 所有子设备统一的中断父节点 */</span>
+
+    <span class="n">serial</span><span class="err">@</span><span class="mi">70006300</span> <span class="p">{</span>
+        <span class="n">interrupts</span> <span class="o">=</span> <span class="o">&lt;</span><span class="mi">122</span><span class="o">&gt;</span><span class="p">;</span>       <span class="cm">/* 不需要重复 interrupt-parent */</span>
+    <span class="p">};</span>
+<span class="p">};</span>
+</code></pre></div></div>
+
+<p><strong><code class="language-plaintext highlighter-rouge">interrupts-extended</code></strong> 用于一个设备连接到多个中断控制器的情况：</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">interrupts</span><span class="o">-</span><span class="n">extended</span> <span class="o">=</span> <span class="o">&lt;&amp;</span><span class="n">pic</span> <span class="mh">0xA</span> <span class="mi">8</span><span class="o">&gt;</span><span class="p">,</span> <span class="o">&lt;&amp;</span><span class="n">gic</span> <span class="mh">0xda</span><span class="o">&gt;</span><span class="p">;</span>
+</code></pre></div></div>
+
+<p><code class="language-plaintext highlighter-rouge">interrupts</code> 和 <code class="language-plaintext highlighter-rouge">interrupts-extended</code> 互斥。当两者共存时，<code class="language-plaintext highlighter-rouge">interrupts-extended</code> 优先。</p>
+
+<h3 id="33-中断控制器">3.3 中断控制器</h3>
+
+<p>一个节点要成为中断控制器，需要两个属性：</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">open</span><span class="o">-</span><span class="n">pic</span> <span class="p">{</span>
+    <span class="n">interrupt</span><span class="o">-</span><span class="n">controller</span><span class="p">;</span>           <span class="cm">/* 标记：我是中断控制器（空值属性） */</span>
+    <span class="cp">#interrupt-cells = &lt;2&gt;;         </span><span class="cm">/* 每个中断 specifier 占几个 cell */</span><span class="cp">
+</span><span class="p">};</span>
+</code></pre></div></div>
+
+<p><code class="language-plaintext highlighter-rouge">#interrupt-cells</code> 定义了中断规格的”宽度”。对于 Open PIC 这种需要 2 cells（中断号 + 电平/敏感度）的控制器，值就是 <code class="language-plaintext highlighter-rouge">&lt;2&gt;</code>。对于 ARM GIC (Generic Interrupt Controller)，可能是 <code class="language-plaintext highlighter-rouge">&lt;3&gt;</code>（中断类型 + 中断号 + 触发类型）。</p>
+
+<p>中断树的根是遍历中断父链直到找到一个<strong>没有 <code class="language-plaintext highlighter-rouge">interrupts</code> 属性</strong>的中断控制器——这意味着它本身不向更高的控制器报告中断。</p>
+
+<h3 id="34-中继nexus-节点与中断映射">3.4 中继：Nexus 节点与中断映射</h3>
+
+<p>当不同中断域之间需要翻译时（比如 PCI 的 INTA/INTB/INTC/INTD 经过 PCI host bridge 转换到系统中断号），需要一个<strong>nexus 节点</strong>，通过 <code class="language-plaintext highlighter-rouge">interrupt-map</code> 来做这个翻译。</p>
+
+<p>一条映射表行包含五个部分：</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">interrupt</span><span class="o">-</span><span class="n">map</span> <span class="o">=</span> <span class="o">&lt;</span>
+    <span class="n">child</span><span class="o">-</span><span class="n">unit</span><span class="o">-</span><span class="n">address</span>  <span class="n">child</span><span class="o">-</span><span class="n">interrupt</span><span class="o">-</span><span class="n">specifier</span>
+    <span class="n">interrupt</span><span class="o">-</span><span class="n">parent</span><span class="o">-</span><span class="n">phandle</span>
+    <span class="n">parent</span><span class="o">-</span><span class="n">unit</span><span class="o">-</span><span class="n">address</span>  <span class="n">parent</span><span class="o">-</span><span class="n">interrupt</span><span class="o">-</span><span class="n">specifier</span>
+<span class="o">&gt;</span><span class="p">;</span>
+</code></pre></div></div>
+
+<p>例如，PCI slot 1 的 INTA（INT #1）映射到 Open PIC 控制器的中断源 2：</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">interrupt</span><span class="o">-</span><span class="n">map</span> <span class="o">=</span> <span class="o">&lt;</span>
+    <span class="mh">0x8800</span> <span class="mi">0</span> <span class="mi">0</span>  <span class="mi">1</span>  <span class="o">&amp;</span><span class="n">open</span><span class="o">-</span><span class="n">pic</span>   <span class="mi">2</span> <span class="mi">1</span>
+<span class="o">&gt;</span><span class="p">;</span>
+</code></pre></div></div>
+
+<p><code class="language-plaintext highlighter-rouge">interrupt-map-mask</code> 在匹配前被 AND 到输入上，作用是屏蔽掉不需要参与匹配的位（如 PCI 总线的 function number 可能不区分）。</p>
+
+<h3 id="35-gpio-等非中断信号的通用映射机制">3.5 GPIO 等非中断信号的通用映射机制</h3>
+
+<p>DTSpec 将 nexus 映射机制推广到了所有类型的 “规格（specifier）”：<code class="language-plaintext highlighter-rouge">&lt;specifier&gt;-map</code>、<code class="language-plaintext highlighter-rouge">&lt;specifier&gt;-map-mask</code>、<code class="language-plaintext highlighter-rouge">&lt;specifier&gt;-map-pass-thru</code> 以及 <code class="language-plaintext highlighter-rouge">#&lt;specifier&gt;-cells</code>。</p>
+
+<p>最常见的例子是 <strong>GPIO 映射</strong>：一个连接器（connector）上的 GPIO 通过 <code class="language-plaintext highlighter-rouge">gpio-map</code> 路由到 SoC 内部的某个 GPIO 控制器：</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">connector</span> <span class="p">{</span>
+    <span class="cp">#gpio-cells = &lt;2&gt;;
+</span>    <span class="n">gpio</span><span class="o">-</span><span class="n">map</span> <span class="o">=</span> <span class="o">&lt;</span><span class="mi">0</span> <span class="mi">0</span> <span class="o">&amp;</span><span class="n">soc_gpio1</span> <span class="mi">1</span> <span class="mi">0</span><span class="o">&gt;</span><span class="p">,</span>
+               <span class="o">&lt;</span><span class="mi">1</span> <span class="mi">0</span> <span class="o">&amp;</span><span class="n">soc_gpio2</span> <span class="mi">4</span> <span class="mi">0</span><span class="o">&gt;</span><span class="p">,</span>
+               <span class="o">&lt;</span><span class="mi">2</span> <span class="mi">0</span> <span class="o">&amp;</span><span class="n">soc_gpio1</span> <span class="mi">3</span> <span class="mi">0</span><span class="o">&gt;</span><span class="p">,</span>
+               <span class="o">&lt;</span><span class="mi">3</span> <span class="mi">0</span> <span class="o">&amp;</span><span class="n">soc_gpio2</span> <span class="mi">2</span> <span class="mi">0</span><span class="o">&gt;</span><span class="p">;</span>
+    <span class="n">gpio</span><span class="o">-</span><span class="n">map</span><span class="o">-</span><span class="n">mask</span> <span class="o">=</span> <span class="o">&lt;</span><span class="mh">0xf</span> <span class="mh">0x0</span><span class="o">&gt;</span><span class="p">;</span>
+    <span class="n">gpio</span><span class="o">-</span><span class="n">map</span><span class="o">-</span><span class="n">pass</span><span class="o">-</span><span class="n">thru</span> <span class="o">=</span> <span class="o">&lt;</span><span class="mh">0x0</span> <span class="mh">0x1</span><span class="o">&gt;</span><span class="p">;</span>
+<span class="p">};</span>
+</code></pre></div></div>
+
+<p><code class="language-plaintext highlighter-rouge">gpio-map-pass-thru</code> 的巧妙之处在于允许子 specifier 中的 flags 字段（如 <code class="language-plaintext highlighter-rouge">GPIO_ACTIVE_LOW</code>）穿越映射表，直接透传到父域，避免映射表需要为每种 flag 组合都写一行。</p>
+
+<p class="notice--info">理解设备树中断子系统的最佳思路：中断信号的路径是一张<strong>独立于设备物理层级的有向图</strong>。遍历从 <code class="language-plaintext highlighter-rouge">interrupts</code>/<code class="language-plaintext highlighter-rouge">interrupt-parent</code> 开始，沿链上溯，直到中断树根（没有 <code class="language-plaintext highlighter-rouge">interrupts</code> 的中断控制器）。每一层可能是中断控制器或 nexus 节点——nexus 节点通过 <code class="language-plaintext highlighter-rouge">interrupt-map</code> 表提供域间翻译。这一整套设计的目的在于允许同一个设备树描述中的任何节点都能够表达自己的中断路由，机制统一且可扩展。</p>
+
+<hr>
+
+<h2 id="4-拼装一台计算机系统骨架与必选节点">4. 拼装一台计算机：系统骨架与必选节点</h2>
+
+<p>设备树不只是描述外设。一套完整的设备树必须描述整个系统的骨架 —— CPU 几核、内存多大、控制台在哪。</p>
+
+<h3 id="41-根节点-">4.1 根节点 <code class="language-plaintext highlighter-rouge">/</code>
+</h3>
+
+<p>根节点没有名字，用 <code class="language-plaintext highlighter-rouge">/</code> 表示。它的核心属性包括：</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">/</span> <span class="p">{</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="s">"fsl,mpc8572ds"</span><span class="p">;</span>
+    <span class="n">compatible</span> <span class="o">=</span> <span class="s">"fsl,mpc8572ds"</span><span class="p">;</span>
+    <span class="cp">#address-cells = &lt;1&gt;;
+</span>    <span class="cp">#size-cells = &lt;1&gt;;
+</span>    <span class="n">serial</span><span class="o">-</span><span class="n">number</span> <span class="o">=</span> <span class="s">"PZ123456"</span><span class="p">;</span>      <span class="cm">/* 可选：序列号 */</span>
+    <span class="n">chassis</span><span class="o">-</span><span class="n">type</span> <span class="o">=</span> <span class="s">"embedded"</span><span class="p">;</span>       <span class="cm">/* 可选：机箱类型 */</span>
+<span class="p">};</span>
+</code></pre></div></div>
+
+<p>根节点的 <code class="language-plaintext highlighter-rouge">#address-cells</code> 和 <code class="language-plaintext highlighter-rouge">#size-cells</code> 定义了内存地址的编码规则，影响 <code class="language-plaintext highlighter-rouge">/memory</code> 节点的 <code class="language-plaintext highlighter-rouge">reg</code> 格式。</p>
+
+<p><code class="language-plaintext highlighter-rouge">chassis-type</code> 可取 <code class="language-plaintext highlighter-rouge">"desktop"</code>、<code class="language-plaintext highlighter-rouge">"laptop"</code>、<code class="language-plaintext highlighter-rouge">"convertible"</code>、<code class="language-plaintext highlighter-rouge">"server"</code>、<code class="language-plaintext highlighter-rouge">"tablet"</code>、<code class="language-plaintext highlighter-rouge">"handset"</code>、<code class="language-plaintext highlighter-rouge">"embedded"</code> 等值。</p>
+
+<h3 id="42-大脑cpus">4.2 大脑：<code class="language-plaintext highlighter-rouge">/cpus</code>
+</h3>
+
+<p><code class="language-plaintext highlighter-rouge">/cpus</code> 节点是所有 CPU 节点的容器：</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">cpus</span> <span class="p">{</span>
+    <span class="cp">#address-cells = &lt;1&gt;;
+</span>    <span class="cp">#size-cells = &lt;0&gt;;
+</span>
+    <span class="n">cpu</span><span class="err">@</span><span class="mi">0</span> <span class="p">{</span>
+        <span class="n">device_type</span> <span class="o">=</span> <span class="s">"cpu"</span><span class="p">;</span>
+        <span class="n">reg</span> <span class="o">=</span> <span class="o">&lt;</span><span class="mi">0</span><span class="o">&gt;</span><span class="p">;</span>
+        <span class="n">clock</span><span class="o">-</span><span class="n">frequency</span> <span class="o">=</span> <span class="o">&lt;</span><span class="mi">825000000</span><span class="o">&gt;</span><span class="p">;</span>      <span class="cm">/* 825 MHz */</span>
+        <span class="n">timebase</span><span class="o">-</span><span class="n">frequency</span> <span class="o">=</span> <span class="o">&lt;</span><span class="mi">82500000</span><span class="o">&gt;</span><span class="p">;</span>    <span class="cm">/* 82.5 MHz 时基 */</span>
+    <span class="p">};</span>
+
+    <span class="n">cpu</span><span class="err">@</span><span class="mi">1</span> <span class="p">{</span>
+        <span class="n">device_type</span> <span class="o">=</span> <span class="s">"cpu"</span><span class="p">;</span>
+        <span class="n">reg</span> <span class="o">=</span> <span class="o">&lt;</span><span class="mi">1</span><span class="o">&gt;</span><span class="p">;</span>
+        <span class="n">clock</span><span class="o">-</span><span class="n">frequency</span> <span class="o">=</span> <span class="o">&lt;</span><span class="mi">825000000</span><span class="o">&gt;</span><span class="p">;</span>
+    <span class="p">};</span>
+<span class="p">};</span>
+</code></pre></div></div>
+
+<p>多核 SMP 系统中，<code class="language-plaintext highlighter-rouge">status</code> 属性标记每颗 CPU 的运行状态：</p>
+
+<ul>
+  <li>
+<code class="language-plaintext highlighter-rouge">"okay"</code>：该 CPU 正常运行</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">"disabled"</code>：该 CPU 处于<strong>静止状态</strong>（quiescent state），可通过特定方法唤醒</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">"fail"</code>：该 CPU 不可用或不存在</li>
+</ul>
+
+<p>对于 <code class="language-plaintext highlighter-rouge">disabled</code> 的 CPU，需要 <code class="language-plaintext highlighter-rouge">enable-method</code> 属性指定唤醒方式。最常见的是 <code class="language-plaintext highlighter-rouge">"spin-table"</code>：CPU 在指定物理地址（<code class="language-plaintext highlighter-rouge">cpu-release-addr</code>）上自旋等待，直到引导 CPU 写入释放信号。</p>
+
+<h4 id="缓存层级">缓存层级</h4>
+
+<p>CPU 的缓存层级通过 <code class="language-plaintext highlighter-rouge">next-level-cache</code> 属性和 phandle 引用串联：</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">cpu</span><span class="err">@</span><span class="mi">0</span> <span class="p">{</span>
+    <span class="n">next</span><span class="o">-</span><span class="n">level</span><span class="o">-</span><span class="n">cache</span> <span class="o">=</span> <span class="o">&lt;&amp;</span><span class="n">L2_0</span><span class="o">&gt;</span><span class="p">;</span>
+    <span class="nl">L2_0:</span> <span class="n">l2</span><span class="o">-</span><span class="n">cache</span> <span class="p">{</span>
+        <span class="n">compatible</span> <span class="o">=</span> <span class="s">"cache"</span><span class="p">;</span>
+        <span class="n">cache</span><span class="o">-</span><span class="n">level</span> <span class="o">=</span> <span class="o">&lt;</span><span class="mi">2</span><span class="o">&gt;</span><span class="p">;</span>
+        <span class="n">cache</span><span class="o">-</span><span class="n">size</span> <span class="o">=</span> <span class="o">&lt;</span><span class="mh">0x40000</span><span class="o">&gt;</span><span class="p">;</span>   <span class="cm">/* 256 KB */</span>
+        <span class="n">next</span><span class="o">-</span><span class="n">level</span><span class="o">-</span><span class="n">cache</span> <span class="o">=</span> <span class="o">&lt;&amp;</span><span class="n">L3</span><span class="o">&gt;</span><span class="p">;</span>
+    <span class="p">};</span>
+<span class="p">};</span>
+</code></pre></div></div>
+
+<p>这种基于 phandle 的多级缓存描述方式让缓存拓扑可以灵活表达各种共享结构（两核共享 L2、全芯片共享 L3 等）。</p>
+
+<h3 id="43-物理记忆memory-和-reserved-memory">4.3 物理记忆：<code class="language-plaintext highlighter-rouge">/memory</code> 和 <code class="language-plaintext highlighter-rouge">/reserved-memory</code>
+</h3>
+
+<p><strong><code class="language-plaintext highlighter-rouge">/memory</code> 节点</strong>宣告系统的可用物理 RAM。这是每个设备树必须具备的节点之一——所有设备树都必须有 <code class="language-plaintext highlighter-rouge">/cpus</code> 和至少一个 <code class="language-plaintext highlighter-rouge">/memory</code> 节点。</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">memory</span><span class="err">@</span><span class="mi">0</span> <span class="p">{</span>
+    <span class="n">device_type</span> <span class="o">=</span> <span class="s">"memory"</span><span class="p">;</span>
+    <span class="n">reg</span> <span class="o">=</span> <span class="o">&lt;</span><span class="mh">0x00000000</span> <span class="mh">0x80000000</span><span class="o">&gt;</span><span class="p">;</span>   <span class="cm">/* 0x0 起 2 GB */</span>
+<span class="p">};</span>
+</code></pre></div></div>
+
+<p>对于 64 位系统（<code class="language-plaintext highlighter-rouge">#address-cells = &lt;2&gt;</code>, <code class="language-plaintext highlighter-rouge">#size-cells = &lt;2&gt;</code>）：</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">memory</span><span class="err">@</span><span class="mi">0</span> <span class="p">{</span>
+    <span class="n">device_type</span> <span class="o">=</span> <span class="s">"memory"</span><span class="p">;</span>
+    <span class="n">reg</span> <span class="o">=</span> <span class="o">&lt;</span><span class="mh">0x00000000</span> <span class="mh">0x00000000</span>  <span class="mh">0x00000000</span> <span class="mh">0x80000000</span><span class="o">&gt;</span><span class="p">;</span>  <span class="cm">/* 低 2GB */</span>
+<span class="p">};</span>
+<span class="n">memory</span><span class="err">@</span><span class="mi">100000000</span> <span class="p">{</span>
+    <span class="n">device_type</span> <span class="o">=</span> <span class="s">"memory"</span><span class="p">;</span>
+    <span class="n">reg</span> <span class="o">=</span> <span class="o">&lt;</span><span class="mh">0x00000001</span> <span class="mh">0x00000000</span>  <span class="mh">0x00000001</span> <span class="mh">0x00000000</span><span class="o">&gt;</span><span class="p">;</span>  <span class="cm">/* 高 4GB */</span>
+<span class="p">};</span>
+</code></pre></div></div>
+
+<p><strong><code class="language-plaintext highlighter-rouge">/reserved-memory</code> 节点</strong>划定<strong>不可被内核随意使用的内存禁区</strong>：</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">reserved</span><span class="o">-</span><span class="n">memory</span> <span class="p">{</span>
+    <span class="cp">#address-cells = &lt;1&gt;;
+</span>    <span class="cp">#size-cells = &lt;1&gt;;
+</span>    <span class="n">ranges</span><span class="p">;</span>
+
+    <span class="nl">display_reserved:</span> <span class="n">framebuffer</span><span class="err">@</span><span class="mi">78000000</span> <span class="p">{</span>
+        <span class="n">reg</span> <span class="o">=</span> <span class="o">&lt;</span><span class="mh">0x78000000</span> <span class="mh">0x800000</span><span class="o">&gt;</span><span class="p">;</span>          <span class="cm">/* 8 MB 静态预留 */</span>
+    <span class="p">};</span>
+
+    <span class="n">linux</span><span class="p">,</span><span class="n">cma</span> <span class="p">{</span>
+        <span class="n">compatible</span> <span class="o">=</span> <span class="s">"shared-dma-pool"</span><span class="p">;</span>
+        <span class="n">reusable</span><span class="p">;</span>
+        <span class="n">size</span> <span class="o">=</span> <span class="o">&lt;</span><span class="mh">0x4000000</span><span class="o">&gt;</span><span class="p">;</span>                    <span class="cm">/* 64 MB 动态分配 */</span>
+        <span class="n">alignment</span> <span class="o">=</span> <span class="o">&lt;</span><span class="mh">0x2000</span><span class="o">&gt;</span><span class="p">;</span>                  <span class="cm">/* 8 KB 对齐 */</span>
+    <span class="p">};</span>
+<span class="p">};</span>
+</code></pre></div></div>
+
+<ul>
+  <li>
+<strong><code class="language-plaintext highlighter-rouge">no-map</code></strong>：操作系统<strong>禁止</strong>为这段区域创建虚拟映射——用于安全隔离（如 TEE/安全飞地）。</li>
+  <li>
+<strong><code class="language-plaintext highlighter-rouge">reusable</code></strong>：系统可临时将这片内存挪作他用（如页面缓存），但当设备驱动需要时，能将其要回来。</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">no-map</code> 和 <code class="language-plaintext highlighter-rouge">reusable</code> 是互斥的。</li>
+</ul>
+
+<p>设备通过 <code class="language-plaintext highlighter-rouge">memory-region</code> 属性引用专属内存：</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nl">fb0:</span> <span class="n">video</span><span class="err">@</span><span class="mi">12300000</span> <span class="p">{</span>
+    <span class="n">memory</span><span class="o">-</span><span class="n">region</span> <span class="o">=</span> <span class="o">&lt;&amp;</span><span class="n">display_reserved</span><span class="o">&gt;</span><span class="p">;</span>
+<span class="p">};</span>
+</code></pre></div></div>
+
+<p>关于与 UEFI 的协作：当通过 UEFI 启动时，<code class="language-plaintext highlighter-rouge">/memory</code> 和静态 <code class="language-plaintext highlighter-rouge">/reserved-memory</code> 的内容也必须在 UEFI 内存映射表中体现：带 <code class="language-plaintext highlighter-rouge">no-map</code> 的区域标记为 <code class="language-plaintext highlighter-rouge">EfiReservedMemoryType</code>，其他区域标记为 <code class="language-plaintext highlighter-rouge">EfiBootServicesData</code>。动态预留区域则不应在 UEFI 内存映射表中列出——它们在固件退出后才由操作系统分配。</p>
+
+<h3 id="44-运行时通道chosen-和-aliases">4.4 运行时通道：<code class="language-plaintext highlighter-rouge">/chosen</code> 和 <code class="language-plaintext highlighter-rouge">/aliases</code>
+</h3>
+
+<p><strong><code class="language-plaintext highlighter-rouge">/chosen</code></strong> 节点不代表任何物理设备。它是引导程序向内核传递<strong>运行时配置</strong>的通道：</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">chosen</span> <span class="p">{</span>
+    <span class="n">bootargs</span> <span class="o">=</span> <span class="s">"console=ttyS0,115200 root=/dev/mmcblk0p2 rw"</span><span class="p">;</span>
+    <span class="n">stdout</span><span class="o">-</span><span class="n">path</span> <span class="o">=</span> <span class="s">"/soc/serial@70006300:115200"</span><span class="p">;</span>
+<span class="p">};</span>
+</code></pre></div></div>
+
+<p><code class="language-plaintext highlighter-rouge">bootargs</code> 就是内核命令行参数，<code class="language-plaintext highlighter-rouge">stdout-path</code> 指定启动控制台的输出设备。</p>
+
+<p><strong><code class="language-plaintext highlighter-rouge">/aliases</code></strong> 为冗长的路径起短名：</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">aliases</span> <span class="p">{</span>
+    <span class="n">serial0</span> <span class="o">=</span> <span class="s">"/soc/serial@70006300"</span><span class="p">;</span>
+    <span class="n">ethernet0</span> <span class="o">=</span> <span class="s">"/soc/ethernet@31c000"</span><span class="p">;</span>
+<span class="p">};</span>
+</code></pre></div></div>
+
+<p>内核中的 <code class="language-plaintext highlighter-rouge">of_alias_get_id()</code> 等函数使用这些别名定位设备或标准化设备编号（如 <code class="language-plaintext highlighter-rouge">/dev/ttyS0</code> 对应 <code class="language-plaintext highlighter-rouge">serial0</code>）。</p>
+
+<h3 id="45-典型设备绑定">4.5 典型设备绑定</h3>
+
+<h4 id="451-不可探测的系统总线simple-bus">4.5.1 不可探测的系统总线：<code class="language-plaintext highlighter-rouge">simple-bus</code>
+</h4>
+
+<p><code class="language-plaintext highlighter-rouge">compatible = "simple-bus"</code> 是设备树中的一个重要特殊值。它描述一类最简单的总线：<strong>内存映射、不可探测、子设备的寄存器直接在 CPU 地址空间可见</strong>。</p>
+
+<p>SoC 内部总线通常就是 <code class="language-plaintext highlighter-rouge">simple-bus</code>。当内核看到 <code class="language-plaintext highlighter-rouge">simple-bus</code> 兼容的节点时，会自动遍历其子节点并注册 platform_device：</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">soc</span> <span class="p">{</span>
+    <span class="n">compatible</span> <span class="o">=</span> <span class="s">"simple-bus"</span><span class="p">;</span>
+    <span class="cp">#address-cells = &lt;1&gt;;
+</span>    <span class="cp">#size-cells = &lt;1&gt;;
+</span>    <span class="n">ranges</span><span class="p">;</span>
+
+    <span class="cm">/* 子节点自动被创建为 platform_device */</span>
+<span class="p">};</span>
+</code></pre></div></div>
+
+<h4 id="452-串口以-ns16550-为例">4.5.2 串口：以 NS16550 为例</h4>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">serial</span><span class="err">@</span><span class="mi">70006300</span> <span class="p">{</span>
+    <span class="n">compatible</span> <span class="o">=</span> <span class="s">"nvidia,tegra20-uart"</span><span class="p">,</span> <span class="s">"ns16550"</span><span class="p">;</span>
+    <span class="n">reg</span> <span class="o">=</span> <span class="o">&lt;</span><span class="mh">0x70006300</span> <span class="mh">0x100</span><span class="o">&gt;</span><span class="p">;</span>
+    <span class="n">clock</span><span class="o">-</span><span class="n">frequency</span> <span class="o">=</span> <span class="o">&lt;</span><span class="mi">408000000</span><span class="o">&gt;</span><span class="p">;</span>
+    <span class="n">interrupts</span> <span class="o">=</span> <span class="o">&lt;</span><span class="mi">122</span><span class="o">&gt;</span><span class="p">;</span>
+<span class="p">};</span>
+</code></pre></div></div>
+
+<p><code class="language-plaintext highlighter-rouge">clock-frequency</code> 是 UART 波特率发生器所需的时钟频率——内核 UART 驱动用这个值计算正确的分频系数。</p>
+
+<h4 id="453-网络以太网">4.5.3 网络：以太网</h4>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">ethernet</span><span class="err">@</span><span class="mi">31</span><span class="n">c000</span> <span class="p">{</span>
+    <span class="n">compatible</span> <span class="o">=</span> <span class="s">"nvidia,tegra20-ehci"</span><span class="p">;</span>
+    <span class="n">reg</span> <span class="o">=</span> <span class="o">&lt;</span><span class="mh">0x31c000</span> <span class="mh">0x100</span><span class="o">&gt;</span><span class="p">;</span>
+    <span class="n">interrupts</span> <span class="o">=</span> <span class="o">&lt;</span><span class="mh">0x6d</span><span class="o">&gt;</span><span class="p">;</span>
+    <span class="n">local</span><span class="o">-</span><span class="n">mac</span><span class="o">-</span><span class="n">address</span> <span class="o">=</span> <span class="p">[</span><span class="mo">00</span> <span class="mi">11</span> <span class="mi">22</span> <span class="mi">33</span> <span class="mi">44</span> <span class="mi">55</span><span class="p">];</span>
+    <span class="n">phy</span><span class="o">-</span><span class="n">connection</span><span class="o">-</span><span class="n">type</span> <span class="o">=</span> <span class="s">"rgmii"</span><span class="p">;</span>
+<span class="p">};</span>
+</code></pre></div></div>
+
+<p><code class="language-plaintext highlighter-rouge">local-mac-address</code> 是 6 字节的 MAC 地址，用方括号格式的字节串表示。<code class="language-plaintext highlighter-rouge">phy-connection-type</code> 指定 PHY 和 MAC 之间的总线类型（RGMII、RMII、MII 等）——这决定了内核如何配置 MAC 侧的时序和管脚。</p>
+
+<hr>
+
+<h2 id="5-庖丁解牛dtb-二进制格式的底层设计">5. 庖丁解牛：DTB 二进制格式的底层设计</h2>
+
+<p>虽然大部分开发者只接触 DTS 源码，但理解 DTB 的二进制结构有助于理解设备树的<strong>设计哲学</strong>——为什么某些奇怪的限制存在。</p>
+
+<h3 id="51-扁平化的哲学为什么没有-c-风格的指针">5.1 扁平化的哲学：为什么没有 C 风格的指针？</h3>
+
+<p>DTSpec 规范开篇第一句就点明了关键前提：</p>
+
+<blockquote>
+  <p>A boot program loads a devicetree into a client program’s memory and passes a pointer to the devicetree to the client.</p>
+</blockquote>
+
+<p>在这个时刻，MMU（内存管理单元）可能还没开启，虚拟地址的概念不存在。DTB 必须是一块<strong>可以被任意复制、重定位到任意物理地址</strong>的数据块。</p>
+
+<p>如果 DTB 内部使用 C 指针——那在重定位后就全是悬垂指针了。因此 DTB 设计为<strong>完全自包含、位置无关</strong>的格式：所有的跨区块引用都用偏移量而非指针表达。</p>
+
+<p>这就是”扁平化”（Flattened）的核心含义——一个可以平移到任意内存位置、无需解析指针就能直接读取的数据结构。</p>
+
+<h3 id="52-dtb-的四大内存区块">5.2 DTB 的四大内存区块</h3>
+
+<p>一个 DTB 文件由四个连续的内存区块组成：</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="err">┌───────────────────────┐</span>  <span class="err">←</span> <span class="err">低地址</span>
+<span class="err">│</span>  <span class="n">Header</span> <span class="p">(</span><span class="err">头部</span><span class="p">)</span>         <span class="err">│</span>  <span class="mi">40</span> <span class="err">字节</span> <span class="p">(</span><span class="mi">10</span> <span class="err">×</span> <span class="kt">uint32_t</span><span class="p">)</span>
+<span class="err">├───────────────────────┤</span>
+<span class="err">│</span>  <span class="n">Memory</span> <span class="n">Reservation</span>    <span class="err">│</span>  <span class="err">预留内存列表</span>
+<span class="err">│</span>  <span class="n">Block</span>                 <span class="err">│</span>
+<span class="err">├───────────────────────┤</span>
+<span class="err">│</span>  <span class="n">Structure</span> <span class="n">Block</span>       <span class="err">│</span>  <span class="err">树的线性</span> <span class="n">Token</span> <span class="err">序列</span>
+<span class="err">│</span>  <span class="p">(</span><span class="n">FDT_BEGIN_NODE</span> <span class="err">等</span><span class="p">)</span>  <span class="err">│</span>
+<span class="err">├───────────────────────┤</span>
+<span class="err">│</span>  <span class="n">Free</span> <span class="n">Space</span> <span class="p">(</span><span class="err">可选</span><span class="p">)</span>     <span class="err">│</span>
+<span class="err">├───────────────────────┤</span>
+<span class="err">│</span>  <span class="n">Strings</span> <span class="n">Block</span>         <span class="err">│</span>  <span class="err">属性名字符串池</span>
+<span class="err">└───────────────────────┘</span>  <span class="err">←</span> <span class="err">高地址</span>
+</code></pre></div></div>
+
+<h4 id="521-header头部设备的身份证">5.2.1 Header（头部）：设备的身份证</h4>
+
+<p>Header 是 40 字节的固定结构，所有字段都是大端 32 位整数：</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">struct</span> <span class="n">fdt_header</span> <span class="p">{</span>
+    <span class="kt">uint32_t</span> <span class="n">magic</span><span class="p">;</span>              <span class="cm">/* 0xd00dfeed — 魔数 */</span>
+    <span class="kt">uint32_t</span> <span class="n">totalsize</span><span class="p">;</span>          <span class="cm">/* DTB 总大小 */</span>
+    <span class="kt">uint32_t</span> <span class="n">off_dt_struct</span><span class="p">;</span>      <span class="cm">/* Structure Block 偏移 */</span>
+    <span class="kt">uint32_t</span> <span class="n">off_dt_strings</span><span class="p">;</span>     <span class="cm">/* Strings Block 偏移 */</span>
+    <span class="kt">uint32_t</span> <span class="n">off_mem_rsvmap</span><span class="p">;</span>     <span class="cm">/* 内存预留块偏移 */</span>
+    <span class="kt">uint32_t</span> <span class="n">version</span><span class="p">;</span>            <span class="cm">/* 格式版本 (当前为 17) */</span>
+    <span class="kt">uint32_t</span> <span class="n">last_comp_version</span><span class="p">;</span>  <span class="cm">/* 向后兼容的最低版本 (16) */</span>
+    <span class="kt">uint32_t</span> <span class="n">boot_cpuid_phys</span><span class="p">;</span>    <span class="cm">/* 引导 CPU 的物理 ID */</span>
+    <span class="kt">uint32_t</span> <span class="n">size_dt_strings</span><span class="p">;</span>    <span class="cm">/* Strings Block 大小 */</span>
+    <span class="kt">uint32_t</span> <span class="n">size_dt_struct</span><span class="p">;</span>     <span class="cm">/* Structure Block 大小 */</span>
+<span class="p">};</span>
+</code></pre></div></div>
+
+<p>几个关键字段：</p>
+
+<ul>
+  <li>
+<strong><code class="language-plaintext highlighter-rouge">magic = 0xd00dfeed</code></strong>：这个魔数的英文读音就是 “dude feed” —— 是 Open Firmware 工作组留下的一个幽默彩蛋。内核通过比对它来确认”这确实是一个 DTB”。</li>
+  <li>
+<strong><code class="language-plaintext highlighter-rouge">version = 17</code></strong>：当前 DTSpec 标准格式版本。向后兼容的最低版本是 16。</li>
+  <li>
+<strong><code class="language-plaintext highlighter-rouge">totalsize</code></strong>：涵盖所有区块及之间的空格，但不包含 DTB 前后的额外内存。这个字段让解析器提前知道数据边界。</li>
+  <li>
+<strong><code class="language-plaintext highlighter-rouge">boot_cpuid_phys</code></strong>：必须与 <code class="language-plaintext highlighter-rouge">/cpus</code> 中对应 CPU 节点的 <code class="language-plaintext highlighter-rouge">reg</code> 值一致。内核通过它确定哪个 CPU 是引导 CPU。</li>
+</ul>
+
+<h4 id="522-memory-reservation-block硬核预留">5.2.2 Memory Reservation Block：硬核预留</h4>
+
+<p>内核初始化过程的脆弱时刻——代码在未成熟的地址空间中一步步构建完整的虚拟地址系统——必须确保引导程序的关键内存不被覆写。Memory Reservation Block 就是为此而建立的”禁止访问”清单。</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">struct</span> <span class="n">fdt_reserve_entry</span> <span class="p">{</span>
+    <span class="kt">uint64_t</span> <span class="n">address</span><span class="p">;</span>
+    <span class="kt">uint64_t</span> <span class="n">size</span><span class="p">;</span>
+<span class="p">};</span>
+</code></pre></div></div>
+
+<p>每个条目描述一段（物理地址, 大小）的保留区域。列表以 <code class="language-plaintext highlighter-rouge">(0, 0)</code> 条目终止。这比 <code class="language-plaintext highlighter-rouge">/reserved-memory</code> 节点更底层——在内核还没解析设备树结构之前，引导程序就已确认这些区域不能被触碰。</p>
+
+<h4 id="523-structure-block用-token-线性展开的树">5.2.3 Structure Block：用 Token 线性展开的树</h4>
+
+<p>这是 DTB 最核心的部分——如何将一个树状结构编码为平直化的字节序列？</p>
+
+<p>结构区块由 5 种 Token 组成，每个 Token 是 32 位大端整数：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Token</th>
+      <th>值</th>
+      <th>含义</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">FDT_BEGIN_NODE</code></td>
+      <td><code class="language-plaintext highlighter-rouge">0x00000001</code></td>
+      <td>节点开始，后跟节点名（null-terminated string）</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">FDT_END_NODE</code></td>
+      <td><code class="language-plaintext highlighter-rouge">0x00000002</code></td>
+      <td>节点结束</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">FDT_PROP</code></td>
+      <td><code class="language-plaintext highlighter-rouge">0x00000003</code></td>
+      <td>属性，后跟 len + nameoff + 值</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">FDT_NOP</code></td>
+      <td><code class="language-plaintext highlighter-rouge">0x00000004</code></td>
+      <td>空操作（用于覆盖已删除的节点/属性）</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">FDT_END</code></td>
+      <td><code class="language-plaintext highlighter-rouge">0x00000009</code></td>
+      <td>结构区块结束标记</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong><code class="language-plaintext highlighter-rouge">FDT_PROP</code> 的编码</strong>：</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">struct</span> <span class="p">{</span>
+    <span class="kt">uint32_t</span> <span class="n">len</span><span class="p">;</span>       <span class="cm">/* 属性值的字节长度 */</span>
+    <span class="kt">uint32_t</span> <span class="n">nameoff</span><span class="p">;</span>   <span class="cm">/* 属性名字在 Strings Block 中的偏移量 */</span>
+<span class="p">};</span>
+<span class="cm">/* 后跟 len 字节的属性值，然后 0 填充至 4 字节对齐 */</span>
+</code></pre></div></div>
+
+<p><strong>树的线性化编码</strong>：</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">FDT_BEGIN_NODE</span>  <span class="s">"/"</span>
+  <span class="n">FDT_PROP</span>        <span class="err">属性</span><span class="mi">1</span>
+  <span class="n">FDT_PROP</span>        <span class="err">属性</span><span class="mi">2</span>
+  <span class="n">FDT_BEGIN_NODE</span>  <span class="s">"soc"</span>
+    <span class="n">FDT_PROP</span>      <span class="err">属性</span>
+  <span class="n">FDT_END_NODE</span>
+<span class="n">FDT_END_NODE</span>
+<span class="n">FDT_END</span>           <span class="err">全局结束</span>
+</code></pre></div></div>
+
+<p>这种结构的巧妙处：</p>
+
+<ul>
+  <li>前端解析器从头到尾扫描，遇到 <code class="language-plaintext highlighter-rouge">FDT_BEGIN_NODE</code> 就是”进入子节点”，遇到 <code class="language-plaintext highlighter-rouge">FDT_END_NODE</code> 就是”回到父节点”——一个栈结构自然处理整个解析。</li>
+  <li>通过 <code class="language-plaintext highlighter-rouge">FDT_NOP</code>（覆盖被删除块的开头），DTB 可以在不移动其他数据的情况下”删除”节点或属性——这在 DT overlay 和运行时修改的场景中非常重要。</li>
+  <li>属性名通过偏移量引用 Strings Block，同一个名字字符串被全局共享——这正是下一节要讲的极致压缩策略。</li>
+</ul>
+
+<h4 id="524-strings-block极致压缩的字符串复用池">5.2.4 Strings Block：极致压缩的字符串复用池</h4>
+
+<p>设备树里有大量相同的属性名——”compatible” 可能出现上百次，”reg” 可能出现几百次。Strings Block 通过<strong>所有属性名统一存储</strong>，只保存一份字符串，然后用偏移量引用来实现极致的空间压缩。</p>
+
+<p>本质上，这就是一个以 null 字节分隔的字符串列表。查找过程：取 <code class="language-plaintext highlighter-rouge">nameoff</code> 值 → 跳到 Strings Block 开始处 + nameoff 的位置 → 读到 null 为止。这个简单的设计让 20 KB 的 DTS 编译后可能只有 5 KB 的 DTB。</p>
+
+<h3 id="53-内存对齐使用-32-位单元但以-8-字节整体看待">5.3 内存对齐：使用 32 位单元但以 8 字节整体看待</h3>
+
+<p>DTB 的每一处对齐都有其物理上的现实原因：</p>
+
+<ul>
+  <li>
+<strong>Structure Block</strong> 按要求 4 字节对齐——每个 Token 是 <code class="language-plaintext highlighter-rouge">uint32_t</code>
+</li>
+  <li>
+<strong>Memory Reservation Block</strong> 8 字节对齐——条目是 <code class="language-plaintext highlighter-rouge">uint64_t</code> 对</li>
+  <li>
+<strong>整个 DTB</strong> 按 8 字节对齐加载——这是所有子块对齐要求的最大公约数</li>
+</ul>
+
+<p>这个 8 字节整体对齐要求意味着引导程序从任何可以 8 字节对齐的地址上加载的 DTB 都能确保在不做额外内存搬运的情况下，被内核安全地按 4 或 8 字节访问。</p>
+
+<p class="notice--info">DTB 的设计体现的是嵌入式引导阶段的现实约束：无 MMU、无动态分配、物理内存可能非连续、引导程序的内存在”交接时刻”不可以被覆盖。那些看似奇怪的限制——没有指针只有偏移量、所有数据平坦排列、必须整体 8 字节对齐——全都是从这个唯一约束推导出来的：<strong>在 MMU 开启前，内核必须安全地解析一个可以被任意重定位的硬件描述块</strong>。</p>
+
+<hr>
+
+<h2 id="结语">结语</h2>
+
+<p>设备树，归根结底，是一份交给操作系统的”施工图纸”。引导程序拿着蓝图说：”这就是这个机器的样子。”操作系统回答说：”好的，我知道该怎么做了。”</p>
+
+<h2 id="参考资料">参考资料</h2>
+
+<ol>
+  <li><a href="https://docs.kernel.org/devicetree/usage-model.html">Linux Kernel Documentation: Devicetree Usage Model</a></li>
+  <li><a href="https://github.com/devicetree-org/devicetree-specification">DeviceTree Specification（devicetree-org）</a></li>
+</ol>
+
+        
+      </section>
+
+      <footer class="page__meta">
+        
+        
+
+  
+    
+
+
+
+  
+
+  <p class="page__taxonomy">
+    <strong><i class="fas fa-fw fa-tags" aria-hidden="true"></i> Tags: </strong>
+    <span itemprop="keywords">
+    
+      <a href="/tags/linux" class="page__taxonomy-item p-category" rel="tag">Linux</a>
+    
+    </span>
+  </p>
+
+
+  
+
+  
+    
+
+
+
+  
+
+  <p class="page__taxonomy">
+    <strong><i class="fas fa-fw fa-folder-open" aria-hidden="true"></i> Categories: </strong>
+    <span itemprop="keywords">
+    
+      <a href="/categories/note" class="page__taxonomy-item p-category" rel="tag">Note</a>
+    
+    </span>
+  </p>
+
+
+  
+
+
+        
+
+
+  <p class="page__date"><strong><i class="fas fa-fw fa-calendar-alt" aria-hidden="true"></i> Updated:</strong> <time class="dt-published" datetime="2026-05-20T03:15:00+00:00">May 20, 2026</time></p>
+
+
+      </footer>
+
+      
+<section class="page__share">
+  <h4 class="page__share-title">Share on</h4>
+
+  <a href="https://x.com/intent/tweet?text=%E8%AE%BE%E5%A4%87%E6%A0%91%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0%EF%BC%9A%E4%BB%8E%E5%9F%BA%E7%A1%80%E8%AF%AD%E6%B3%95%E5%88%B0+DTB%20https%3A%2F%2Fbfmhno3.github.io%2Fnote%2Fdevicetree-study-notes%2F" class="btn btn--x" aria-label="Share on X" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on X">
+    <i class="fab fa-fw fa-x-twitter" aria-hidden="true"></i><span> X</span>
+  </a>
+
+  <a href="https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fbfmhno3.github.io%2Fnote%2Fdevicetree-study-notes%2F" class="btn btn--facebook" aria-label="Share on Facebook" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on Facebook">
+    <i class="fab fa-fw fa-facebook" aria-hidden="true"></i><span> Facebook</span>
+  </a>
+
+  <a href="https://www.linkedin.com/shareArticle?mini=true&url=https://bfmhno3.github.io/note/devicetree-study-notes/" class="btn btn--linkedin" aria-label="Share on LinkedIn" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on LinkedIn">
+    <i class="fab fa-fw fa-linkedin" aria-hidden="true"></i><span> LinkedIn</span>
+  </a>
+
+  <a href="https://bsky.app/intent/compose?text=%E8%AE%BE%E5%A4%87%E6%A0%91%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0%EF%BC%9A%E4%BB%8E%E5%9F%BA%E7%A1%80%E8%AF%AD%E6%B3%95%E5%88%B0+DTB%20https%3A%2F%2Fbfmhno3.github.io%2Fnote%2Fdevicetree-study-notes%2F" class="btn btn--bluesky" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on Bluesky">
+    <i class="fab fa-fw fa-bluesky" aria-hidden="true"></i><span> Bluesky</span>
+  </a>
+</section>
+
+
+      
+
+  <nav class="pagination" aria-label="Post pagination">
+    
+      <a href="/note/bibtex-and-biblatex-guide/" class="pagination--pager" title="BibTeX 与 BibLaTeX 入门：.bib 文件结构、引用与编译流程">Previous</a>
+    
+    
+      <a href="/note/latex-project-structure/" class="pagination--pager" title="LaTeX 项目结构与 latexmk 配置">Next</a>
+    
+  </nav>
+
+
+    </div>
+
+    
+      
+        
+<div class="page__comments">
+  
+  
+      <h4 class="page__comments-title">Comments</h4>
+      <section id="giscus-comments"></section>
+    
+</div>
+
+      
+    
+  </article>
+
+  
+  
+    
+
+<div class="page__related">
+  
+  <h2 class="page__related-title">You May Also Enjoy</h2>
+  <div class="grid__wrapper">
+    
+      
+      
+
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc p-name" itemprop="headline">
+      
+        <a class="u-url" href="/note/latex-project-structure/" rel="permalink">LaTeX 项目结构与 latexmk 配置
+</a>
+      
+    </h2>
+    
+
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-06-18T03:20:00+00:00">June 18, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          9 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt p-summary" itemprop="description">我用 LaTeX 写东西时的项目目录结构、main.tex 模板，以及一份跨平台的 .latexmkrc 配置。
+</p>
+  </article>
+</div>
+
+    
+      
+      
+
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc p-name" itemprop="headline">
+      
+        <a class="u-url" href="/note/bibtex-and-biblatex-guide/" rel="permalink">BibTeX 与 BibLaTeX 入门：.bib 文件结构、引用与编译流程
+</a>
+      
+    </h2>
+    
+
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-05-19T14:00:00+00:00">May 19, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          4 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt p-summary" itemprop="description">最近恰逢本科阶段的倒数第二个课程设计，初步估计又得三四十页，并且老师不发模板只发排版要求，美其名曰让我们提前适应毕业论文写作（但是我记得毕业论文也是有 Word 模板的吧😂）。
+
+我并非是某一方的狂热爱好者，在我看来两者都是工具，只要能解决我的问题，那就是好工具。显然这种比较专业的排版需求还是使用 LaTeX 比...</p>
+  </article>
+</div>
+
+    
+      
+      
+
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc p-name" itemprop="headline">
+      
+        <a class="u-url" href="/note/note-of-tmux/" rel="permalink">Tmux 使用笔记
+</a>
+      
+    </h2>
+    
+
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-04-25T13:55:00+00:00">April 25, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          5 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt p-summary" itemprop="description">为什么我们需要 tmux？
+
+1. 终端的物理与逻辑基础
+
+在计算机世界里，我们通过 “终端（Terminal）” 与 “Shell（如 bash, zsh）” 进行交互。
+
+当你打开一个终端窗口，或者通过 SSH 连接到远程服务器时，操作系统为你分配了一个 TTY（伪终端），并在这个 TTY 上启动了一个 Sh...</p>
+  </article>
+</div>
+
+    
+      
+      
+
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/assets/images/logo-teaser.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc p-name" itemprop="headline">
+      
+        <a class="u-url" href="/note/fhs-of-linux/" rel="permalink">从 FHS 到 Linux 运行时目录体系
+</a>
+      
+    </h2>
+    
+
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2026-04-21T07:00:00+00:00">April 21, 2026</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          13 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt p-summary" itemprop="description">要真正理解 Linux 的 FHS (Filesystem Hierarchy Standard，文件系统层次结构标准)，不能只靠死记硬背“哪个目录放什么文件”。更有效的办法，是剥开表象，回到操作系统设计的起点，看看在构建一个多用户、网络化、可扩展的系统时，我们究竟面临了哪些根本问题，以及 FHS 又是如何作为一...</p>
+  </article>
+</div>
+
+    
+  </div>
+</div>
+
+  
+  
+</div>
+
+      
+    </div>
+
+    
+      <div class="search-content">
+        
+<div class="search-content__inner-wrap">
+<form class="search-content__form" onkeydown="return event.key != 'Enter';" role="search">
+    <label class="sr-only" for="search">
+      Enter your search term...
+    </label>
+    <input type="search" id="search" class="search-input" tabindex="-1" placeholder="Enter your search term...">
+  </form>
+  <div id="results" class="results"></div>
+</div>
+
+      </div>
+    
+
+    <div id="footer" class="page__footer">
+      <footer>
+        <!-- start custom footer snippets -->
+
+<!-- end custom footer snippets -->
+        
+
+
+<div class="page__footer-follow">
+  <ul class="social-icons">
+    
+
+    
+      
+        
+          <li><a href="https://github.com/bfmhno3" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-github" aria-hidden="true"></i> GitHub</a></li>
+        
+      
+        
+          <li><a href="https://gitee.com/bfmhno3" rel="nofollow noopener noreferrer"><i class="fa-solid fa-g" aria-hidden="true"></i> Gitee</a></li>
+        
+      
+        
+          <li><a href="https://www.cnblogs.com/bfmhno3" rel="nofollow noopener noreferrer"><i class="fa-solid fa-blog" aria-hidden="true"></i> cnblogs</a></li>
+        
+      
+        
+          <li><a href="https://blog.csdn.net/B33336" rel="nofollow noopener noreferrer"><i class="fa-solid fa-blog" aria-hidden="true"></i> CSDN</a></li>
+        
+      
+    
+
+    
+      <li><a href="/feed.xml"><i class="fas fa-fw fa-square-rss" aria-hidden="true"></i> Feed</a></li>
+    
+  </ul>
+</div>
+
+
+<div class="page__footer-copyright">© 2026 <a href="https://bfmhno3.github.io">Better Mistakes</a>. Powered by <a href="https://jekyllrb.com" rel="nofollow">Jekyll</a> &amp; <a href="https://mademistakes.com/work/jekyll-themes/minimal-mistakes/" rel="nofollow">Minimal Mistakes</a>.</div>
+
+      </footer>
+    </div>
+
+    
+
+  <script src="/assets/js/main.min.js"></script>
+
+
+
+
+
+<script src="/assets/js/lunr/lunr.min.js"></script>
+<script src="/assets/js/lunr/lunr-store.js"></script>
+<script src="/assets/js/lunr/lunr-en.js"></script>
+
+
+
+
+
+  <!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-VS5B3CR1M6"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-VS5B3CR1M6', { 'anonymize_ip': false});
+</script>
+
+
+
+
+
+
+
+    <script>
+  'use strict';
+
+  (function () {
+    var commentContainer = document.querySelector('#giscus-comments');
+
+    if (!commentContainer) {
+      return;
+    }
+
+    var script = document.createElement('script');
+
+    script.setAttribute('src', 'https://giscus.app/client.js');
+    script.setAttribute('data-repo', 'bfmhno3/bfmhno3.github.io');
+    script.setAttribute('data-repo-id', 'R_kgDOQCQGxg');
+    script.setAttribute('data-category', 'General');
+    script.setAttribute('data-category-id', 'DIC_kwDOQCQGxs4CzG3a');
+    script.setAttribute('data-mapping', 'pathname');
+    script.setAttribute('data-strict', '0');
+    script.setAttribute('data-reactions-enabled', '1');
+    script.setAttribute('data-emit-metadata', '0');
+    script.setAttribute('data-input-position', 'bottom');
+    script.setAttribute('data-theme', 'transparent_dark');
+    script.setAttribute('data-lang',  'en');
+    
+    script.setAttribute('data-loading', 'lazy');
+    
+    script.setAttribute('crossorigin', 'anonymous');
+
+    script.setAttribute('async', '');
+
+    commentContainer.appendChild(script);
+  })();
+</script>
+
+  
+
+
+
+
+  </body>
+</html>
