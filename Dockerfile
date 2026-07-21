@@ -1,4 +1,4 @@
-FROM ruby:3.3-bookworm@sha256:2405fae4df28e561be0ccc5b4c91b95204769fb659c1f41dc1defd2f02cfc2df
+FROM ruby:4.0-bookworm@sha256:0b28d5e7802f430cb78b20af30e196b40fc08c95839f50a0c1a7e84d667bc49e
 
 ARG BUNDLER_VERSION=2.6.9
 
