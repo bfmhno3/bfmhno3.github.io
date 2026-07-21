@@ -1,23 +1,33 @@
 services:
   jekyll:
-    image: jekyll/jekyll:latest
-    container_name: bfmhno3.github.io
+    build:
+      context: .
+      args:
+        BUNDLER_VERSION: "2.6.9"
     userns_mode: keep-id
-
-    command: >
-      sh -c "
-      bundle config mirror.https://rubygems.org https://mirrors.tuna.tsinghua.edu.cn/rubygems/ &&
-      bundle check || bundle install &&
-      bundle exec jekyll serve --watch --force_polling --future --verbose --host 0.0.0.0
-      "
+    command:
+      - sh
+      - -ec
+      - |
+        if [ -n "$${RUBYGEMS_MIRROR:-}" ]; then
+          bundle config set --global mirror.https://rubygems.org/ "$${RUBYGEMS_MIRROR}"
+        else
+          bundle config unset --global mirror.https://rubygems.org/
+        fi
+        bundle check || bundle install
+        exec bundle exec jekyll serve --watch --force_polling --future --host 0.0.0.0
     ports:
-      - "4000:4000"
-      # - "35729:35729"  # livereload 端口
+      - "127.0.0.1:4000:4000"
     volumes:
-      - .:/srv/jekyll  # 将当前目录挂载到容器内的 /srv/jekyll
-      - bundle_cache:/usr/local/bundle  # 持久化 Ruby gems，避免每次启动都重新安装
+      - .:/srv/jekyll
+      - bundle_cache_ruby_3_3:/usr/local/bundle
     environment:
-      - BUNDLE_PATH=/usr/local/bundle  # 指定 gems 安装路径
+      BUNDLE_PATH: /usr/local/bundle
+      RUBYGEMS_MIRROR: ${RUBYGEMS_MIRROR:-}
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
 
 volumes:
-  bundle_cache:
+  bundle_cache_ruby_3_3:
