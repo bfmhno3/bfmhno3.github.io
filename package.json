@@ -1,0 +1,10 @@
+{
+  "name": "better-mistakes-site-tools",
+  "private": true,
+  "scripts": {
+    "lint:markdown": "markdownlint-cli2"
+  },
+  "devDependencies": {
+    "markdownlint-cli2": "0.23.1"
+  }
+}
