@@ -21,6 +21,6 @@ group :jekyll_plugins do
 end
 
 group :development do
-  gem "bundler-audit", "0.9.2", require: false
+  gem "bundler-audit", "0.9.3", require: false
   gem "html-proofer", "5.0.10"
 end
