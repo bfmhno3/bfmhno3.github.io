@@ -16,7 +16,11 @@ group :jekyll_plugins do
   gem "jekyll-feed"
   gem "jemoji"
   gem "jekyll-include-cache"
-  gem "jekyll-algolia"
   gem "jekyll-spaceship", "0.10.2"
   gem "jekyll-archives"
+end
+
+group :development do
+  gem "bundler-audit", "0.9.2", require: false
+  gem "html-proofer", "5.0.10"
 end
