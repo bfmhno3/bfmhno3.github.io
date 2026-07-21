@@ -1,40 +1,111 @@
-name: Build and Deploy to Github Pages
+name: Build and deploy Jekyll site to GitHub Pages
 
 on:
   push:
     branches:
-      - main  # Here source code branch is `main`, it could be other branch
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('pages-pr-{0}', github.event.pull_request.number) || format('pages-deploy-{0}', github.ref) }}
+  cancel-in-progress: true
 
 jobs:
-  build_and_deploy:
+  build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
-
-      # Use GitHub Actions' cache to cache dependencies on servers
-      - uses: actions/cache@v4
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          path: |
-            .asdf/**
-            vendor/bundle
-          key: ${{ runner.os }}-cache-${{ hashFiles('**/cache.key') }}
-          restore-keys: |
-            ${{ runner.os }}-cache-
+          fetch-depth: 0
+          persist-credentials: false
 
-      # Use GitHub Deploy Action to build and deploy to Github
-      # For the latest version: `jeffreytse/jekyll-deploy-action@master`
-      - uses: jeffreytse/jekyll-deploy-action@master
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@003a5c4d8d6321bd302e38f6f0ec593f77f06600 # v1.319.0
         with:
-          provider: 'github'         # Default is github
-          token: ${{ secrets.GITHUB_TOKEN }} # It's your Personal Access Token(PAT)
-          ssh_private_key: ''        # It's your SSH private key (SSH approach)
-          repository: ''             # Default is current repository
-          branch: 'gh-pages'         # Default is gh-pages for github provider
-          jekyll_src: './'           # Default is root directory
-          jekyll_cfg: '_config.yml'  # Default is _config.yml
-          jekyll_baseurl: ''         # Default is according to _config.yml
-          ruby_ver: ''               # Default is 3.2.0 version
-          bundler_ver: ''            # Default is compatible bundler version (~>2.5.0)
-          cname: ''                  # Default is to not use a cname
-          actor: ''                  # Default is the GITHUB_ACTOR
-          pre_build_commands: ''     # Installing additional dependencies (Arch Linux)
+          ruby-version: .ruby-version
+          bundler-cache: true
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install content-check dependencies
+        run: npm ci
+
+      - name: Audit Node.js dependencies
+        run: npm audit --audit-level=high
+
+      - name: Audit Ruby dependencies
+        run: bundle exec bundle-audit check --update
+
+      - name: Lint changed Markdown
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        shell: bash
+        run: |
+          mapfile -d '' files < <(git diff --diff-filter=AM --name-only -z "$BASE_SHA...HEAD" -- '*.md')
+          if (( ${#files[@]} )); then
+            npm run lint:markdown -- "${files[@]}"
+          fi
+
+      - name: Validate content and assets
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: bundle exec ruby scripts/validate_content.rb --base "$BASE_SHA"
+
+      - name: Validate repository content
+        if: github.event_name != 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.before }}
+        shell: bash
+        run: |
+          if [[ -n "$BASE_SHA" ]] && git rev-parse --verify --quiet "$BASE_SHA^{commit}"; then
+            bundle exec ruby scripts/validate_content.rb --base "$BASE_SHA"
+          else
+            bundle exec ruby scripts/validate_content.rb
+          fi
+
+      - name: Configure GitHub Pages
+        if: github.event_name != 'pull_request'
+        id: pages
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+
+      - name: Build site
+        env:
+          JEKYLL_ENV: production
+        run: bundle exec jekyll build --strict_front_matter --trace
+
+      - name: Check generated HTML
+        run: bundle exec htmlproofer ./_site --disable-external --ignore-urls '/mermaid\.ink\/svg/'
+
+      - name: Upload GitHub Pages artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: _site
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0
