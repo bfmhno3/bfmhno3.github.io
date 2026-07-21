@@ -1,1 +1,5 @@
-@import "custom/figures"
+@import "custom/figures";
+
+.site-logo img {
+    filter: invert(1);
+}
