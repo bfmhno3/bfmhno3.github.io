@@ -205,7 +205,7 @@ sass:
 
 # --- Outputting ---
 permalink: /:categories/:title/
-time_zone: "Asia/Shanghai"
+timezone: "Asia/Shanghai"
 
 collections:
   portfolio:
