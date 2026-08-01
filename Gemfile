@@ -22,5 +22,5 @@ end
 
 group :development do
   gem "bundler-audit", "0.9.2", require: false
-  gem "html-proofer", "5.0.10"
+  gem "html-proofer", "5.2.2"
 end
