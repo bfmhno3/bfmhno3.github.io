@@ -163,7 +163,7 @@ podman compose run --rm jekyll bundle exec ruby scripts/validate_content.rb --ba
    ---
    title: "中文标题"
    date: YYYY-MM-DD HH:MM:SS +08:00
-   excerpt: "摘要"
+   description: "摘要"
    categories:
      - category
    tags:
