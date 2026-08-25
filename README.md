@@ -99,6 +99,17 @@ http://127.0.0.1:4000
 podman compose down
 ```
 
+如需使用 Nix 本地工具链，在仓库根目录执行 `nix develop`。首次进入后按需安装锁定的 Ruby 与 npm 依赖：
+
+```bash
+nix develop
+bundle install
+npm ci
+bundle exec jekyll serve --watch --future --host 127.0.0.1
+```
+
+启动后访问 `http://127.0.0.1:4000`。Nix shell 只提供 Ruby、Node.js 和构建工具，不会自动安装依赖或构建站点；它不改变 GitHub Actions。需要容器隔离或 `watch` / `force_polling` 行为时，仍使用上面的 Podman Compose 流程。
+
 如需临时使用 RubyGems 镜像，可在启动前设置 `RUBYGEMS_MIRROR`；默认使用官方 RubyGems。例如在 PowerShell 中：
 
 ```powershell
@@ -107,6 +118,8 @@ podman compose up -d
 ```
 
 ## 验证
+
+Podman 环境中的验证命令如下；在 Nix shell 中去掉 `podman compose run --rm jekyll` 前缀即可运行同一组 Ruby 命令：
 
 ```powershell
 podman compose run --rm jekyll bundle check
@@ -117,6 +130,17 @@ podman compose run --rm jekyll bundle exec htmlproofer ./_site --disable-externa
 npm ci
 npm audit --audit-level=high
 npm run lint:markdown
+```
+
+Nix shell 中对应的构建与校验命令为：
+
+```bash
+bundle exec ruby scripts/validate_content.rb
+bundle exec jekyll build --strict_front_matter --trace
+bundle exec htmlproofer ./_site --disable-external --ignore-urls '/mermaid\.ink\/svg/'
+npm run lint:markdown
+npm audit --audit-level=high
+bundle exec bundle-audit check --update
 ```
 
 CI 的 Node.js 检查使用 Node.js 24 和锁定的 `markdownlint-cli2 0.23.1`。`validate_content.rb` 会检查全部 Git 已跟踪文章的文件名和 front matter；资产规则只检查相对基线新增或重命名的文件。默认基线为 `HEAD^`，也可以显式指定：
