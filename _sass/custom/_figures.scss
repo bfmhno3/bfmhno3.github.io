@@ -1,19 +1,27 @@
 .centered-75-figure {
-  width: 75%;
-  
-  // 居中显示
-  margin-left: auto;
-  margin-right: auto;
+  width: min(75%, 960px);
+  margin: 2rem auto;
   display: block;
 
-  // 确保里面的图片占满 figure 的宽度
   img {
+    display: block;
     width: 100%;
     height: auto;
-    display: block;
+    max-width: 100%;
   }
 
   figcaption {
+    margin-top: 0.65rem;
+    color: #aab5c2;
+    font-size: 0.85em;
+    line-height: 1.5;
     text-align: center;
+  }
+}
+
+@media (max-width: 600px) {
+  .centered-75-figure {
+    width: 100%;
+    margin: 1.5rem 0;
   }
 }

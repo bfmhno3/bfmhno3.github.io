@@ -17,7 +17,7 @@
   <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork"{% if post.locale %} lang="{{ post.locale }}"{% endif %}>
     {% if include.type == "grid" and teaser %}
       <div class="archive__item-teaser">
-        <img src="{{ teaser | relative_url }}" alt="">
+        <img src="{{ teaser | relative_url }}" alt="" loading="lazy" decoding="async">
       </div>
     {% endif %}
     <h2 class="archive__item-title no_toc p-name" itemprop="headline">
@@ -28,6 +28,12 @@
       {% endif %}
     </h2>
     {% include page__meta.html locale=locale type=include.type %}
+    {% if post.categories.size > 0 or post.tags.size > 0 %}
+      <p class="archive__item-taxonomy" aria-label="分类与标签">
+        {% for category in post.categories %}<a href="{{ '/categories/' | relative_url }}#{{ category | slugify }}">{{ category | escape_once }}</a>{% endfor %}
+        {% for tag in post.tags %}<a href="{{ '/tags/' | relative_url }}#{{ tag | slugify }}">#{{ tag | escape_once }}</a>{% endfor %}
+      </p>
+    {% endif %}
     {% if excerpt %}<p class="archive__item-excerpt p-summary" itemprop="description">{{ excerpt | markdownify | strip_html | truncate: 160 }}</p>{% endif %}
   </article>
 </div>
