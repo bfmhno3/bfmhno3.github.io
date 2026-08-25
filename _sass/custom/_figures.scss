@@ -2,26 +2,12 @@
   width: min(75%, 960px);
   margin: 2rem auto;
   display: block;
+  padding: 0;
 
-  img {
-    display: block;
-    width: 100%;
-    height: auto;
-    max-width: 100%;
-  }
-
-  figcaption {
-    margin-top: 0.65rem;
-    color: #aab5c2;
-    font-size: 0.85em;
-    line-height: 1.5;
-    text-align: center;
-  }
+  img { display: block; width: 100%; height: auto; max-width: 100%; border-radius: 0.45rem; }
+  figcaption { margin-top: 0.65rem; color: #aab5c2; font-size: 0.85em; line-height: 1.5; text-align: center; }
 }
 
 @media (max-width: 600px) {
-  .centered-75-figure {
-    width: 100%;
-    margin: 1.5rem 0;
-  }
+  .centered-75-figure { width: 100%; margin: 1.5rem 0; }
 }

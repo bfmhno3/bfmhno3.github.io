@@ -96,6 +96,8 @@ jobs:
 
       - name: Check generated HTML
         run: bundle exec htmlproofer ./_site --disable-external --ignore-urls '/mermaid\.ink\/svg/'
+      - name: Check visual performance budgets
+        run: bundle exec ruby scripts/performance_budget.rb _site
 
       - name: Upload GitHub Pages artifact
         if: github.event_name != 'pull_request'

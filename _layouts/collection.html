@@ -1,0 +1,18 @@
+---
+layout: archive
+---
+{%- assign locale = page.locale | default: layout.locale | default: site.locale -%}
+{{ content }}
+{% assign entries = site[page.collection] | where_exp: "entry", "entry.hidden != true" %}
+{% if entries.size > 0 %}
+  {% assign entries_layout = page.entries_layout | default: 'list' %}
+  <div class="entries-{{ entries_layout }}">
+    {% include documents-collection.html locale=locale collection=page.collection type=entries_layout %}
+  </div>
+{% else %}
+  <section class="portfolio-empty" aria-labelledby="portfolio-empty-title">
+    <h2 id="portfolio-empty-title">Portfolio is empty</h2>
+    <p>No portfolio entries are published yet.</p>
+    <p><a href="{{ '/posts/' | relative_url }}">Browse Posts</a> or <a href="{{ '/about/' | relative_url }}">learn more about this site</a>.</p>
+  </section>
+{% endif %}

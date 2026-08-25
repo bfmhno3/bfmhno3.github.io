@@ -258,9 +258,7 @@ jekyll-spaceship:
   processors:
     - table-processor
     - mathjax-processor
-    - plantuml-processor
     - mermaid-processor
-    - media-processor
     - emoji-processor
     - element-processor
   mathjax-processor:

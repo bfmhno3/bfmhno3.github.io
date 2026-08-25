@@ -1,13 +1,9 @@
-<figure class="{{ include.class}} centered-75-figure">
-  {%- if include.popup -%}<a href="{{ include.image_path | relative_url }}" class="image-popup"{% if include.caption %} title="{{ include.caption | markdownify | strip_html }}"{% endif %}>{%- endif -%}
-  <img src="{{ include.image_path | relative_url }}"
+<figure class="{{ include.class}} centered-75-figure"{% if include.width and include.height %} style="aspect-ratio: {{ include.width }} / {{ include.height }}"{% endif %}>
+  {%- if include.popup -%}<a href="{{ include.image_path | relative_url }}" class="image-popup" aria-label="Open image{% if include.alt %}: {{ include.alt | escape_once }}{% endif %}"{% if include.caption %} title="{{ include.caption | markdownify | strip_html }}"{% endif %}>{%- endif -%}
+  <img src="{{ include.image_path | relative_url }}"{% if include.srcset %} srcset="{{ include.srcset }}"{% endif %}{% if include.sizes %} sizes="{{ include.sizes }}"{% endif %}
        alt="{% if include.alt %}{{ include.alt | escape_once }}{% endif %}"
-       loading="lazy"
-       decoding="async">
+       {% if include.width %}width="{{ include.width }}"{% endif %}{% if include.height %} height="{{ include.height }}"{% endif %}
+       loading="{% if include.eager %}eager{% else %}lazy{% endif %}" decoding="async">
   {%- if include.popup -%}</a>{%- endif -%}
-  {%- if include.caption -%}
-    <figcaption>
-      {{ include.caption | markdownify | remove: "<p>" | remove: "</p>" }}
-    </figcaption>
-  {%- endif -%}
+  {%- if include.caption -%}<figcaption>{{ include.caption | markdownify | remove: "<p>" | remove: "</p>" }}</figcaption>{%- endif -%}
 </figure>
