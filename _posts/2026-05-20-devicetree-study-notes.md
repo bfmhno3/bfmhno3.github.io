@@ -1,813 +1,413 @@
 ---
-title: "设备树学习笔记：从基础语法到 DTB"
+title: "设备树入门：从第一份 DTS 到 Linux 驱动匹配"
 date: 2026-05-20 11:15:00 +08:00
-description: "从设备树产生背景讲起，系统梳理 DTS/DTB 语法、compatible/reg/status、中断路由、系统必选节点与 DTB 二进制结构，形成一条从写法到底层实现的完整学习路径。"
+description: "我从一份可编译的最小 DTS 开始，走完 DTS、DTB、boot program 到 Linux 驱动匹配的链路，再用真实工具和内核调试路径验证设备树。"
 categories:
   - Note
 tags:
   - Linux
+  - Device Tree
+  - Embedded
 ---
 
-## 0. 引言：为什么我们需要设备树？
+我以前把设备树当成一堆需要背下来的属性名：`compatible`、`reg`、`interrupts`，还有几个看起来像预处理器产物的 `#*-cells`。后来我决定只做一件事：写一份足够小的 DTS，把它编译成 DTB，再从 Linux 看到它实际收到的内容。设备树一下从名词表变成了一条可以跑通的交接链路。
 
-想象这样一个场景：你的电脑开机，操作系统启动，它需要知道自己运行在什么硬件之上：有几颗 CPU、多大内存、串口在哪里、网卡是什么型号。操作系统如何获取这些信息？
+本文不绑定具体开发板。我们会用一个虚构但自洽的 SoC 和 UART 做实验，所以这份 DTB 不会神奇地让你的电脑多出一个串口（遗憾，但也算避免了一次售后事故）。
 
-答案是……看情况。
+## 设备树到底解决什么问题？
 
-### 0.1 自发现 vs 非自发现总线
+PCI 和 USB 这类总线可以通过协议探测设备。Linux 询问总线，设备回答自己的身份，操作系统再加载驱动。SoC 内部的 UART、GPIO、定时器和很多 I2C 设备通常没有这样的自发现协议。CPU 只知道某个地址范围可能连着寄存器，却不知道那里是什么设备，或者这根中断线接到了哪里。
 
-现代计算机系统中，总线大致分为两类。
+设备树把这份外部知识交给启动链路。把它想成搬家时交接的一张机器清单：清单说明房间里有什么、门牌号是什么、钥匙交给谁；它不会替你操作洗衣机。对应到规范术语，boot program 可以是固件、bootloader 或 hypervisor，client program 可以是 Linux，也可以是另一个 bootloader。boot program 把 devicetree 放进内存，然后把它传给 client program。
 
-**自发现总线（Self-Discoverable Bus）**：PCIe、USB 这类总线，操作系统可以向总线发送探测请求，插在总线上的设备会主动回答 "我在这里，我是某某设备"。插上一个 USB 键盘，系统立刻就能知道这个键盘的存在及其设备描述符。这是一种**运行时动态发现**机制。
+因此职责边界很重要：
 
-**非自发现总线（Non-Discoverable Bus）**：I2C、SPI、CAN、系统总线（Processor Bus）等则完全不是这样。在这些总线上，CPU 无法主动 "问" 谁连接在上面。它只知道有一组内存映射的寄存器地址，但对于这些地址背后是什么设备、什么型号、如何配置，CPU 一无所知。这些信息必须由**人为提供**。
+- **DTS/DTB** 描述硬件的拓扑、资源和连接关系。
+- **boot program** 加载 DTB，并把它传给下一个程序。
+- **Linux 驱动** 根据描述找到资源，映射寄存器，申请中断，然后真正操作硬件。
+- **binding** 规定某类设备允许使用哪些 `compatible` 和属性，是接口约束，不是驱动实现。
 
-嵌入式系统大量使用**非自发现总线**。一个典型的 ARM SoC 上，UART、I2C 控制器、GPIO 控制器、定时器都是通过内存映射连接到处理器总线的，没有任何动态发现机制。
+设备树不是硬件扫描器，也不是驱动代码。往 `reg` 里写一个地址，不会自动生成对该地址执行读写的驱动。
 
-### 0.2 历史的教训：Linus 的愤怒
+> **注意：设备树不会替代驱动。** `compatible` 只负责匹配，`reg` 只描述资源。只有对应的 Linux 驱动成功匹配并执行 `probe()`，设备才可能被初始化。
+{: .notice--warning}
 
-在设备树出现之前，Linux 对这些非自发现硬件的处理方式简单粗暴：**硬编码**。
+## 先跑通一条 DTS 到 DTB 的链路
 
-ARM 架构的 Linux 内核曾经有一个庞大的 `arch/arm/mach-*` 目录，里面为每一款开发板都写了一份 C 代码，直接在内核源码中描述板上有什么设备、基地址是多少、中断号是多少。如果你买了一块新的开发板，就需要在内核里添加一份新的 `board-*.c` 文件。
-
-这导致了几个严重问题：
-
-1. **内核膨胀**：同一份内核镜像无法在多块不同板子上运行。每块板子都需要编译一个专用内核。
-2. **代码冗余**：不同板子之间共享同一个 SoC，但因为板上外设组合不同，代码大量重复。
-3. **维护灾难**：2011 年左右，Linux 内核邮件列表上 Linus Torvalds 公开表达了强烈的[不满](https://lkml.org/lkml/2011/3/17/492)——ARM 架构的 `mach-*` 目录已经变成一个无法维护的垃圾场。
-
-> Gaah. Guys, this whole ARM thing is a f*cking pain in the ass.
-
-问题的根源在于：**硬件描述信息（数据）被硬编码在了操作系统的核心逻辑（代码）中**。
-
-### 0.3 解决办法：数据与代码的剥离
-
-设备树的本质思想总结为一句话：
-
-> **将硬件的拓扑结构和物理参数从操作系统的核心代码中彻底剥离，以结构化的数据文件形式独立存在。**
-
-在这个模型中：
-
-- **引导程序**（Boot Program）如 U-Boot、树莓派固件、QEMU，负责将设备树二进制文件（DTB）加载到内存，并将其地址传递给内核。
-- **内核**（Client Program）在启动时解析这份数据，按图施工：发现设备、匹配驱动、配置寄存器。
-
-这是一种**声明式**（Declarative）的硬件描述方式：你告诉内核 "有什么"，而不是 "怎么做"。内核中的驱动程序则负责 "怎么做"。
-
-这个思想和 Web 前端分离 HTML（结构/数据）与 JavaScript（逻辑）如出一辙，或者类比数据库系统中的 DDL（数据定义）与 DML（数据操作）。
-
-设备树最早来自 Open Firmware（IEEE 1275），用在 PowerPC 和 SPARC 平台上。2005 年，PowerPC Linux 在合并 32 位/64 位支持的清理工作中，将设备树设为强制要求——由此诞生了 "扁平化设备树"（Flattened Device Tree, FDT）格式。此后，FDT 被推广到所有架构。
-
-截至本文写作时，arm、arm64、microblaze、mips、powerpc、sparc、x86、riscv 等主流架构均已支持设备树。
-
----
-
-## 1. 设备树的基础语法
-
-### 1.1 DTS 源码与 DTB 二进制
-
-设备树有两种形态，二者关系类似 C 语言中 `.c` 源文件与编译后的二进制可执行文件：
-
-| 形态                         | 文件名           | 本质                 | 使用者 |
-| ---------------------------- | ---------------- | -------------------- | ------ |
-| **DTS** (Device Tree Source) | `.dts` / `.dtsi` | 人类可读的文本源码   | 开发者 |
-| **DTB** (Device Tree Blob)   | `.dtb`           | 二进制的扁平化树结构 | 内核   |
-
-DTS 通过**设备树编译器**（DTC, Device Tree Compiler）编译成 DTB。同时，DTC 也支持反编译（`dtc -I dtb -O dts`），方便逆向查看既有 DTB 内容。
-
-`.dts` 文件是设备树源文件，通常一个板子一个。`.dtsi` 文件是**可包含的共用文件**（"i" = include），通常描述一个 SoC 的内部结构，然后被多个板子的 `.dts` 以 `/include/` 指令引用——板级 `.dts` 引用 SoC 级 `.dtsi`，只在末尾补充板上特有的外设。
-
-### 1.2 节点（Node）与路径
-
-设备树是一个**树形数据结构**。每个节点描述一个设备或一个总线，节点可以包含属性和子节点。
-
-#### 节点命名规则
+我们先写一个只描述 UART 的最小例子。这里的地址 `0x10000000` 是实验数据，不属于任何真实芯片。
 
 ```c
-node-name@unit-address
-```
+/dts-v1/;
 
-- `node-name`：1-31 个字符，只能使用数字、大小写字母和 `,._+-`，必须以字母开头。推荐使用描述设备**类别**的通用名称，而非具体型号——例如用 `serial` 而不是 `ns16550`，用 `ethernet` 而不是 `rtl8139`。这种"重类别、轻型号"的命名哲学让设备树在不同硬件平台间保持可读性。
-- `@unit-address`：可选的单元地址，必须与 `reg` 属性中的第一个地址值匹配。如果节点没有 `reg` 属性，则必须省略 `@unit-address`。
+/ {
+    compatible = "example,hello-board";
+    model = "Example Hello Board";
 
-为什么单元地址必须和 `reg` 首地址一致？因为 DTC 编译器会校验这种一致性，确保设备树的自我完整性——你在节点名中承诺的物理地址，必须和寄存器基地址真正对上，否则树结构本身就是错的。
+    #address-cells = <1>;
+    #size-cells = <1>;
 
-举例：
+    soc {
+        compatible = "simple-bus";
+        #address-cells = <1>;
+        #size-cells = <1>;
+        ranges;
 
-```c
-cpu@0          —— 0 号 CPU
-serial@4600    —— 基地址 0x4600 的串口
-i2c@7000c000   —— 基地址 0x7000c000 的 I2C 控制器
-```
-
-#### 树状层级与绝对路径
-
-每个节点在树中有唯一路径，从根节点 `/` 开始：
-
-```c
-/cpus/cpu@0
-/soc/serial@4600
-/soc/i2c@7000c000/codec@1a
-```
-
-这种层级镜像了硬件的物理拓扑：芯片内部总线（SoC）下挂载着各种外设控制器，而 I2C 控制器下面又挂着连接在 I2C 总线上的设备（如音频编解码器）。
-
-### 1.3 属性（Property）：数据的载体
-
-每个节点由若干属性定义。属性是键值对结构。
-
-DTSpec 定义了以下几种基本的属性值类型：
-
-**〈空值〉（Empty）**：属性的存在本身就是一个布尔信号。例如 `interrupt-controller;` 表示不需要任何值，有这个属性就代表"我是中断控制器"。
-
-**〈u32〉（32 位整数）**：大端序存储的 32 位无符号整数，在 DTS 源码中用尖括号包裹，例如：
-
-```c
-clock-frequency = <825000000>;
-```
-
-DTS 支持在尖括号内使用 C 风格的算术、位运算和三元表达式：
-
-```c
-reg = <(0x1000 + 0x200) 0x100>;
-```
-
-**〈u64〉（64 位整数）**：用两个 `<u32>` 表示，高 32 位在前，例如：
-
-```c
-clock-frequency = <0x00000001 0x00000000>;
-```
-
-这表示的是 64 位值 `0x100000000`：第一个 cell 是高 32 位（`0x00000001`），第二个是低 32 位（`0x00000000`）。
-
-**〈string〉（字符串）**：双引号包裹，以 null 结尾，例如：
-
-```c
-compatible = "ns16550";
-```
-
-**〈stringlist〉（字符串列表）**：多个字符串拼接，例如：
-
-```c
-compatible = "fsl,mpc8641", "ns16550";
-```
-
-**〈phandle〉（节点引用）**：一个 `<u32>` 值，指向树中另一个节点。DTC 在编译时自动为有标签的节点分配唯一的 phandle 值。
-
-**〈prop-encoded-array〉（自定义编码数组）**：格式取决于具体属性定义，最常见的就是 `reg` 中的（地址, 长度）对。
-
-### 1.4 语法糖：标签与引用
-
-如果每次都要写 `/soc/i2c@7000c000/codec@1a` 这样的绝对路径来引用一个节点，代码会变得难以阅读。DTS 提供了两个机制来解决这个问题。
-
-**标签（Label）**：在节点或属性前加 `标签名:` 定义，例如：
-
-```c
-wm8903: codec@1a {
-    compatible = "wlf,wm8903";
-    reg = <0x1a>;
+        uart0: serial@10000000 {
+            compatible = "example,uart";
+            reg = <0x10000000 0x100>;
+            status = "okay";
+        };
+    };
 };
 ```
 
-**引用（Reference）**：`&标签名` 引用已定义的节点，例如：
+保存为 `/tmp/devicetree-tutorial.dts` 后，先确认工具是否存在：
+
+```bash
+dtc --version
+```
+
+`dtc` 是 Device Tree Compiler。它把 DTS 文本转换成 DTB，也能把 DTB 反编译回近似的 DTS。我的实验环境如果没有 `dtc`，这一步就应该明确停下来安装工具，而不是编造一段"成功输出"。在 Debian/Ubuntu 上通常由 `device-tree-compiler` 包提供，其他发行版请查自己的包管理器。
+
+> **工具检查。** 如果 `dtc` 不在 `PATH` 中，请先安装 Device Tree Compiler。后续编译、反编译和 magic 检查都依赖它们；不要把"命令没有执行"写成"实验成功"。
+{: .notice--danger}
+
+编译命令的输入是 DTS，输出是 DTB：
+
+```bash
+dtc -I dts -O dtb -o /tmp/devicetree-tutorial.dtb \
+    /tmp/devicetree-tutorial.dts
+```
+
+随后反编译：
+
+```bash
+dtc -I dtb -O dts -o /tmp/devicetree-tutorial.roundtrip.dts \
+    /tmp/devicetree-tutorial.dtb
+```
+
+反编译结果不是原文件的文本复制品。标签名、注释和部分源码排版可能消失，但根节点、`compatible`、`reg` 和 `status` 等设备树数据应该还在。若系统安装了 `fdtdump`，还可以查看底层结构；没有它时，至少可以观察 DTB 的头部：
+
+```bash
+hexdump -C -n 16 /tmp/devicetree-tutorial.dtb
+```
+
+合法 DTB 的前四个字节按大端解释为 magic `0xd00dfeed`。这不是"文件前 40 字节永远是什么"的承诺，后面讲 FDT 结构时会看到，真正可靠的是头部字段里的偏移和长度。
+
+这里的"大端"说的是**多字节数值在内存或文件中的字节排列顺序**。例如数值 `0x12345678` 由四个字节 `12 34 56 78` 组成：大端把高位字节 `12` 放在低地址一侧，小端则把低位字节 `78` 放在低地址一侧。设备树规范要求 DTB 中的 cell 按大端编码，所以用十六进制查看原始字节时，不能直接把字节序列当作当前 CPU 的本地整数来读。
+
+> **大小端提醒。** `0xd00dfeed` 是按大端解释出的 32 位 magic。看到原始字节时，先确认协议规定的字节序，再解释数值；否则很容易把同一组字节读成另一个整数。
+{: .notice--info}
+
+**这份小树逐行在说什么？**
+
+`/dts-v1/;` 声明 DTS source format version 1。`/ { ... };` 是根节点，根节点没有 `@unit-address`。`model` 面向人，`compatible` 面向软件匹配；根节点的 `compatible` 也必须来自对应平台的约定，实验值只是实验值。
+
+`soc` 是一个总线节点。`ranges;` 是空属性，在常见的 `simple-bus` 写法里表示子总线地址空间与父地址空间相同。`uart0:` 是源码标签，只服务于 DTS 内部引用，标签本身不会作为标签字符串写入 DTB。
+
+`serial@10000000` 由两部分构成：通用节点名 `serial` 和 unit-address `10000000`。因为节点有 `reg`，unit-address 必须与 `reg` 中的第一个地址相匹配。节点名应使用 1 到 31 个合法字符，并以字母开头；具体总线 binding 还可能增加额外要求。
+
+## DTS 语法的最小心智模型
+
+节点是树，属性是节点里的键值对。属性要写在子节点之前，子节点再继续向下展开。下面把常用值类型放在一处：
 
 ```c
-sound {
-    compatible = "nvidia,harmony-sound";
-    i2s-controller = <&i2s1>;
-    i2s-codec = <&wm8903>;   /* 引用上面的 codec 节点 */
+empty-property;
+
+one-cell = <42>;
+two-cells = <0x00000001 0x00000000>;
+
+one-string = "hello";
+string-list = "example,device", "example,bus";
+
+bytes = [00 11 22 aa];
+```
+
+尖括号里的每个 cell 是 32 位无符号整数。一个 64 位值由两个 cell 表示，高位在前。方括号表示 bytestring。多个逗号分隔的组件会拼接成同一个属性值。DTS 还支持 C 风格的算术、位运算和逻辑表达式，例如 `reg = <(0x1000 + 0x200) 0x100>;`。
+
+`reg` 不是一种到处一样的"地址加长度"语法。它的 cell 布局由**父节点**的 `#address-cells` 和 `#size-cells` 决定：
+
+```c
+mmio-bus {
+    #address-cells = <1>;
+    #size-cells = <1>;
+
+    device@2000 {
+        reg = <0x2000 0x100>;
+    };
+};
+
+i2c-bus {
+    #address-cells = <1>;
+    #size-cells = <0>;
+
+    eeprom@50 {
+        reg = <0x50>;
+    };
 };
 ```
 
-在 DTC 编译时，`&wm8903` 会被展开为该节点的 phandle 值，存入 DTB。
+在第一个例子里，每个条目是一个地址 cell 加一个长度 cell。第二个例子里，I2C 子设备的 `reg` 是从设备地址，父总线把 `#size-cells` 设为 0，所以没有长度 cell。不要从某块板子的数值推导普适规则；先看父节点，再看该总线和设备的 binding。
 
-引用语法还有一个常见用法：**引用覆盖**。在板级 `.dts` 中，你可以这样激活或修改 SoC 级 `.dtsi` 中已定义的外设：
+> **`reg` 的关键规则。** 永远先看父节点的 `#address-cells` 和 `#size-cells`，再按照对应 bus binding 解释 `reg`。I2C 从设备地址、MMIO 地址和 PCI 地址不是同一种语义。
+{: .notice--primary}
+
+`ranges` 描述子总线地址空间到父总线地址空间的翻译。它不是 `reg` 的别名。`dma-ranges` 则描述 DMA 地址视角下的范围，是否需要它取决于平台的 DMA 地址转换。实际填写时必须查 binding 和平台 DTS。
+
+标签和引用让设备树可以把物理层级与逻辑连接分开：
 
 ```c
-/* 在 SoC .dtsi 中，外设默认 disabled */
-&uart1 {
-    status = "disabled";
+intc: interrupt-controller {
+    compatible = "example,intc";
+    interrupt-controller;
+    #interrupt-cells = <2>;
 };
 
-/* 板级 .dts 中，将它启用 */
-&uart1 {
+serial@10000000 {
+    interrupt-parent = <&intc>;
+    interrupts = <5 4>;
+};
+```
+
+`&intc` 最终会被编码为 phandle 相关信息。`&node { ... };` 是对已经定义节点的覆盖，板级 `.dts` 经常用它启用 SoC `.dtsi` 中默认禁用的外设：
+
+```c
+&uart0 {
     status = "okay";
 };
 ```
 
-这种 "先定义、后覆盖" 的模式是设备树实际工程中的核心工作流。
+共享定义通常放进 `.dtsi`，再通过 `/include/ "soc.dtsi"` 引入。源码标签只存在于 DTS 语言；DTB 里保存的是供运行时解析的结构和 phandle 值。
 
----
+## 描述一个真实设备需要回答的问题
 
-## 2. 描述硬件的三大核心维度
+我写设备节点时会按下面的顺序检查，而不是看到属性名就往里塞：
 
-如果设备树是一份硬件档案，那么描述一个设备至少需要回答三个问题：**你是谁、你在哪里、你还活着吗**。
+1. **设备是谁？** 用 binding 规定的 `compatible`。列表通常从特化到通用，但只有当内核确实存在对应匹配项时，回退字符串才有意义。
+2. **资源在哪里？** 用该总线语义下的 `reg`、`ranges`、内存区域和时钟资源。
+3. **设备怎么连？** 用 phandle 引用表达时钟、reset、GPIO、DMA 和中断控制器。
+4. **现在是否使用？** 通常通过 binding 允许的 `status` 值表达，常见值是 `okay` 和 `disabled`。
 
-### 2.1 身份认同：`compatible` 和 `model`
-
-**`compatible`** 是设备树中最重要的属性。它定义了一个设备的 "编程模型"，也就是软件（驱动）应该用哪种接口协议来操作这个硬件。
-
-```c
-compatible = "manufacturer,model";
-```
-
-格式严格规定为 `<制造商>,<型号>`，全小写，不用下划线。例如：
-
-```c
-compatible = "arm,cortex-a72";
-compatible = "nvidia,tegra20-uart";
-compatible = "wlf,wm8903";        /* Wolfson 的 WM8903 音频编解码器 */
-```
-
-**多重兼容性策略**：`compatible` 的值是一个从**最特化**到**最泛化**的字符串列表。内核会按顺序逐一尝试匹配驱动：
-
-```c
-compatible = "fsl,mpc8641", "ns16550";
-```
-
-这条配置告诉内核：优先找 Freescale MPC8641 专用驱动；如果没找到，就退而求其次，用通用的 NS16550 UART 驱动。这种"回退"（fallback）策略让同一套内核可以在范围极大的硬件上运行。
-
-**`model`** 是一个人类可读的字符串，描述设备的制造商型号：
-
-```c
-model = "fsl,MPC8349EMITX";
-```
-
-`model` 和 `compatible` 的核心区别在于使用者不同：`model` 是给人（开发者、调试者）看的，`compatible` 是给内核的设备匹配算法用的。也就是说，`model` 可以由开发者自己确定，随意编写，而 `compatible` 则应该遵循一定的规范。
-
-那 `compatible` 字符串从哪里来？`<制造商>,<型号>` 中的每一对合法取值，都有对应的绑定文档（Binding Document）加以规范。Linux 内核源码树的 `Documentation/devicetree/bindings/` 目录就是这份 "字典"：按设备类别分子目录（`serial/`、`i2c/`、`gpio/` 等），每个 `.yaml` 文件精确声明该设备支持哪些 `compatible` 字符串、哪些属性是必须的、哪些属性是可选的、各属性的合法取值范围。
-
-为设备挑选 `compatible` 字符串的正确方式是：先查 `Documentation/devicetree/bindings/` 找到对应 binding，再照着 binding 填写，而不是凭经验猜测或照抄其他设备树。
-
-### 2.2 寻址空间：`reg`、`#address-cells` 与 `#size-cells`
-
-这三个属性构成了设备树寻址系统的核心。
-
-`#address-cells` 和 `#size-cells 由**父节点**定义，告诉子节点：描述一个地址需要几个 32 位 cell，描述一个长度需要几个 cell。
-
-这里的 cell 是设备树规范继承自 Open Firmware 的基本数据单元，固定为一个 **32 位无符号整数**。当硬件的地址或长度超过 32 位时，就用多个连续的 cell 拼接：两个 cell 拼接成 64 位，高位在前。
-
-因此，`#address-cells = <2>` 意味着子节点的地址用两个 32 位整数（合计 64 位）来描述，`#address-cells = <1>` 则是单个 32 位整数就够了。
-
-**这两个属性不会被继承，每个有子节点的节点必须自己显式定义**。
-
-**`reg`** 属性描述设备的寄存器资源，格式为 `<地址 长度>` 对：
-
-```c
-soc {
-    #address-cells = <1>;
-    #size-cells = <1>;
-
-    serial@4600 {
-        compatible = "ns16550";
-        reg = <0x4600 0x100>;   /* 地址 0x4600，长度 0x100 */
-    };
-};
-```
-
-当 `#size-cells = <0>` 时，`reg` 中只有地址没有长度，这是带独立片选信号的设备（如 I2C 从设备）的常见情况：
-
-```c
-i2c@7000c000 {
-    #address-cells = <1>;
-    #size-cells = <0>;
-
-    codec@1a {
-        compatible = "wlf,wm8903";
-        reg = <0x1a>;   /* 只有 I2C 从机地址，没有长度 */
-    };
-};
-```
-
-一个设备有多个寄存器块时，`reg` 可以包含多组 `<地址 长度>` 对：
-
-```c
-reg = <0x3000 0x20 0xFE00 0x100>;
-/*    第一块：offset 0x3000, 长 32 字节
-      第二块：offset 0xFE00, 长 256 字节    */
-```
-
-#### 进阶：地址映射与 DMA
-
-**`ranges` 属性**：实现父子总线之间的地址翻译。它定义一个 "映射范围"：子总线地址空间的 X，对应父总线地址空间的 Y，长度 Z。
+一个稍微完整的 SoC 节点可能长这样：
 
 ```c
 soc {
     compatible = "simple-bus";
     #address-cells = <1>;
     #size-cells = <1>;
-    ranges = <0x0 0xe0000000 0x00100000>;
-    /* 子地址 0x0 映射到父地址 0xe0000000，范围 1MB */
+    ranges;
 
-    serial@4600 {
-        reg = <0x4600 0x100>;
-        /* 实际物理地址 = 父地址 0xe0000000 + offset 0x4600 = 0xe0004600 */
+    uart0: serial@10000000 {
+        compatible = "example,uart-v2", "example,uart";
+        reg = <0x10000000 0x100>;
+        interrupts-extended = <&intc 5 4>;
+        clocks = <&clk 3>;
+        resets = <&reset 7>;
+        pinctrl-names = "default";
+        pinctrl-0 = <&uart0_pins>;
+        dmas = <&dma 2>;
+        status = "okay";
     };
 };
 ```
 
-当 `ranges` 为空值时，即 `ranges;`，意味着父子地址空间完全一致，不需要任何平移。
+这段代码只是展示属性之间的关系，不是某个可直接提交的 Linux binding。`interrupts-extended` 的 cell 数量由被引用的中断控制器定义，`clocks`、`resets` 和 `dmas` 的参数也分别由 provider 的 `#*-cells` 和对应 binding 定义。设备树不是"把所有可能的属性都填上"竞赛。
 
-`dma-ranges`：与 `ranges` 类似，但从 DMA 设备的视角描述，解决的是 "DMA 控制器看到的地址" 和 "CPU 看到的物理地址" 之间的差异（例如 IOMMU 的存在会制造这种差异）。
+`compatible` 列表的顺序有意义：更特化的字符串在前，更通用的字符串在后。它不是承诺任意平台都存在一个通用回退驱动。正确流程是先查 Linux 内核 `Documentation/devicetree/bindings/` 下的 YAML，再决定字符串和必需属性。`make dtbs_check` 会用这些 schema 检查编译后的设备树，但 schema 检查通过也不等于硬件接线正确。
 
-`virtual-reg`：当引导程序已经设置了虚拟地址映射时，告知内核虚拟地址到物理地址的转换关系。
+> **不要凭感觉填写属性。** `compatible`、中断 specifier、clock/reset/DMA 参数都由 binding 规定。`make dtbs_check` 通过，只说明描述符合 schema，不证明芯片接线、时钟或电源真的正确。
+{: .notice--warning}
 
-<div class="notice--info" markdown="1">
-`reg` 和 `ranges` 是设备树中最容易被误解的概念。简单记忆法则：
+## I2C 设备和中断：两棵逻辑树
 
-- `reg` = "我的寄存器在**我所在总线地址空间**的什么位置"
-- `ranges` = "**我的总线地址空间**如何映射到**我父亲的总线地址空间**"
-- 最终 CPU 看到的物理地址 = 层层 ranges 翻译之和
-</div>
-
-### 2.3 运行状态：`status`
-
-`status` 属性标记设备当前的操作状态：
-
-| 值           | 含义                                                     |
-| ------------ | -------------------------------------------------------- |
-| `"okay"`     | 设备正常工作                                             |
-| `"disabled"` | 设备当前不可用，但可能在未来可用（如模块未插入）         |
-| `"reserved"` | 设备可用，但不应被本操作系统使用（被固件或其他 OS 控制） |
-| `"fail"`     | 设备出现严重错误，不可能恢复                             |
-| `"fail-sss"` | 同上，`sss` 为设备特定的错误码                           |
-
-省略 `status` 属性等同于 `status = "okay"`。
-
-在实际工程中最常见的场景是：SoC 级 `.dtsi` 中所有外设默认 `status = "disabled"`，板级 `.dts` 中只启用实际使用的外设——设置为 `status = "okay"`。
-
----
-
-## 3. 硬件中断的逻辑连线
-
-中断描述是设备树最难理解的部分之一，因为**中断在硬件上的信号流向和在设备树上的描述路径，经常与设备物理层级不同**。
-
-举个典型例子：一颗 I2C 触摸屏控制器挂在 I2C 总线上，所以它在设备树里的物理路径通常是 `soc` -> `i2c` -> `touchscreen`；但它的中断线并不回到 I2C 控制器，而是接到 GPIO 控制器的某个引脚，再由 GPIO 控制器上报给 GIC。于是它的中断路径变成 `touchscreen` -> `gpio-controller` -> `gic`。
-
-这就是 “设备物理层级” 和 “中断描述路径” 不一致的真实场景：你在设备树里看到它在 I2C 下，但它的中断信号却是走的 GPIO/GIC 这条逻辑链路。
-
-### 3.1 中断树：跳出物理层级的逻辑结构
-
-设备树采用**中断树**（Interrupt Tree）模型来表达中断路由。虽然叫做 "树"，但它更准确的描述是一个**有向无环图**（Directed Acyclic Graph）。
+I2C 触摸控制器在设备树的物理拓扑中是 I2C 控制器的子节点，但它的中断线可能接到 GPIO 控制器，再由 GPIO 控制器连接到 GIC。于是"设备在哪"和"中断怎么走"是两种不同的关系。
 
 ```c
-Device Tree 层级:             Interrupt Tree 层级:
+&i2c0 {
+    #address-cells = <1>;
+    #size-cells = <0>;
 
-soc                             open-pic (根)
-├── device1 ------------------> (直接连接)
-├── pci-host -----------------> (nexus 节点, 中转)
-│   ├── slot0 ----------------> (经 pci-host 中转)
-│   └── slot1 ----------------> (经 pci-host 中转)
-└── gpioctrl -----------------> (nexus 节点, 中转)
-    └── device3 --------------> (经 gpioctrl 中转)
-```
-
-关键思想：中断信号在硬件上跨越多层物理总线，设备树通过在逻辑上建立直接的中断父子关系来"压平"这个复杂性。
-
-### 3.2 中断信号的属性
-
-**中断产生者（Interrupt-Generating Device）**使用两个核心属性：
-
-```c
-device1 {
-    interrupts = <0xA 8>;              /* 该设备产生的中断规格（specifier） */
-    interrupt-parent = <&open-pic>;     /* 中断发往哪个控制器 */
-};
-```
-
-`interrupts` 的值格式由目标中断控制器定义的 bindings 决定——对一个 Open PIC 兼容的中断域，两个 cells 分别表示中断号和电平/敏感度信息。
-
-如果设备没有显式的 `interrupt-parent`，中断父节点就**默认向上继承**——沿着设备树向上找，使用第一个声明的中断父节点。所以当中断父节点在 SoC 级别统一指定时，设备可以不写 `interrupt-parent`：
-
-```c
-soc {
-    interrupt-parent = <&intc>;   /* 所有子设备统一的中断父节点 */
-
-    serial@70006300 {
-        interrupts = <122>;       /* 不需要重复 interrupt-parent */
+    touch@38 {
+        compatible = "example,touch";
+        reg = <0x38>;
+        interrupt-parent = <&gpio0>;
+        interrupts = <12 8>;
     };
 };
-```
 
-**`interrupts-extended`** 用于一个设备连接到多个中断控制器的情况：
-
-```c
-interrupts-extended = <&pic 0xA 8>, <&gic 0xda>;
-```
-
-`interrupts` 和 `interrupts-extended` 互斥。当两者共存时，`interrupts-extended` 优先。
-
-### 3.3 中断控制器
-
-一个节点要成为中断控制器，需要两个属性：
-
-```c
-open-pic {
-    interrupt-controller;           /* 标记：我是中断控制器（空值属性） */
-    #interrupt-cells = <2>;         /* 每个中断 specifier 占几个 cell */
-};
-```
-
-`#interrupt-cells` 定义了中断规格的"宽度"。对于 Open PIC 这种需要 2 cells（中断号 + 电平/敏感度）的控制器，值就是 `<2>`。对于 ARM GIC (Generic Interrupt Controller)，可能是 `<3>`（中断类型 + 中断号 + 触发类型）。
-
-中断树的根是遍历中断父链直到找到一个**没有 `interrupts` 属性**的中断控制器——这意味着它本身不向更高的控制器报告中断。
-
-### 3.4 中继：Nexus 节点与中断映射
-
-当不同中断域之间需要翻译时（比如 PCI 的 INTA/INTB/INTC/INTD 经过 PCI host bridge 转换到系统中断号），需要一个**nexus 节点**，通过 `interrupt-map` 来做这个翻译。
-
-一条映射表行包含五个部分：
-
-```c
-interrupt-map = <
-    child-unit-address  child-interrupt-specifier
-    interrupt-parent-phandle
-    parent-unit-address  parent-interrupt-specifier
->;
-```
-
-例如，PCI slot 1 的 INTA（INT #1）映射到 Open PIC 控制器的中断源 2：
-
-```c
-interrupt-map = <
-    0x8800 0 0  1  &open-pic   2 1
->;
-```
-
-`interrupt-map-mask` 在匹配前被 AND 到输入上，作用是屏蔽掉不需要参与匹配的位（如 PCI 总线的 function number 可能不区分）。
-
-### 3.5 GPIO 等非中断信号的通用映射机制
-
-DTSpec 将 nexus 映射机制推广到了所有类型的 "规格（specifier）"：`<specifier>-map`、`<specifier>-map-mask`、`<specifier>-map-pass-thru` 以及 `#<specifier>-cells`。
-
-最常见的例子是 **GPIO 映射**：一个连接器（connector）上的 GPIO 通过 `gpio-map` 路由到 SoC 内部的某个 GPIO 控制器：
-
-```c
-connector {
+gpio0: gpio-controller {
+    compatible = "example,gpio";
+    gpio-controller;
     #gpio-cells = <2>;
-    gpio-map = <0 0 &soc_gpio1 1 0>,
-               <1 0 &soc_gpio2 4 0>,
-               <2 0 &soc_gpio1 3 0>,
-               <3 0 &soc_gpio2 2 0>;
-    gpio-map-mask = <0xf 0x0>;
-    gpio-map-pass-thru = <0x0 0x1>;
+    interrupt-controller;
+    #interrupt-cells = <2>;
+    interrupt-parent = <&gic>;
 };
 ```
 
-`gpio-map-pass-thru` 的巧妙之处在于允许子 specifier 中的 flags 字段（如 `GPIO_ACTIVE_LOW`）穿越映射表，直接透传到父域，避免映射表需要为每种 flag 组合都写一行。
+`interrupt-controller;` 是空属性，表示该节点提供中断域。`#interrupt-cells` 告诉消费者一个 interrupt specifier 有几个 cell，但具体每个 cell 的含义不能猜。ARM GIC、GPIO 控制器和其他中断域的数量可能不同。
 
-理解设备树中断子系统的最佳思路：中断信号的路径是一张**独立于设备物理层级的有向图**。遍历从 `interrupts`/`interrupt-parent` 开始，沿链上溯，直到中断树根（没有 `interrupts` 的中断控制器）。每一层可能是中断控制器或 nexus 节点——nexus 节点通过 `interrupt-map` 表提供域间翻译。这一整套设计的目的在于允许同一个设备树描述中的任何节点都能够表达自己的中断路由，机制统一且可扩展。
+简单设备通常写 `interrupt-parent` 和 `interrupts`。如果设备连接多个中断控制器，可以使用 `interrupts-extended`，它把每个中断控制器的 phandle 和对应 specifier 放在一起。复杂的 PCI host bridge 等 nexus 节点还会使用 `interrupt-map` 做域间翻译；入门阶段只需要记住：中断引用可以跨越设备树的物理父子关系，详细格式必须回到 binding。
+
+GPIO、clock、reset、DMA 的写法也是同一类 phandle 思路：消费者引用 provider，provider 通过 `#gpio-cells` 等属性声明 specifier 的宽度。真正的 flags 和参数解释来自各自 binding，不来自属性名字的直觉。
+
+## Linux 收到 DTB 后发生什么？
+
+bootloader 把 DTB 地址交给内核后，Linux 解析扁平化设备树，建立自己的 device model。对于 `simple-bus` 下的 platform 设备，内核会根据节点创建设备对象；驱动注册时提供 `of_match_table`，其中的 `compatible` 与节点属性进行匹配。
+
+匹配成功以后，驱动才会读取资源。常见的 platform driver 代码大致是：
+
+```c
+static const struct of_device_id example_uart_of_match[] = {
+    { .compatible = "example,uart-v2" },
+    { .compatible = "example,uart" },
+    { }
+};
+
+static int example_uart_probe(struct platform_device *pdev)
+{
+    struct resource *mem;
+    void __iomem *base;
+    int irq;
+
+    mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+    base = devm_ioremap_resource(&pdev->dev, mem);
+    if (IS_ERR(base))
+        return PTR_ERR(base);
+
+    irq = platform_get_irq(pdev, 0);
+    if (irq < 0)
+        return irq;
+
+    return devm_request_irq(&pdev->dev, irq, example_uart_irq,
+                            0, dev_name(&pdev->dev), pdev);
+}
+```
+
+这里的关键不是背 API，而是看清边界：设备树提供资源描述，驱动通过 Linux API 取得并使用资源。`devm_ioremap_resource()` 不会验证地址背后真的焊了一块 UART；它只负责在内核资源模型允许的前提下建立映射。`devm_request_irq()` 也不替你修复接错的中断线。
+
+> **排错边界。** 设备树描述"有什么"和"资源在哪里"，驱动决定"怎么操作"。匹配失败、资源获取失败和硬件本身不工作，应分别从 `compatible`、资源属性以及时钟/复位/pinmux/接线排查。
 {: .notice--info}
 
----
+因此排错时要区分三类失败：
 
-## 4. 拼装一台计算机：系统骨架与必选节点
+- `compatible` 不匹配：设备可能根本没有进入目标驱动的 `probe()`。
+- `reg`、clock、reset 或中断描述错误：驱动进入 `probe()`，但获取资源失败。
+- DTS 和 binding 都正确，硬件仍不工作：继续检查时钟、复位、pinmux、电源和真实接线。
 
-设备树不只是描述外设。一套完整的设备树必须描述整个系统的骨架 —— CPU 几核、内存多大、控制台在哪。
+## 系统节点：不要把惯例写成绝对规则
 
-### 4.1 根节点 `/`
-
-根节点没有名字，用 `/` 表示。它的核心属性包括：
+完整系统描述通常还会出现这些节点：
 
 ```c
 / {
-    model = "fsl,mpc8572ds";
-    compatible = "fsl,mpc8572ds";
-    #address-cells = <1>;
-    #size-cells = <1>;
-    serial-number = "PZ123456";      /* 可选：序列号 */
-    chassis-type = "embedded";       /* 可选：机箱类型 */
-};
-```
-
-根节点的 `#address-cells` 和 `#size-cells` 定义了内存地址的编码规则，影响 `/memory` 节点的 `reg` 格式。
-
-`chassis-type` 可取 `"desktop"`、`"laptop"`、`"convertible"`、`"server"`、`"tablet"`、`"handset"`、`"embedded"` 等值。
-
-### 4.2 大脑：`/cpus`
-
-`/cpus` 节点是所有 CPU 节点的容器：
-
-```c
-cpus {
-    #address-cells = <1>;
-    #size-cells = <0>;
-
-    cpu@0 {
-        device_type = "cpu";
-        reg = <0>;
-        clock-frequency = <825000000>;      /* 825 MHz */
-        timebase-frequency = <82500000>;    /* 82.5 MHz 时基 */
+    chosen {
+        stdout-path = &uart0;
     };
 
-    cpu@1 {
-        device_type = "cpu";
-        reg = <1>;
-        clock-frequency = <825000000>;
+    aliases {
+        serial0 = &uart0;
+    };
+
+    cpus {
+        #address-cells = <1>;
+        #size-cells = <0>;
+
+        cpu@0 {
+            device_type = "cpu";
+            reg = <0>;
+        };
+    };
+
+    memory@80000000 {
+        device_type = "memory";
+        reg = <0x80000000 0x40000000>;
     };
 };
 ```
 
-多核 SMP 系统中，`status` 属性标记每颗 CPU 的运行状态：
-
-- `"okay"`：该 CPU 正常运行
-- `"disabled"`：该 CPU 处于**静止状态**（quiescent state），可通过特定方法唤醒
-- `"fail"`：该 CPU 不可用或不存在
-
-对于 `disabled` 的 CPU，需要 `enable-method` 属性指定唤醒方式。最常见的是 `"spin-table"`：CPU 在指定物理地址（`cpu-release-addr`）上自旋等待，直到引导 CPU 写入释放信号。
-
-#### 缓存层级
-
-CPU 的缓存层级通过 `next-level-cache` 属性和 phandle 引用串联：
+`/chosen` 是 boot program 向 client program 传递运行时选择的地方，例如 `bootargs` 和 `stdout-path`。`/aliases` 为长路径提供短名字。`/cpus` 描述 CPU 集合，`/memory` 描述可用 RAM。某种架构和启动方式可能要求这些节点，但不能脱离上下文说所有设备树在任何场景都必须有完全相同的节点。
 
-```c
-cpu@0 {
-    next-level-cache = <&L2_0>;
-    L2_0: l2-cache {
-        compatible = "cache";
-        cache-level = <2>;
-        cache-size = <0x40000>;   /* 256 KB */
-        next-level-cache = <&L3>;
-    };
-};
-```
+`/reserved-memory` 节点和 FDT 的 memory reservation block 也不是同一个东西。前者是设备树结构里的内存区域描述，常用于 CMA、framebuffer 或固件共享内存；后者是 DTB 二进制中的底层保留表，boot program 可以用它避免 client program 覆写仍在使用的区域。两者都和"这段内存不能随便拿来用"有关，但出现的阶段和表达层次不同。
 
-这种基于 phandle 的多级缓存描述方式让缓存拓扑可以灵活表达各种共享结构（两核共享 L2、全芯片共享 L3 等）。
+## 从 Linux 现场反查设备树
 
-### 4.3 物理记忆：`/memory` 和 `/reserved-memory`
+拿到一台正在运行的 Linux 后，我会按这个顺序排查，而不是先盯着驱动源码：
 
-**`/memory` 节点**宣告系统的可用物理 RAM。这是每个设备树必须具备的节点之一——所有设备树都必须有 `/cpus` 和至少一个 `/memory` 节点。
+1. 查看内核实际展开的设备树：
 
-```c
-memory@0 {
-    device_type = "memory";
-    reg = <0x00000000 0x80000000>;   /* 0x0 起 2 GB */
-};
-```
+   ```bash
+   ls /sys/firmware/devicetree/base
+   ls /proc/device-tree
+   ```
 
-对于 64 位系统（`#address-cells = <2>`, `#size-cells = <2>`）：
-
-```c
-memory@0 {
-    device_type = "memory";
-    reg = <0x00000000 0x00000000  0x00000000 0x80000000>;  /* 低 2GB */
-};
-memory@100000000 {
-    device_type = "memory";
-    reg = <0x00000001 0x00000000  0x00000001 0x00000000>;  /* 高 4GB */
-};
-```
-
-**`/reserved-memory` 节点**划定**不可被内核随意使用的内存禁区**：
-
-```c
-reserved-memory {
-    #address-cells = <1>;
-    #size-cells = <1>;
-    ranges;
+   两个路径通常指向内核提供的设备树视图，具体挂载方式取决于系统配置。
 
-    display_reserved: framebuffer@78000000 {
-        reg = <0x78000000 0x800000>;          /* 8 MB 静态预留 */
-    };
+2. 查看某个节点的属性。字符串属性以 NUL 结尾，不能总用普通文本工具直读：
 
-    linux,cma {
-        compatible = "shared-dma-pool";
-        reusable;
-        size = <0x4000000>;                    /* 64 MB 动态分配 */
-        alignment = <0x2000>;                  /* 8 KB 对齐 */
-    };
-};
-```
+   ```bash
+   tr -d '\0' < /sys/firmware/devicetree/base/model
+   printf '\n'
+   xxd /sys/firmware/devicetree/base/soc/serial@10000000/reg
+   ```
 
-- **`no-map`**：操作系统**禁止**为这段区域创建虚拟映射——用于安全隔离（如 TEE/安全飞地）。
-- **`reusable`**：系统可临时将这片内存挪作他用（如页面缓存），但当设备驱动需要时，能将其要回来。
-- `no-map` 和 `reusable` 是互斥的。
+3. 查看驱动和设备的启动日志：
 
-设备通过 `memory-region` 属性引用专属内存：
+   ```bash
+   dmesg | grep -i -E 'of|firmware|uart|probe'
+   ```
 
-```c
-fb0: video@12300000 {
-    memory-region = <&display_reserved>;
-};
-```
+4. 如果手里只有 DTB，先反编译，再把结果和板级 `.dts`、SoC `.dtsi` 以及对应 YAML binding 对照。
 
-关于与 UEFI 的协作：当通过 UEFI 启动时，`/memory` 和静态 `/reserved-memory` 的内容也必须在 UEFI 内存映射表中体现：带 `no-map` 的区域标记为 `EfiReservedMemoryType`，其他区域标记为 `EfiBootServicesData`。动态预留区域则不应在 UEFI 内存映射表中列出——它们在固件退出后才由操作系统分配。
+5. 在 Linux 内核源码树中运行 schema 检查：
 
-### 4.4 运行时通道：`/chosen` 和 `/aliases`
+   ```bash
+   make dtbs_check
+   ```
 
-**`/chosen`** 节点不代表任何物理设备。它是引导程序向内核传递**运行时配置**的通道：
+`dtbs_check` 主要检查设备树是否符合 binding schema。它不能替代 `dtc` 的语法检查，也不能替代示波器、逻辑分析仪或一双确认过连接器的眼睛。
 
-```c
-chosen {
-    bootargs = "console=ttyS0,115200 root=/dev/mmcblk0p2 rw";
-    stdout-path = "/soc/serial@70006300:115200";
-};
-```
+> **验证顺序。** 先看 Linux 实际展开的设备树，再看 `dmesg`，然后对照 DTB、板级 DTS 和 binding。`dtbs_check` 是约束检查，不是硬件功能测试。
+{: .notice--success}
 
-`bootargs` 就是内核命令行参数，`stdout-path` 指定启动控制台的输出设备。
+## DTB 为什么可以被搬到别的地址？
 
-**`/aliases`** 为冗长的路径起短名：
+DTS 是源码，DTB 是给 client program 消费的紧凑二进制表示。FDT 的设计目标之一是让 boot program 能把它放入内存并传递给下一个程序，因此结构内部使用偏移和长度，而不是依赖加载地址的 C 裸指针。
 
-```c
-aliases {
-    serial0 = "/soc/serial@70006300";
-    ethernet0 = "/soc/ethernet@31c000";
-};
-```
+DTB 头部包含 magic、总大小，以及 memory reservation block、structure block 和 strings block 的偏移与大小等字段。字段按规范使用大端编码。解析器应该读取这些字段，而不是假设某个区块永远位于固定位置。
 
-内核中的 `of_alias_get_id()` 等函数使用这些别名定位设备或标准化设备编号（如 `/dev/ttyS0` 对应 `serial0`）。
+structure block 把树线性化为 token 序列，常见 token 包括：
 
-### 4.5 典型设备绑定
+- `FDT_BEGIN_NODE`：进入节点，后面跟节点名。
+- `FDT_END_NODE`：离开节点。
+- `FDT_PROP`：属性，包含长度、属性名在 strings block 中的偏移和属性值。
+- `FDT_NOP`：保留的空操作 token。
+- `FDT_END`：structure block 结束。
 
-#### 4.5.1 不可探测的系统总线：`simple-bus`
+属性名集中存放在 strings block，`FDT_PROP` 用偏移引用它们。节点和属性数据按 4 字节边界对齐；memory reservation entry 使用 64 位地址和大小。这里的数字和布局规则来自 FDT 结构规范及其头部定义，不应该简化成"固定 40 字节所以永远如此"。
 
-`compatible = "simple-bus"` 是设备树中的一个重要特殊值。它描述一类最简单的总线：**内存映射、不可探测、子设备的寄存器直接在 CPU 地址空间可见**。
+我第一次看到这套布局时，感觉它像一个没有指针的压缩内存快照：解析器带着 offset 在几个区块之间走，遇到 begin/end token 用栈恢复树。这个设计牺牲了一点随机访问的舒服感，却换来了可复制、可重定位和早期启动阶段可解析的格式，算是很合理的嵌入式取舍。
 
-SoC 内部总线通常就是 `simple-bus`。当内核看到 `simple-bus` 兼容的节点时，会自动遍历其子节点并注册 platform_device：
+## 下一次动手做什么
 
-```c
-soc {
-    compatible = "simple-bus";
-    #address-cells = <1>;
-    #size-cells = <1>;
-    ranges;
+如果你已经能读懂上面的最小例子，下一步不要继续收藏属性清单。找一块真实开发板，按下面的路径走一遍：
 
-    /* 子节点自动被创建为 platform_device */
-};
-```
+1. 找到它的板级 `.dts` 和 SoC `.dtsi`。
+2. 沿着节点路径确认父节点的 `#address-cells`、`#size-cells` 和 `ranges`。
+3. 在内核 `Documentation/devicetree/bindings/` 中找到设备对应的 YAML。
+4. 只修改一个 `status` 或一个资源属性，重新编译 DTB。
+5. 用 `dtc` 反编译产物，确认修改确实进入 DTB。
+6. 启动 Linux，从 `/sys/firmware/devicetree/base` 和 `dmesg` 确认内核实际拿到的内容。
 
-#### 4.5.2 串口：以 NS16550 为例
-
-```c
-serial@70006300 {
-    compatible = "nvidia,tegra20-uart", "ns16550";
-    reg = <0x70006300 0x100>;
-    clock-frequency = <408000000>;
-    interrupts = <122>;
-};
-```
-
-`clock-frequency` 是 UART 波特率发生器所需的时钟频率——内核 UART 驱动用这个值计算正确的分频系数。
-
-#### 4.5.3 网络：以太网
-
-```c
-ethernet@31c000 {
-    compatible = "nvidia,tegra20-ehci";
-    reg = <0x31c000 0x100>;
-    interrupts = <0x6d>;
-    local-mac-address = [00 11 22 33 44 55];
-    phy-connection-type = "rgmii";
-};
-```
-
-`local-mac-address` 是 6 字节的 MAC 地址，用方括号格式的字节串表示。`phy-connection-type` 指定 PHY 和 MAC 之间的总线类型（RGMII、RMII、MII 等）——这决定了内核如何配置 MAC 侧的时序和管脚。
-
----
-
-## 5. 庖丁解牛：DTB 二进制格式的底层设计
-
-虽然大部分开发者只接触 DTS 源码，但理解 DTB 的二进制结构有助于理解设备树的**设计哲学**——为什么某些奇怪的限制存在。
-
-### 5.1 扁平化的哲学：为什么没有 C 风格的指针？
-
-DTSpec 规范开篇第一句就点明了关键前提：
-
-> A boot program loads a devicetree into a client program's memory and passes a pointer to the devicetree to the client.
-
-在这个时刻，MMU（内存管理单元）可能还没开启，虚拟地址的概念不存在。DTB 必须是一块**可以被任意复制、重定位到任意物理地址**的数据块。
-
-如果 DTB 内部使用 C 指针——那在重定位后就全是悬垂指针了。因此 DTB 设计为**完全自包含、位置无关**的格式：所有的跨区块引用都用偏移量而非指针表达。
-
-这就是"扁平化"（Flattened）的核心含义——一个可以平移到任意内存位置、无需解析指针就能直接读取的数据结构。
-
-### 5.2 DTB 的四大内存区块
-
-一个 DTB 文件由四个连续的内存区块组成：
-
-```c
-┌───────────────────────┐  ← 低地址
-│  Header (头部)         │  40 字节 (10 × uint32_t)
-├───────────────────────┤
-│  Memory Reservation    │  预留内存列表
-│  Block                 │
-├───────────────────────┤
-│  Structure Block       │  树的线性 Token 序列
-│  (FDT_BEGIN_NODE 等)  │
-├───────────────────────┤
-│  Free Space (可选)     │
-├───────────────────────┤
-│  Strings Block         │  属性名字符串池
-└───────────────────────┘  ← 高地址
-```
-
-#### 5.2.1 Header（头部）：设备的身份证
-
-Header 是 40 字节的固定结构，所有字段都是大端 32 位整数：
-
-```c
-struct fdt_header {
-    uint32_t magic;              /* 0xd00dfeed — 魔数 */
-    uint32_t totalsize;          /* DTB 总大小 */
-    uint32_t off_dt_struct;      /* Structure Block 偏移 */
-    uint32_t off_dt_strings;     /* Strings Block 偏移 */
-    uint32_t off_mem_rsvmap;     /* 内存预留块偏移 */
-    uint32_t version;            /* 格式版本 (当前为 17) */
-    uint32_t last_comp_version;  /* 向后兼容的最低版本 (16) */
-    uint32_t boot_cpuid_phys;    /* 引导 CPU 的物理 ID */
-    uint32_t size_dt_strings;    /* Strings Block 大小 */
-    uint32_t size_dt_struct;     /* Structure Block 大小 */
-};
-```
-
-几个关键字段：
-
-- **`magic = 0xd00dfeed`**：这个魔数的英文读音就是 "dude feed" —— 是 Open Firmware 工作组留下的一个幽默彩蛋。内核通过比对它来确认"这确实是一个 DTB"。
-- **`version = 17`**：当前 DTSpec 标准格式版本。向后兼容的最低版本是 16。
-- **`totalsize`**：涵盖所有区块及之间的空格，但不包含 DTB 前后的额外内存。这个字段让解析器提前知道数据边界。
-- **`boot_cpuid_phys`**：必须与 `/cpus` 中对应 CPU 节点的 `reg` 值一致。内核通过它确定哪个 CPU 是引导 CPU。
-
-#### 5.2.2 Memory Reservation Block：硬核预留
-
-内核初始化过程的脆弱时刻——代码在未成熟的地址空间中一步步构建完整的虚拟地址系统——必须确保引导程序的关键内存不被覆写。Memory Reservation Block 就是为此而建立的"禁止访问"清单。
-
-```c
-struct fdt_reserve_entry {
-    uint64_t address;
-    uint64_t size;
-};
-```
-
-每个条目描述一段（物理地址, 大小）的保留区域。列表以 `(0, 0)` 条目终止。这比 `/reserved-memory` 节点更底层——在内核还没解析设备树结构之前，引导程序就已确认这些区域不能被触碰。
-
-#### 5.2.3 Structure Block：用 Token 线性展开的树
-
-这是 DTB 最核心的部分——如何将一个树状结构编码为平直化的字节序列？
-
-结构区块由 5 种 Token 组成，每个 Token 是 32 位大端整数：
-
-| Token            | 值           | 含义                                           |
-| ---------------- | ------------ | ---------------------------------------------- |
-| `FDT_BEGIN_NODE` | `0x00000001` | 节点开始，后跟节点名（null-terminated string） |
-| `FDT_END_NODE`   | `0x00000002` | 节点结束                                       |
-| `FDT_PROP`       | `0x00000003` | 属性，后跟 len + nameoff + 值                  |
-| `FDT_NOP`        | `0x00000004` | 空操作（用于覆盖已删除的节点/属性）            |
-| `FDT_END`        | `0x00000009` | 结构区块结束标记                               |
-
-**`FDT_PROP` 的编码**：
-
-```c
-struct {
-    uint32_t len;       /* 属性值的字节长度 */
-    uint32_t nameoff;   /* 属性名字在 Strings Block 中的偏移量 */
-};
-/* 后跟 len 字节的属性值，然后 0 填充至 4 字节对齐 */
-```
-
-**树的线性化编码**：
-
-```c
-FDT_BEGIN_NODE  "/"
-  FDT_PROP        属性1
-  FDT_PROP        属性2
-  FDT_BEGIN_NODE  "soc"
-    FDT_PROP      属性
-  FDT_END_NODE
-FDT_END_NODE
-FDT_END           全局结束
-```
-
-这种结构的巧妙处：
-
-- 前端解析器从头到尾扫描，遇到 `FDT_BEGIN_NODE` 就是"进入子节点"，遇到 `FDT_END_NODE` 就是"回到父节点"——一个栈结构自然处理整个解析。
-- 通过 `FDT_NOP`（覆盖被删除块的开头），DTB 可以在不移动其他数据的情况下"删除"节点或属性——这在 DT overlay 和运行时修改的场景中非常重要。
-- 属性名通过偏移量引用 Strings Block，同一个名字字符串被全局共享——这正是下一节要讲的极致压缩策略。
-
-#### 5.2.4 Strings Block：极致压缩的字符串复用池
-
-设备树里有大量相同的属性名——"compatible" 可能出现上百次，"reg" 可能出现几百次。Strings Block 通过**所有属性名统一存储**，只保存一份字符串，然后用偏移量引用来实现极致的空间压缩。
-
-本质上，这就是一个以 null 字节分隔的字符串列表。查找过程：取 `nameoff` 值 → 跳到 Strings Block 开始处 + nameoff 的位置 → 读到 null 为止。这个简单的设计让 20 KB 的 DTS 编译后可能只有 5 KB 的 DTB。
-
-### 5.3 内存对齐：使用 32 位单元但以 8 字节整体看待
-
-DTB 的每一处对齐都有其物理上的现实原因：
-
-- **Structure Block** 按要求 4 字节对齐——每个 Token 是 `uint32_t`
-- **Memory Reservation Block** 8 字节对齐——条目是 `uint64_t` 对
-- **整个 DTB** 按 8 字节对齐加载——这是所有子块对齐要求的最大公约数
-
-这个 8 字节整体对齐要求意味着引导程序从任何可以 8 字节对齐的地址上加载的 DTB 都能确保在不做额外内存搬运的情况下，被内核安全地按 4 或 8 字节访问。
-
-DTB 的设计体现的是嵌入式引导阶段的现实约束：无 MMU、无动态分配、物理内存可能非连续、引导程序的内存在"交接时刻"不可以被覆盖。那些看似奇怪的限制——没有指针只有偏移量、所有数据平坦排列、必须整体 8 字节对齐——全都是从这个唯一约束推导出来的：**在 MMU 开启前，内核必须安全地解析一个可以被任意重定位的硬件描述块**。
-{: .notice--info}
-
----
-
-## 结语
-
-设备树，归根结底，是一份交给操作系统的"施工图纸"。引导程序拿着蓝图说："这就是这个机器的样子。"操作系统回答说："好的，我知道该怎么做了。"
+未来同一份硬件描述继续被不同 client program 使用并不奇怪，但这不意味着设备树自动带来跨平台兼容。真正可移植的是清晰的描述接口；地址、时钟、中断和 binding 仍然属于具体硬件。至于我自己，下一步大概会挑一个真实 GPIO binding 做实验。先把一盏灯点亮，再考虑宇宙级抽象，yolo。
 
 ## 参考资料
 
-1. [Linux Kernel Documentation: Devicetree Usage Model](https://docs.kernel.org/devicetree/usage-model.html)
-2. [DeviceTree Specification（devicetree-org）](https://github.com/devicetree-org/devicetree-specification)
+1. [Devicetree Specification: Introduction](https://devicetree-specification.readthedocs.io/en/stable/intro.html)
+2. [Devicetree Specification: The Devicetree](https://devicetree-specification.readthedocs.io/en/stable/devicetree-basics.html)
+3. [Devicetree Specification: Flattened Devicetree](https://devicetree-specification.readthedocs.io/en/stable/flattened-format.html)
+4. [Devicetree Specification: Devicetree Source Format](https://devicetree-specification.readthedocs.io/en/stable/devicetree-source.html)
+5. [Linux Kernel Documentation: Linux and the Devicetree](https://docs.kernel.org/devicetree/usage-model.html)
+6. [Linux Kernel Documentation: Devicetree Bindings](https://docs.kernel.org/devicetree/bindings/index.html)
+7. [Device Tree Compiler 官方仓库](https://git.kernel.org/pub/scm/utils/dtc/dtc.git/)
+8. [Linux 内核 dtc 文档入口](https://docs.kernel.org/devicetree/)
