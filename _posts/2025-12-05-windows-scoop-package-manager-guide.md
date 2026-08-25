@@ -1,7 +1,7 @@
 ---
 title: "Windows 包管理神器 Scoop：从入门到自定义安装配置"
 date: 2025-12-05 21:00:00 +08:00
-excerpt: "Windows 下最好用的命令行包管理工具 Scoop 保姆级教程。涵盖自定义安装路径、Aria2 加速配置、常用软件推荐以及常见问题解决。"
+description: "Windows 下最好用的命令行包管理工具 Scoop 保姆级教程。涵盖自定义安装路径、Aria2 加速配置、常用软件推荐以及常见问题解决。"
 categories:
   - Tutorial
 tags:

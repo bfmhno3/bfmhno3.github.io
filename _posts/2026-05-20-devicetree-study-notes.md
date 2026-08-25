@@ -1,7 +1,7 @@
 ---
 title: "设备树学习笔记：从基础语法到 DTB"
 date: 2026-05-20 11:15:00 +08:00
-excerpt: "从设备树产生背景讲起，系统梳理 DTS/DTB 语法、compatible/reg/status、中断路由、系统必选节点与 DTB 二进制结构，形成一条从写法到底层实现的完整学习路径。"
+description: "从设备树产生背景讲起，系统梳理 DTS/DTB 语法、compatible/reg/status、中断路由、系统必选节点与 DTB 二进制结构，形成一条从写法到底层实现的完整学习路径。"
 categories:
   - Note
 tags:

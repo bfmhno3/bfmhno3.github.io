@@ -1,7 +1,7 @@
 ---
 title: "小米手机 (HyperOS/MIUI) 深度优化指南：移除 AI 组件与去广告"
 date: 2025-11-25 22:00:00 +08:00
-excerpt: "通过 ADB 移除小米手机中冗余的 AI 组件、广告服务及臃肿软件，并调整系统设置以提升流畅度和续航。"
+description: "通过 ADB 移除小米手机中冗余的 AI 组件、广告服务及臃肿软件，并调整系统设置以提升流畅度和续航。"
 categories:
   - Tutorial
 tags:

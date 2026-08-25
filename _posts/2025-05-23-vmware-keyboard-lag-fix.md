@@ -1,7 +1,7 @@
 ---
 title: "VMware Workstation 17.x 中的虚拟机按键反应迟钝解决办法"
 date: 2025-05-23 22:34:00 +08:00
-excerpt: "本文介绍了如何解决 VMware Workstation 17.x 中虚拟机（如 Ubuntu）按键反应迟钝、跟手性差的问题。通过在 .vmx 配置文件中添加 keyboard.vusb.enable = \"TRUE\" 参数，可以有效改善输入延迟，无需降低 CPU 核心数或关闭 3D 图形加速。"
+description: "本文介绍了如何解决 VMware Workstation 17.x 中虚拟机（如 Ubuntu）按键反应迟钝、跟手性差的问题。通过在 .vmx 配置文件中添加 keyboard.vusb.enable = \"TRUE\" 参数，可以有效改善输入延迟，无需降低 CPU 核心数或关闭 3D 图形加速。"
 categories:
   - Tutorial
 tags:

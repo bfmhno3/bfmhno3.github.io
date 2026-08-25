@@ -1,7 +1,7 @@
 ---
 title: "LaTeX 项目结构与 latexmk 配置"
 date: 2026-06-18 11:20:00 +08:00
-excerpt: "我用 LaTeX 写东西时的项目目录结构、main.tex 模板，以及一份跨平台的 .latexmkrc 配置。"
+description: "我用 LaTeX 写东西时的项目目录结构、main.tex 模板，以及一份跨平台的 .latexmkrc 配置。"
 categories:
   - Note
 tags:

@@ -1,7 +1,7 @@
 ---
 title: "Notes of Effective CMake"
 date: 2025-08-08 23:17:00 +08:00
-excerpt: >-
+description: >-
   Notes on modern CMake best practices based on "Effective CMake". Covers the philosophy of CMake as code, the importance of targets and properties, generator expressions, dependency management, testing, and static analysis integration.
 categories:
   - Note
