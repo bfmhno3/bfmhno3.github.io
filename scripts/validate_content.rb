@@ -9,7 +9,7 @@ require "yaml"
 POST_FILENAME = /\A\d{4}-\d{2}-\d{2}-[a-z0-9]+(?:-[a-z0-9]+)*\.md\z/
 ASSET_FILENAME = /\A[a-z0-9]+(?:_[a-z0-9]+)*(?:\.[a-z0-9]+)?\z/
 BITMAP_EXTENSIONS = %w[.bmp .gif .jpeg .jpg .png .tif .tiff .webp].freeze
-REQUIRED_FRONT_MATTER = %w[title date excerpt categories tags].freeze
+REQUIRED_FRONT_MATTER = %w[title date description categories tags].freeze
 DATE_WITH_ZONE = /\A\d{4}-\d{2}-\d{2} \d{2}:\d{2}(?::\d{2})? \+08:00\z/
 
 def parse_options(arguments)
@@ -75,8 +75,8 @@ def validate_front_matter(path)
   errors += missing.map { |key| "#{path}: missing front matter key '#{key}'" }
   errors += ["#{path}: 'title' must be a non-empty string"] unless data["title"].is_a?(String) && !data["title"].strip.empty?
   errors += ["#{path}: 'date' must include a valid date, time, and UTC offset"] unless valid_post_date?(data["date"])
-  valid_excerpt = data["excerpt"].is_a?(String) && !data["excerpt"].strip.empty?
-  errors += ["#{path}: 'excerpt' must be a non-empty string"] unless valid_excerpt
+  valid_description = data["description"].is_a?(String) && !data["description"].strip.empty?
+  errors += ["#{path}: 'description' must be a non-empty string"] unless valid_description
 
   %w[categories tags].each do |key|
     valid_values = data[key].is_a?(Array) && !data[key].empty? &&
