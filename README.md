@@ -16,9 +16,6 @@
 ├── _pages/                  # 独立页面
 │   ├── about.md
 │   ├── category-archive.md
-│   ├── category-musings.md
-│   ├── category-notes.md
-│   ├── category-tutorials.md
 │   ├── portfolio.md
 │   ├── tag-archive.md
 │   ├── year-archive.md
