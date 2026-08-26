@@ -151,6 +151,27 @@ Podman users must use rootful mode.
 
 Use the environment provided by Nix by default. If Nix is unavailable in the execution environment, try Docker and then Podman, in that order.
 
+### Update the Firefly theme
+
+Update the theme by merging the upstream repository:
+
+```bash
+# Run once if the upstream remote has not been configured.
+git remote add upstream https://github.com/CuteLeaf/Firefly.git
+
+git fetch upstream
+git merge upstream/master
+```
+
+Resolve any merge conflicts manually, then commit the resolution:
+
+```bash
+git add .
+git commit -m "merge: update Firefly theme"
+```
+
+Conflicts most often affect customized configuration files. Prefer limiting site-specific changes to `src/config/` and content to `src/content/` so future theme updates touch fewer core files. After merging, run `pnpm install`, review upstream commits for new or changed configuration fields, then run `pnpm check`, `pnpm type-check`, `pnpm dev`, and `pnpm build` to verify configuration compatibility, rendering, and production output.
+
 ### Test
 
 There is no dedicated unit-test framework configured.
@@ -313,6 +334,13 @@ This section applies only to blog-related Markdown files and the images they ref
 
 - Name blog files in English, separate words with `-`, and use the `.md` extension. Do not use `.mdx`.
 - Name images in English and separate words with `-`.
+
+### Git Commits
+
+- **Atomic Commits**: Segment individual logical updates into isolated, sequential commits. Avoid massive, single-batch structural changes.
+- **Conventional Commits**: Commit messages must match the structural specification explicitly:
+  - `feat(posts): add new freeRTOS tutorial post`
+  - `fix(styles): repair notice box margin misalignment`
 
 ## Security considerations
 
