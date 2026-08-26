@@ -79,14 +79,8 @@ export const siteConfig: SiteConfig = {
 	// Favicon 配置
 	// 如果启用了OpenGraph图片功能，数组中需要包含png格式的favicon图标
 	favicon: [
-		{
-			// 图标文件路径
-			src: "/assets/images/favicon/favicon.ico",
-			// 可选，指定主题 'light' | 'dark'
-			// theme: "light",
-			// 可选，图标大小
-			// sizes: "32x32",
-		},
+		{ src: "/favicon/site-favicon-light.svg", theme: "light" },
+		{ src: "/favicon/site-favicon-dark.svg", theme: "dark" },
 	],
 
 	// 导航栏配置
@@ -102,7 +96,8 @@ export const siteConfig: SiteConfig = {
 		// 使用 Astro 图标库时不需要设置 valueDark，图标会自动跟随主题亮暗色切换
 		logo: {
 			type: "url",
-			value: "/assets/images/logo-without-text.svg",
+			value: "/favicon/site-mark-light.svg",
+			valueDark: "/favicon/site-mark-dark.svg",
 			alt: "Better Mistakes",
 		},
 		// 导航栏标题
