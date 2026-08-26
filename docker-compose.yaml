@@ -1,0 +1,19 @@
+services:
+  astro:
+    build:
+      context: .
+    command: sh -ec 'pnpm install --frozen-lockfile && pnpm dev --host 0.0.0.0'
+    ports:
+      - "127.0.0.1:4321:4321"
+    volumes:
+      - .:/workspace
+      - pnpm_store:/home/astro/.local/share/pnpm/store
+    environment:
+      CI: "true"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+volumes:
+  pnpm_store:

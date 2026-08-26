@@ -1,34 +1,35 @@
-# Repository Guidelines
+# Agent Instructions: `bfmhno3.github.io`
 
-## Project Structure & Module Organization
+## Architecture
 
-Firefly is an Astro 7 site with Svelte islands and TypeScript configuration. Main source code lives in `src/`: routes in `src/pages`, layouts in `src/layouts`, reusable UI in `src/components`, styles in `src/styles`, content in `src/content`, helpers in `src/utils`, and Markdown/HTML plugins in `src/plugins`. Site configuration is split across `src/config` with matching type definitions in `src/types`; prefer imports from `@/config` when available. Static files served directly belong in `public`, source-managed images in `src/assets`, docs in `docs` and `Firefly-Docs`, and automation in `scripts`.
+This site is an Astro static site using the CuteLeaf/Firefly theme, pinned to upstream commit `4f40eaf35d754fe4988a5293b5e2eee4755b88a8`. Site configuration is in `src/config/`; posts are in `src/content/posts/`; fixed content is in `src/content/spec/`; routes are in `src/pages/`; reusable assets are in `public/assets/`.
 
-## Build, Test, and Development Commands
+Posts use Firefly front matter (`title`, `published`, `description`, `category`, `tags`). Publication instants retain the original `+08:00` values. Article bodies are immutable during migration: do not rewrite Markdown, HTML, code, Mermaid, math, image links, Liquid text, or Kramdown attributes. The validator requires 27 dated post files.
 
-Use `pnpm`; the `preinstall` script enforces it.
+Callouts use only Firefly's `rehypeCallouts.theme: "github"`. Do not convert legacy notice attributes or enable another callout dialect. Firefly's figure renderer handles retained legacy figure include syntax at render time.
 
-- `pnpm dev` or `pnpm start`: run the local Astro dev server.
-- `pnpm check`: run Astro diagnostics.
-- `pnpm type-check`: run TypeScript with `--noEmit`.
-- `pnpm format`: format `src` with Biome.
-- `pnpm lint`: run Biome checks and safe fixes on `src`.
-- `pnpm build`: generate icons, LQIPs, the Astro build, font subsets, and Pagefind search output in `dist`.
-- `pnpm preview`: preview the production build locally.
-- `pnpm new-post`: scaffold a new content post.
+## Commands
 
-## Coding Style & Naming Conventions
+```bash
+pnpm install --frozen-lockfile
+pnpm dev --host 127.0.0.1
+pnpm check
+pnpm build
+```
 
-Biome is the formatter and linter. It uses tabs for indentation and double quotes for JavaScript/TypeScript strings. Keep Astro and Svelte components in `PascalCase` (`PostCard.astro`, `Search.svelte`), config modules in `camelCase` ending with `Config.ts`, and utilities in descriptive kebab case such as `date-utils.ts`. Keep `src/types` aligned with `src/config`. Avoid unrelated formatting churn.
+The Nix flake provides Node 24, pnpm, and native image-build dependencies. Docker development runs Astro on port 4321:
 
-## Testing Guidelines
+```bash
+docker compose build
+docker compose up -d
+docker compose logs --tail=100 astro
+docker compose down
+```
 
-There is no dedicated unit-test framework configured. Before submitting changes, run `pnpm check`, `pnpm type-check`, and `pnpm build` for rendering, content, or generated asset work. For visual or interactive changes, verify with `pnpm dev` or `pnpm preview` and include screenshots in the PR. Name future tests near the feature they cover, using the local file name as the stem.
+Podman users must use rootful mode.
 
-## Commit & Pull Request Guidelines
+## Content and deployment
 
-Use Conventional Commits, matching the current history: `feat: ...`, `fix: ...`, and `chore: ...`. Keep commits and PRs focused on one concern. PRs should include a concise summary, linked issues when relevant, validation commands run, and screenshots for UI changes. Discuss major features or design changes in an issue or discussion before implementation.
+Preserved public routes include `/`, `/posts/`, `/page/:num/`, `/categories/`, `/tags/`, `/portfolio/`, `/about/`, legacy category/post URLs, and date archives. GitHub Pages builds `dist/` through `.github/workflows/build-astro.yml`.
 
-## Security & Configuration Tips
-
-Do not commit secrets, tokens, or service keys in config files. Keep deployment-specific settings in the target platform environment, and review generated files such as `dist`, `src/constants/lqips.json`, and `src/constants/icons.ts` before committing them.
+Keep asset references synchronized when changing asset names. Do not modify generated `dist/` by hand.

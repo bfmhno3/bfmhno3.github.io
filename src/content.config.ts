@@ -42,7 +42,7 @@ const postsCollection: ContentCollection<PostData> = defineCollection({
 	loader: glob({ pattern: "**/*.{md,mdx}", base: "./src/content/posts" }),
 	schema: z.object({
 		title: z.string(),
-		published: z.date(),
+		published: z.coerce.date(),
 		updated: z.date().optional(),
 		draft: z.boolean().optional().default(false),
 		description: z.string().optional().default(""),
