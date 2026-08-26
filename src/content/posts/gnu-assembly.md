@@ -51,7 +51,7 @@ GAS 语法的核心难点在于不同架构下对**操作数方向**的处理，
 
 **多行注释**在所有架构中是通用的，沿用了 C 语言风格：
 
-```armasm
+```asm
 /*
  The only way to include a newline ('\n') in a comment
  is to use this sort of comment.
@@ -140,13 +140,13 @@ RISC-V 的 GAS 实现较为现代，通常兼容性较好：
 
 x86 GAS 遵循 “**源在前，目的在后**” 的原则。读代码时请默念“把左边的值给右边”。
 
-```armasm
+```asm
 operation source, destination
 ```
 
 例如：
 
-```armasm
+```asm
 movl %eax, %ebx  # 含义：EBX = EAX (将 EAX 的值搬运到 EBX)
 ```
 
@@ -154,13 +154,13 @@ movl %eax, %ebx  # 含义：EBX = EAX (将 EAX 的值搬运到 EBX)
 
 为了减少混乱，GNU 针对 ARM 和 RISC-V 做了妥协，采用了更符合官方文档的 “**目的在前，源在后**” 顺序：
 
-```armasm
+```asm
 operation destination, source
 ```
 
 例如：
 
-```armasm
+```asm
 mov r0, r1       # 含义：r0 = r1 (将 r1 的值搬运到 r0)
 ```
 
@@ -183,7 +183,7 @@ mov r0, r1       # 含义：r0 = r1 (将 r1 的值搬运到 r0)
 
 **对比示例：**
 
-```armasm
+```asm
 # x86 (AT&T)
 movl $10, %eax   # EAX = 10 (立即数)
 movl 10, %eax    # EAX = *(int*)(0x0A) (读取内存地址 10 的内容)
@@ -205,7 +205,7 @@ x86 是 CISC（复杂指令集），其最大特点是**允许运算指令直接
 
 **通用格式**：
 
-```armasm
+```asm
 offset(base, index, scale)
 ```
 
@@ -217,7 +217,7 @@ $$
 
 **应用场景**：这非常适合访问数组。例如 `array[i]`，其中 `base` 是数组首地址，`index` 是变量 `i`，`scale` 是元素大小（如 `int` 为 4）。
 
-```armasm
+```asm
 movl 4(%ebp), %eax    # 取地址 (ebp + 4) 处的数据 -> eax
 movl array(,%edi,4), %eax # 取地址 (array + edi * 4) 处的数据 -> eax
 ```
@@ -243,7 +243,7 @@ RISC-V 的基础指令多为 32 bit（但启用压缩扩展后也有 16 bit 指�
 
 **通用格式**：
 
-```armasm
+```asm
 offset(base)
 ```
 
@@ -257,7 +257,7 @@ $$
 
 由于 12 位无法容纳 32/64 位地址，必须将大地址拆分为“高位”和“低位”两条指令处理：
 
-```armasm
+```asm
 # 小范围寻址 (Offset < 2048)
 lw a0, 8(sp)        # 从 sp + 8 处加载一个 word
 sw a0, 0(t1)        # 存入 t1 + 0 处
@@ -290,7 +290,7 @@ x86 是变长指令集，且寄存器存在嵌套关系（`RAX` 包含 `EAX` 包
 
 虽然现代汇编器有时能根据寄存器名字（如 `%eax`）推断出你是想操作 32 位，但在涉及内存操作数（无法看出大小）或立即数时，不写后缀极易报错。
 
-```armasm
+```asm
 movb $0xFF, %al      	# 移动 1 个字节 (8-bit)
 movw $0xFFFF, %ax    	# 移动 1 个字   (16-bit)
 movl $0xFFFFFFFF, %eax	# 移动 1 个长字 (32-bit)
@@ -341,7 +341,7 @@ movq $0, (%rbx)      # 正确：清零 8 个字节
 
   代码段
 
-  ```armasm
+  ```asm
   .byte 0x12, 0x34    # 写入两个字节
   .word 0xAABBCCDD    # 写入 4 字节。小端模式下内存为：DD CC BB AA
   ```
@@ -357,7 +357,7 @@ movq $0, (%rbx)      # 正确：清零 8 个字节
 
   代码段
 
-  ```armasm
+  ```asm
   stack_top:
   .skip 1024, 0      # 预留 1024 字节，全部填 0
   stack_bottom:      # 栈底标号（假设栈向下生长，SP 初始指向此处）
@@ -405,7 +405,7 @@ movq $0, (%rbx)      # 正确：清零 8 个字节
 
   代码段
 
-  ```armasm
+  ```asm
   .equ STACK_SIZE, 0x400
   ```
 
@@ -435,7 +435,7 @@ movq $0, (%rbx)      # 正确：清零 8 个字节
 
 代码段
 
-```armasm
+```asm
 1:          # 定义标号 1
     wfi     # Wait for interrupt
     j 1b    # 向后跳转到最近的标号 1 (相当于 while(1);)
@@ -447,7 +447,7 @@ movq $0, (%rbx)      # 正确：清零 8 个字节
 
 代码段
 
-```armasm
+```asm
 .macro 宏名称 参数1, 参数2
     // 宏体内容，可使用 \参数1 引用
 .endm
