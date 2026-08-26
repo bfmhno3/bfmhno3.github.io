@@ -27,19 +27,19 @@ comment: true
 
 想象一下，你面对的是一个占地 167 平方米、重达 27 吨的庞然大物。这就是 ENIAC，它是那个时代算力的巅峰，但对于 “任务管理” 而言，它确实最原始的形态：它没有任何中间层来管理资源；同一时间，这台巨兽只能为解决**一个问题**而存在。
 
-{% include figure popup=true image_path="/assets/images/Glen_Beck_and_Betty_Snyder_program_the_ENIAC_in_building_328_at_the_Ballistic_Research_Laboratory.jpg" alt="Glen Beck and Betty Snyder program the ENIAC" caption="早期的编程：Glen Beck 与 Betty Snyder 正在对 ENIAC 进行硬连线" %}
+![早期的编程：Glen Beck 与 Betty Snyder 正在对 ENIAC 进行硬连线](/assets/images/Glen_Beck_and_Betty_Snyder_program_the_ENIAC_in_building_328_at_the_Ballistic_Research_Laboratory.jpg)
 
 在 ENIAC 上 “切换任务” 并不是像今天一样双击一个图标一样简单。那是一场体力劳动。当时的 “编程”，实际上就是 “接线”。
 
 程序员（通常是女性数学家）需要拿着粗大的连接线（Patch Cables），在巨大的配线板上进行物理连接。每一个插孔的连接，每一排开关的拨动，都代表着指令的逻辑流向。当你把线插好，这台机器就变成了解决那个特定方程的专用电路。
 
-{% include figure popup=true image_path="/assets/images/Two_women_operating_ENIAC.jpg" alt="Two women operating ENIAC" caption="操作员正在手动更改 ENIAC 的线路配置" %}
+![操作员正在手动更改 ENIAC 的线路配置](/assets/images/Two_women_operating_ENIAC.jpg)
 
 > 似乎有点类似于现在的 FPGA。
 
 既然没有操作系统，那谁来切换任务呢？那自然也只能让人来手动切换了。
 
-{% include figure popup=true image_path="/assets/images/Classic_shot_of_the_ENIAC.jpg" alt="Classic shot of the ENIAC" caption="ENIAC 全景：巨大的体积与原始的操作方式" %}
+![ENIAC 全景：巨大的体积与原始的操作方式](/assets/images/Classic_shot_of_the_ENIAC.jpg)
 
 在这个时期，ENIAC 的加法速度已经高达 5000 次/秒，但准备计算的过程确慢得令人发指。而正是这种**极高的计算速度**与**极低的任务切换效率**之间的巨大鸿沟，成为了推动计算机科学向前发展的原动力。
 
@@ -51,13 +51,13 @@ comment: true
 
 1945 年，随着 [John von Neumann](https://en.wikipedia.org/wiki/John_von_Neumann) 在其里程碑式的著作《[First Draft of a Report on the EDVAC](https://en.wikipedia.org/wiki/First_Draft_of_a_Report_on_the_EDVAC)》中正式确立了冯·诺依曼架构，程序终于从繁琐的硬件连线进化为存储在磁带上的指令。虽然这一边个消除了物理插拔线缆的需求，但在早期的 Open Shop（开放式机房）模式依然由人主导：程序员带着磁带走进机房，装带、运行、卸带、离开，然后下一个人进来。
 
-{% include figure popup=true image_path="/assets/images/Von_Neumann_Architecture.svg" alt="Von Neumann Architecture" caption="冯·诺依曼架构：存储程序计算机的基石" %}
+![冯·诺依曼架构：存储程序计算机的基石](/assets/images/Von_Neumann_Architecture.svg)
 
 当时的 CPU（如 IBM 704）如同黄金般珍贵。人的动作（装磁带、按按钮）可能需要花费几分钟，但 CPU 可能几秒钟就执行完毕。
 
 让一台每秒运行数万次指令的 CPU 停下来等人，这是对计算资源极大的浪费。为了解决 “人太慢，CPU 等人” 的矛盾，**批处理系统**（*Batch Processing*）应运而生。
 
-{% include figure popup=true image_path="/assets/images/batch_processing_system.png" alt="batch processing system" caption="批处理系统的工作流示意图" %}
+![批处理系统的工作流示意图](/assets/images/batch_processing_system.png)
 
 1956 年，通用汽车（GM）的研究部门为 IBM 704 编写了 [GM-NAA I/O](https://en.wikipedia.org/wiki/GM-NAA_I/O)，这被认为是世界上第一个真正意义上的操作系统。
 
@@ -67,7 +67,7 @@ comment: true
 2. 它负责读取磁盘上的下一个**作业**（Job）。
 3. 自动加载作业 $\rightarrow$ 运行作业 $\rightarrow$ 作业结束 $\rightarrow$ 把控制权还给 Monitor $\rightarrow$ 加载下一个。
 
-{% include figure popup=true image_path="/assets/images/resident_montior.png" alt="resident monitor" caption="常驻监控程序 (Monitor) 的内存布局" %}
+![常驻监控程序 (Monitor) 的内存布局](/assets/images/resident_montior.png)
 
 此时，依然没有**进程**的概念，只有**作业**（Job）。内存里依然一次只住一个程序。
 
@@ -83,20 +83,20 @@ comment: true
 
 为了解决 “I/O 太慢，CPU 等 I/O” 的矛盾，**多道程序设计**（Multiprogramming）横空出世。IBM 在其传奇的 Systen/360 大型机上大力推行这一概念。
 
-{% include figure popup=true image_path="/assets/images/IBM_System_360_model_30_cpu.jpg" alt="IBM System 360 model 30 cpu" caption="IBM System/360 Model 30 控制台" %}
+![IBM System/360 Model 30 控制台](/assets/images/IBM_System_360_model_30_cpu.jpg)
 
 工程师们想出了一个绝妙的主意：既然内存变大了，为什么不一次性装入多个作业呢？
 
 1. 当 Job A 在等待磁带数据时（阻塞），操作系统把 CPU 切给 Job B 用。
 2. 当 Job B 也在等打印机时，再切给 Job C。
 
-{% include figure popup=true image_path="/assets/images/multiprogramming_operating_system.png" alt="multiprogramming operating system" caption="多道程序设计下的内存划分" %}
+![多道程序设计下的内存划分](/assets/images/multiprogramming_operating_system.png)
 
 这一刻，计算机科学迎来了一个关键的转折点：为了在多个程序之间来回切换，我们需要保存每个程序的状态。
 
 在 OS/360 中，出现了用来描述任务状态的数据结构 **TCB**（Task Control Block）。这正是后来 **PCB**（Process Control Block）的前身。
 
-{% include figure popup=true image_path="/assets/images/os_360_system_control_blocks.jpg" alt="os 360 system control blocks" caption="OS/360 中的系统控制块 (TCB) 结构" %}
+![OS/360 中的系统控制块 (TCB) 结构](/assets/images/os_360_system_control_blocks.jpg)
 
 此时，TCB 主要完成两个任务：
 
@@ -120,7 +120,7 @@ comment: true
 - **抢占式调度**（Preemptive）：无论程序 A 是否运行完，每隔几十毫秒（一个时间片），操作系统强制打断它，保存上下文，把 CPU 扔给程序 B。
 - 幻觉：这种快速的切换，让每个用户都产生了一种 “我独占了一台电脑” 的错觉。
 
-{% include figure popup=true image_path="/assets/images/Round_Robin_Schedule_Example.jpg" alt="Round Robin Schedule Example" caption="轮转调度算法 (Round-Robin) 时间片轮转示意" %}
+![轮转调度算法 (Round-Robin) 时间片轮转示意](/assets/images/Round_Robin_Schedule_Example.jpg)
 
 也就是在这个时期，**进程**这个概念被正式确立，并赋予了现代含义。为了维持这种 “独占的幻觉”，操作系统构建了两道高墙：
 
@@ -129,8 +129,8 @@ comment: true
 
 至此，进程不再仅仅是用户的代码，它是：
 
-**代码** + **动态执行上下文**（某一时刻寄存器中的值）+ **虚拟地址空间**
-{: .notice}
+> [!NOTE]
+> **代码** + **动态执行上下文**（某一时刻寄存器中的值）+ **虚拟地址空间**
 
 ## 参考资料
 

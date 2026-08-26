@@ -25,8 +25,8 @@ comment: true
 |Ubuntu|22.04 LTS|
 |Ubuntu|24.04 LTS|
 
-**注意**：这里的 PWSH 并不是指 Windows 系统内置的经典 PowerShell，而是跨平台的开源项目 [PowerShell Core](https://github.com/PowerShell/PowerShell)。下文中使用 PowerShell 指代系统默认版本，PWSH 指代开源版本。
-{: .notice--info}
+> [!NOTE]
+> **注意**：这里的 PWSH 并不是指 Windows 系统内置的经典 PowerShell，而是跨平台的开源项目 [PowerShell Core](https://github.com/PowerShell/PowerShell)。下文中使用 PowerShell 指代系统默认版本，PWSH 指代开源版本。
 
 ## 2 准备工作
 
@@ -71,8 +71,8 @@ WSL2 的虚拟磁盘文件通常为 `ext4.vhdx`。你可以使用强大的文件
 |Ubuntu 22.04 LTS|`E:\Users\<your_windows_username>\AppData\wsl\ubuntu2204`|
 |Ubuntu 24.04 LTS|`E:\Users\<your_windows_username>\AppData\wsl\ubuntu2404`|
 
-请在后续的命令行中将 `<your_windows_username>` 替换为你的实际 Windows 用户名。
-{: .notice--warning}
+> [!WARNING]
+> 请在后续的命令行中将 `<your_windows_username>` 替换为你的实际 Windows 用户名。
 
 在新版的 PWSH 中可以直接使用以下命令创建目录：
 
@@ -114,8 +114,8 @@ wsl --import ubuntu2204 E:\Users\<your_windows_username>\AppData\wsl\ubuntu2204 
 wsl --import ubuntu2404 E:\Users\<your_windows_username>\AppData\wsl\ubuntu2404 E:\Users\amara\AppData\wsl\ubuntu2404.tar
 ```
 
-利用 `wsl --import`，你可以将同一个 `.tar` 包导入多次并赋予不同名称，从而实现多开同一个发行版。虽然在隔离环境方面类似于 Docker，但 WSL2 原生支持 WSLg，可以直接运行 Linux 图形化应用，这在某些桌面开发场景下比 Docker 更具优势。
-{: .notice--info}
+> [!NOTE]
+> 利用 `wsl --import`，你可以将同一个 `.tar` 包导入多次并赋予不同名称，从而实现多开同一个发行版。虽然在隔离环境方面类似于 Docker，但 WSL2 原生支持 WSLg，可以直接运行 Linux 图形化应用，这在某些桌面开发场景下比 Docker 更具优势。
 
 ### 3.3 恢复默认用户
 

@@ -46,8 +46,8 @@ GAS 语法的核心难点在于不同架构下对**操作数方向**的处理，
 
 不同的 CPU 架构在 GAS 中通常使用不同的单行注释符号。这里仅列举常见架构的规范，更详细的列表可查阅 [Binutils Docs: Machine Dependent Features](https://sourceware.org/binutils/docs/as/Machine-Dependencies.html)。
 
-推荐直接查阅 "[Machine Dependent Features](https://sourceware.org/binutils/docs/as/Machine-Dependencies.html)" 文档，官方通用的 "[Comments](https://sourceware.org/binutils/docs/as/Comments.html)" 文档包含大量历史遗留信息，较为混乱。
-{: .notice--info}
+> [!NOTE]
+> 推荐直接查阅 "[Machine Dependent Features](https://sourceware.org/binutils/docs/as/Machine-Dependencies.html)" 文档，官方通用的 "[Comments](https://sourceware.org/binutils/docs/as/Comments.html)" 文档包含大量历史遗留信息，较为混乱。
 
 **多行注释**在所有架构中是通用的，沿用了 C 语言风格：
 
@@ -127,8 +127,8 @@ RISC-V 的 GAS 实现较为现代，通常兼容性较好：
 - 支持行首 `#` 注释。
 - 通常支持 `//` 或 `#` 作为行尾注释（具体取决于工具链版本，建议测试确认）。
 
-建议以 `#` 为主，不建议使用 `//` 作为通用写法。
-{: .notice--warning}
+> [!WARNING]
+> 建议以 `#` 为主，不建议使用 `//` 作为通用写法。
 
 ------
 
@@ -317,16 +317,15 @@ movq $0, (%rbx)      # 正确：清零 8 个字节
   - `LDRH` (Half-word): 加载 16 位
   - `LDR` (Word): 加载 32 位
 
-<div class="notice--warning" markdown="1">
-**"Word" 的陷阱**
-
-这是一个跨架构开发时最容易混淆的概念：
-
- - 在 **x86** 汇编中，`Word` = **16 bits**。
- - 在 **ARM / RISC-V** 汇编中，`Word` = **32 bits**。
-
-当你使用 GAS 的 `.word` 伪指令定义数据时，它在所有架构上通常都表示 32 位（或 16 位，取决于具体配置，但在现代环境下多为 32 位）。务必查阅具体目标架构的文档确认 `.word` 的确切长度，或者直接使用 `.2byte` / `.4byte` 这种无歧义的写法。
-</div>
+> [!WARNING]
+> **"Word" 的陷阱**
+>
+> 这是一个跨架构开发时最容易混淆的概念：
+>
+>  - 在 **x86** 汇编中，`Word` = **16 bits**。
+>  - 在 **ARM / RISC-V** 汇编中，`Word` = **32 bits**。
+>
+> 当你使用 GAS 的 `.word` 伪指令定义数据时，它在所有架构上通常都表示 32 位（或 16 位，取决于具体配置，但在现代环境下多为 32 位）。务必查阅具体目标架构的文档确认 `.word` 的确切长度，或者直接使用 `.2byte` / `.4byte` 这种无歧义的写法。
 
 ## 3. 伪指令系统 (Directives)
 

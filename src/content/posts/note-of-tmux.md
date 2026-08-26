@@ -53,7 +53,7 @@ comment: true
 2. **Window（窗口）**：Session 里面的 “标签页”。类似于浏览器的 Tab，一个屏幕只能显示一个 Window。
 3. **Pane（窗格）**：Window 里的 “分屏”。你可以把一个 Window 切分成左边看代码、右边看日志。
 
-```mermaid!
+```mermaid
 graph TD
   Server["🖥️ Tmux Server<br/>(后台进程，永不宕机)"]
     
@@ -82,8 +82,8 @@ graph TD
 
 **操作逻辑：** 先同时按下 `Ctrl` 和 `b`，**松开双手**，然后再按下一个键。
 
-*(下文中我将 `Ctrl + b` 简称为 `Prefix`)*
-{: .notice--info}
+> [!NOTE]
+> *(下文中我将 `Ctrl + b` 简称为 `Prefix`)*
 
 ### 2. Session 管理（在普通的 Linux 终端打字）
 
@@ -229,8 +229,8 @@ graph TD
 | `y`      | 复制选择内容到顶部粘贴缓冲区     |
 | `Escape` | 取消当前操作                     |
 
-**提示**：你也可以通过在 .local 自定义配置文件中设置 `tmux_conf_preserve_stock_bindings` 变量为 true，来保留 tmux 的原始按键绑定。
-{: .notice--info}
+> [!NOTE]
+> **提示**：你也可以通过在 .local 自定义配置文件中设置 `tmux_conf_preserve_stock_bindings` 变量为 true，来保留 tmux 的原始按键绑定。
 
 ## 总结
 

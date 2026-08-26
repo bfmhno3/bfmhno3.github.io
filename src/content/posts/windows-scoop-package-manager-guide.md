@@ -47,8 +47,8 @@ $env:SCOOP_GLOBAL = 'D:\ProgramData\scoop'
 [Environment]::SetEnvironmentVariable('SCOOP_GLOBAL', $env::SCOOP_GLOBAL, 'Machine')
 ```
 
+> [!NOTE]
 > **注意**：修改 `Machine` 级别的变量通常需要**管理员权限**的 PowerShell。
-> {: .notice--info}
 
 > **警告：路径规范**
 > Scoop 的安装路径中**严禁包含空格和中文字符**！

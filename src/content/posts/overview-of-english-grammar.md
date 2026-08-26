@@ -12,8 +12,8 @@ comment: true
 
 我们为什么学语法？
 
-~~当然是为了考高分啊😂~~
-{: .notice--info}
+> [!NOTE]
+> ~~当然是为了考高分啊😂~~
 
 其实，所有的英语语法都只有一个目的：**造句**。
 
@@ -25,8 +25,8 @@ comment: true
 
 我们把这样的不能再拆的 “基本句” 称作**简单句**（Simple Sentence）。而这样的简单句，除去那些**感叹句**（“嗯”，“哦”，“啊”等）、**省略句**、**（向整句提问的）问句**，几乎全部都是在说：
 
-**什么** + **怎么样**
-{: .notice--info}
+> [!NOTE]
+> **什么** + **怎么样**
 
 绝大多数句子粗略地分一共就只有这两个部分，而这个 “什么” 和 “怎么样” 分别对应了两个最基本的**句子成分**：
 
@@ -35,13 +35,13 @@ comment: true
 
 换句话说，几乎所有的英语句子结构都是：
 
-**主语** + **谓语**
-{: .notice--info}
+> [!NOTE]
+> **主语** + **谓语**
 
 这里的**主语**一般是人或物，不管是抽象还是具体。而这里的**谓语**则是指一个广义的动作或发生的事情。
 
-这个 “动作” 不是我们平时狭义说的要动起来的 “动作”，而这个广义的 “动作” 也就是我们语法上说的**动词**（Verb）。
-{: .notice--warning}
+> [!WARNING]
+> 这个 “动作” 不是我们平时狭义说的要动起来的 “动作”，而这个广义的 “动作” 也就是我们语法上说的**动词**（Verb）。
 
 ## 2. 谓语动词
 
@@ -65,8 +65,8 @@ comment: true
 
 不及物动词所对应的基本句子结构就是：
 
-**主语** + **不及物动词**
-{: .notice--success}
+> [!TIP]
+> **主语** + **不及物动词**
 
 ### 2.2 单及物动词（Monotransitive Verb）
 
@@ -80,8 +80,8 @@ comment: true
 
 单及物动词对应的基本句子结构就是：
 
-**主语** + **单及物动词** + **宾语**
-{: .notice--success}
+> [!TIP]
+> **主语** + **单及物动词** + **宾语**
 
 ### 2.3 双及物动词（Ditransitive Verbs）
 
@@ -97,8 +97,8 @@ comment: true
 
 双及物动词对应的基本句子结构就是：
 
-**主语** + **双及物动词** + **间接宾语** + **直接宾语**
-{: .notice--success}
+> [!TIP]
+> **主语** + **双及物动词** + **间接宾语** + **直接宾语**
 
 ### 2.4 复杂及物动词（Complex-transitive Verb）
 
@@ -114,8 +114,8 @@ comment: true
 
 复杂及物动词对应的基本句子结构就是：
 
-**主语** + **复杂及物动词** + **宾语** + **（宾语）补语**
-{: .notice--success}
+> [!TIP]
+> **主语** + **复杂及物动词** + **宾语** + **（宾语）补语**
 
 ### 2.5 系动词（Linking Verb）
 
@@ -127,8 +127,8 @@ comment: true
 
 这里的 "is" 在中文里经常翻译成 “是”，但它实际上的作用很简单：
 
-就是把这个动词之后的信息**赋予**前面的主语。
-{: .notice--danger}
+> [!CAUTION]
+> 就是把这个动词之后的信息**赋予**前面的主语。
 
 这里的 "is" 说白了就是把 "Papa Rabbit" 和 "tall" 连在一起，划上等号而已。或者说，把后者信息赋予前者。如果把 "tall" 换成 "in the room"：
 
@@ -156,8 +156,8 @@ comment: true
 
 系动词对应的基本句子结构就是：
 
-**主语** + **系动词** + **（主语）补语/表语**
-{: .notice--success}
+> [!TIP]
+> **主语** + **系动词** + **（主语）补语/表语**
 
 ## 3. 五大基本句型
 
@@ -169,21 +169,19 @@ comment: true
 |4|主语 + 复杂及物动词 + 宾语 + 宾语补语|
 |5|主语 + 系动词 + 主语补语/表语|
 
-<div class="notice" markdown="1">
-还有一种 “八大句型” 的分类，即在 “五大句型” 基础上增加：
+> [!NOTE]
+> 还有一种 “八大句型” 的分类，即在 “五大句型” 基础上增加：
+>
+> <ol start="6">
+>   <li><strong>there be</strong> 句型，如：There is a rabbit. 可理解为第 5 种句型 “主语 + 系动词 + 主语补语/表语” 的倒装。</li>
+>   <li><strong>主语</strong> + <strong>谓语</strong> + <strong>状语</strong>，如：I live in China. 可理解为第 1 种句型 “主语 + 不及物动词” 的延伸（虽然这里的状语很重要）。</li>
+>   <li><strong>主语</strong> + <strong>谓语动词</strong> + <strong>宾语</strong> + <strong>状语</strong>，如：I put the carrot on the table. 可理解为第 4 种句型 “主语 + 复杂及物动词 + 宾语 + 宾语补语” 的延伸。</li>
+> </ol>
 
-<ol start="6">
-  <li><strong>there be</strong> 句型，如：There is a rabbit. 可理解为第 5 种句型 “主语 + 系动词 + 主语补语/表语” 的倒装。</li>
-  <li><strong>主语</strong> + <strong>谓语</strong> + <strong>状语</strong>，如：I live in China. 可理解为第 1 种句型 “主语 + 不及物动词” 的延伸（虽然这里的状语很重要）。</li>
-  <li><strong>主语</strong> + <strong>谓语动词</strong> + <strong>宾语</strong> + <strong>状语</strong>，如：I put the carrot on the table. 可理解为第 4 种句型 “主语 + 复杂及物动词 + 宾语 + 宾语补语” 的延伸。</li>
-</ol>
-</div>
-
-<div class="notice--warning" markdown="1">
-严格说来，谓语和谓语动词是有区别的。句子主语后面余下的部分就是谓语，谓语动词只是谓语的一部分。
-
-但是在平时，通俗地，为了方便，很多人会直接称呼谓语动词为谓语，而把 “主语 + 谓语动词 + 宾语” 这样的句子结构直接称呼为 “主语 + 谓语 + 宾语”（或 “主谓宾”），这也不是什么大问题。
-</div>
+> [!WARNING]
+> 严格说来，谓语和谓语动词是有区别的。句子主语后面余下的部分就是谓语，谓语动词只是谓语的一部分。
+>
+> 但是在平时，通俗地，为了方便，很多人会直接称呼谓语动词为谓语，而把 “主语 + 谓语动词 + 宾语” 这样的句子结构直接称呼为 “主语 + 谓语 + 宾语”（或 “主谓宾”），这也不是什么大问题。
 
 ## 4. 句子基本成分
 
@@ -198,8 +196,8 @@ comment: true
 |7|状语|Adverbial|修饰谓语动词|The rabbit ate **quickly**.|
 |8|同位语|Appositive||Papa Rabbit, **an English teacher**, eats carrots.|
 
-你可能听过 “**插入语**”，如：This carrot, I think(插入语), is very tasty. 但是插入语是独立的，不作句子成分。
-{: .notice--info}
+> [!NOTE]
+> 你可能听过 “**插入语**”，如：This carrot, I think(插入语), is very tasty. 但是插入语是独立的，不作句子成分。
 
 ## 5. 复杂句
 
@@ -213,9 +211,9 @@ comment: true
 
 从句说白了就是把简单句修改一下来充当另一个句子的句子成分。
 
-<div style="max-width: 520px; margin: 1rem auto;" markdown="1">
+:::div{style="max-width: 520px; margin: 1rem auto;"}
 
-```mermaid!
+```mermaid
 flowchart TB
     subgraph A["主句<br/>Main Clause"]
         spacer[" "]:::invis
@@ -227,7 +225,7 @@ flowchart TB
     classDef invis fill:none,stroke:none
 ```
 
-</div>
+:::
 
 ### 5.1 从句类型
 
@@ -263,8 +261,8 @@ flowchart TB
 |9|叹词|interjection|表感叹|**Ah**, the carrot is tasty!|
 |10|连词|conjunction|连接词和句|I ate two carrots and a potato, **because** I was hungry.|
 
-**句子成分**（Clause Element）和句子中的**词类**（Parts of Speech）是完全不同的概念。
-{: .notice--danger}
+> [!CAUTION]
+> **句子成分**（Clause Element）和句子中的**词类**（Parts of Speech）是完全不同的概念。
 
 前文所述的每一种句子成分，除了**谓语动词**只能是动词，其他成分都可能包含不同的词类。
 
@@ -276,8 +274,8 @@ flowchart TB
 2. 动作状态
 3. 动作假设，情感等
 
-所谓 “中文动词没有这些本领” 是说中文动词本身没有 “时、体、气” 的概念，但是中文当然有相同或相似意思的表达。
-{: .notice--warning}
+> [!WARNING]
+> 所谓 “中文动词没有这些本领” 是说中文动词本身没有 “时、体、气” 的概念，但是中文当然有相同或相似意思的表达。
 
 ### 7.1 时态
 
@@ -290,8 +288,8 @@ flowchart TB
 |*进行*|**现在***进行*|**过去***进行*|**将来***进行*|**过去将来***进行*|
 |*完成进行*|**现在***完成进行*|**过去***完成进行*|**将来***完成进行*|**过去将来***完成进行*|
 
-时态是时间的排列组合，并不是一个线性的列表，更不是只和时间有关。
-{: .notice--info}
+> [!NOTE]
+> 时态是时间的排列组合，并不是一个线性的列表，更不是只和时间有关。
 
 ### 7.2 语气
 
@@ -319,11 +317,11 @@ flowchart TB
 |表示 “有义务吃”|must|must eat|
 |表示 “不吃（否定）”|do|do not eat|
 
-以上的 can, might, must 也被称作 “情态动词”，可归类在 “助动词” 里，但是也有些语法体系把情态动词单独归类，这是分类的不同，不影响理解。
-{: .notice--info}
+> [!NOTE]
+> 以上的 can, might, must 也被称作 “情态动词”，可归类在 “助动词” 里，但是也有些语法体系把情态动词单独归类，这是分类的不同，不影响理解。
 
-有些动词，既可以是助动词（无实义），也可以做实义动词，比如 have 也可以表示 “拥有”。千万不要把助动词和它的其他身份（作实义动词时）弄混淆。
-{: .notice--danger}
+> [!CAUTION]
+> 有些动词，既可以是助动词（无实义），也可以做实义动词，比如 have 也可以表示 “拥有”。千万不要把助动词和它的其他身份（作实义动词时）弄混淆。
 
 ## 8. 非谓语动词
 
@@ -344,10 +342,10 @@ flowchart TB
 
 上述这么多一直在讲动词，这是因为：
 
-英语语法的核心就是动词，动词几乎可以串联起所有英语语法的核心概念。
-{: .notice--danger}
+> [!CAUTION]
+> 英语语法的核心就是动词，动词几乎可以串联起所有英语语法的核心概念。
 
-{% include figure popup=true image_path="/assets/images/english_grammar_system.png" alt="English Grammar System" caption="英语语法体系" %}
+![英语语法体系](/assets/images/english_grammar_system.png)
 
 以上就是英语语法体系的主体框架，绝大多数的语法规则，都逃不出这个框架。而无数的规则和特例也不过就是让这个核心体系更加丰富而已。
 

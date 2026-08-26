@@ -30,8 +30,8 @@ PCI 和 USB 这类总线可以通过协议探测设备。Linux 询问总线，�
 
 设备树不是硬件扫描器，也不是驱动代码。往 `reg` 里写一个地址，不会自动生成对该地址执行读写的驱动。
 
+> [!WARNING]
 > **注意：设备树不会替代驱动。** `compatible` 只负责匹配，`reg` 只描述资源。只有对应的 Linux 驱动成功匹配并执行 `probe()`，设备才可能被初始化。
-{: .notice--warning}
 
 ## 先跑通一条 DTS 到 DTB 的链路
 
@@ -70,8 +70,8 @@ dtc --version
 
 `dtc` 是 Device Tree Compiler。它把 DTS 文本转换成 DTB，也能把 DTB 反编译回近似的 DTS。我的实验环境如果没有 `dtc`，这一步就应该明确停下来安装工具，而不是编造一段"成功输出"。在 Debian/Ubuntu 上通常由 `device-tree-compiler` 包提供，其他发行版请查自己的包管理器。
 
+> [!CAUTION]
 > **工具检查。** 如果 `dtc` 不在 `PATH` 中，请先安装 Device Tree Compiler。后续编译、反编译和 magic 检查都依赖它们；不要把"命令没有执行"写成"实验成功"。
-{: .notice--danger}
 
 编译命令的输入是 DTS，输出是 DTB：
 
@@ -97,8 +97,8 @@ hexdump -C -n 16 /tmp/devicetree-tutorial.dtb
 
 这里的"大端"说的是**多字节数值在内存或文件中的字节排列顺序**。例如数值 `0x12345678` 由四个字节 `12 34 56 78` 组成：大端把高位字节 `12` 放在低地址一侧，小端则把低位字节 `78` 放在低地址一侧。设备树规范要求 DTB 中的 cell 按大端编码，所以用十六进制查看原始字节时，不能直接把字节序列当作当前 CPU 的本地整数来读。
 
+> [!NOTE]
 > **大小端提醒。** `0xd00dfeed` 是按大端解释出的 32 位 magic。看到原始字节时，先确认协议规定的字节序，再解释数值；否则很容易把同一组字节读成另一个整数。
-{: .notice--info}
 
 **这份小树逐行在说什么？**
 
@@ -150,8 +150,8 @@ i2c-bus {
 
 在第一个例子里，每个条目是一个地址 cell 加一个长度 cell。第二个例子里，I2C 子设备的 `reg` 是从设备地址，父总线把 `#size-cells` 设为 0，所以没有长度 cell。不要从某块板子的数值推导普适规则；先看父节点，再看该总线和设备的 binding。
 
+> [!IMPORTANT]
 > **`reg` 的关键规则。** 永远先看父节点的 `#address-cells` 和 `#size-cells`，再按照对应 bus binding 解释 `reg`。I2C 从设备地址、MMIO 地址和 PCI 地址不是同一种语义。
-{: .notice--primary}
 
 `ranges` 描述子总线地址空间到父总线地址空间的翻译。它不是 `reg` 的别名。`dma-ranges` 则描述 DMA 地址视角下的范围，是否需要它取决于平台的 DMA 地址转换。实际填写时必须查 binding 和平台 DTS。
 
@@ -216,8 +216,8 @@ soc {
 
 `compatible` 列表的顺序有意义：更特化的字符串在前，更通用的字符串在后。它不是承诺任意平台都存在一个通用回退驱动。正确流程是先查 Linux 内核 `Documentation/devicetree/bindings/` 下的 YAML，再决定字符串和必需属性。`make dtbs_check` 会用这些 schema 检查编译后的设备树，但 schema 检查通过也不等于硬件接线正确。
 
+> [!WARNING]
 > **不要凭感觉填写属性。** `compatible`、中断 specifier、clock/reset/DMA 参数都由 binding 规定。`make dtbs_check` 通过，只说明描述符合 schema，不证明芯片接线、时钟或电源真的正确。
-{: .notice--warning}
 
 ## I2C 设备和中断：两棵逻辑树
 
@@ -287,8 +287,8 @@ static int example_uart_probe(struct platform_device *pdev)
 
 这里的关键不是背 API，而是看清边界：设备树提供资源描述，驱动通过 Linux API 取得并使用资源。`devm_ioremap_resource()` 不会验证地址背后真的焊了一块 UART；它只负责在内核资源模型允许的前提下建立映射。`devm_request_irq()` 也不替你修复接错的中断线。
 
+> [!NOTE]
 > **排错边界。** 设备树描述"有什么"和"资源在哪里"，驱动决定"怎么操作"。匹配失败、资源获取失败和硬件本身不工作，应分别从 `compatible`、资源属性以及时钟/复位/pinmux/接线排查。
-{: .notice--info}
 
 因此排错时要区分三类失败：
 
@@ -368,8 +368,8 @@ static int example_uart_probe(struct platform_device *pdev)
 
 `dtbs_check` 主要检查设备树是否符合 binding schema。它不能替代 `dtc` 的语法检查，也不能替代示波器、逻辑分析仪或一双确认过连接器的眼睛。
 
+> [!TIP]
 > **验证顺序。** 先看 Linux 实际展开的设备树，再看 `dmesg`，然后对照 DTB、板级 DTS 和 binding。`dtbs_check` 是约束检查，不是硬件功能测试。
-{: .notice--success}
 
 ## DTB 为什么可以被搬到别的地址？
 

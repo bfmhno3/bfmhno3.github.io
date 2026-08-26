@@ -38,8 +38,8 @@ CMake commands are **case-insensitive**, but their arguments (including variable
 project(MyProject VERSION 1.0)
 ```
 
-**Command invovations are not expressions**, so you cannnot put a command invocation directly as an argument of another command or inside an if condition. They are not possible.
-{: .notice--danger}
+> [!CAUTION]
+> **Command invovations are not expressions**, so you cannnot put a command invocation directly as an argument of another command or inside an if condition. They are not possible.
 
 ### Variables
 
@@ -54,19 +54,17 @@ message(STATUS "My variable is: ${MY_VARIABLE}")
 unset(MY_VARIABLE)
 ```
 
-> :exclamation: **IMPORTANT**
+> [!CAUTION] **IMPORTANT**
 >
 > - In CMake, everything is a string. Lists are just strings separated by semicolons `;` (e.g., `"item1;item2;item3"`).
 > - **An unset or undefined variable expands to an empty string**. This can be a common source of bugs! Use `if(DEFINED VAR_NAME)` to check if a variable is set.
 > - CMake variables are not environment variables (unlink `Makefile`).
-{: .notice--danger}
 
-> :warning: **WARNING**
+> [!WARNING] **WARNING**
 >
 > Avoid custom variables in the arguments of project commands.
 > 
 > In modern CMake, what we need is targets and properties. See them later.
-{: .notice--warning}
 
 ### Comments
 
@@ -85,10 +83,9 @@ Generator expressions, often called "genex," are a powerful CMake feature that u
 
 This delayed evaluation is crucial because it allows you to create build configurations that are aware of things that are only known at build time, such as the specific build type (`Debug`, `Release`), the compiler being used, or the language of a source file.
 
-> :exclamation: **IMPORTANT**
+> [!CAUTION] **IMPORTANT**
 >
 > Think of generator expressions as placeholders that the final build tool (like Make, Ninja, or MSBuild) will fill in with the correct value at the right time. This is much more flexible than using `if()` statements in CMake, which are only evaluated once when you run `cmake`.
-{: .notice--danger}
 
 #### Common Use Cases and Examples
 
@@ -158,27 +155,24 @@ You can create your own commands to reduce code duplication.
 - **`function()`**: Creates a new variable scope. To pass results back to the caller, you must use `set(... PARENT_SCOPE)`.
 - **`macro()`**: Does not create a new scope. It performs simple text replacement, much like a C preprocessor macro.
 
-> :bulb: **TIP**
+> [!TIP] **TIP**
 >
 > **Rule of Thumb:**
 >
 > - Use `function()` by default to avoid polluting the caller's scope with side effects.
 > - Use `macro()` only when you need to wrap a command that has an output parameter or when you explicitly want side effects in the caller's scope.
-{: .notice--success}
 
 ## 3. The Core of Modern CMake: Targets and Properties
 
 Modern CMake revolves around **targets** and their **properties**. A target can be an executable, a library, or a custom target.
 
-> :warning: **WARNING**
+> [!WARNING] **WARNING**
 >
 > Avoid directory-level commands like `include_directories()`, `link_libraries()`, and `add_compile_options()`. They use global state and make dependencies hard to reason about. Always prefer the `target_*` equivalents.
-{: .notice--warning}
 
-> :warning: **WARNING**
+> [!WARNING] **WARNING**
 >
 > Don't use `file(GLOB)` in your `CMakeLists.txt` anymore.
-{: .notice--warning}
 
 ### Thinking in Targets
 
@@ -242,10 +236,9 @@ target_include_directories(my_header_lib INTERFACE
 )
 ```
 
-> :warning: **WARNING**
+> [!WARNING] **WARNING**
 >
 > The library interface may change during installation. Use the `BUILD_INTERFACE` and `INSTALL_INTERFACE` generator expressions as filters
-{: .notice--warning}
 
 ## 4. Working with Dependencies
 
@@ -264,20 +257,17 @@ if(Boost_FOUND)
 endif()
 ```
 
-> :memo: **Note**
+> [!NOTE] **Note**
 >
 > Regardless of the mode/package used, a `<PackageName>_FOUND` variable will be set to indicate whether the package was found.
-{: .notice--info}
 
-> :exclamation: **IMPORTANT**
+> [!CAUTION] **IMPORTANT**
 >
 > Always use the official, namespaced, imported targets (e.g., `Boost::system`, `Qt5::Core`, `GTest::GTest`). Never use the old-style `_LIBRARIES` and `_INCLUDE_DIRS` variables. Imported targets handle all dependency properties for you automatically.
-{: .notice--danger}
 
-> :exclamation: **IMPORTANT**
+> [!CAUTION] **IMPORTANT**
 >
 > Use a Find module for third party libraries ~~that are not built with CMake~~ that don't support clients to use CMake. Also, report this as a bug to their authors.
-{: .notice--danger}
 
 If you need to write a find module for a third-party library, report this as a bug to the authors. Because most people use CMake, it's a problem that don't support it.
 
@@ -302,10 +292,9 @@ FetchContent_MakeAvailable(googletest)
 target_link_libraries(my_tests PRIVATE GTest::GTest GTest::Main)
 ```
 
-> :memo: **Note**
+> [!NOTE] **Note**
 >
 > `FetchContent` is generally preferred over Git submodules because it gives the parent project more control and is easier to manage.
-{: .notice--info}
 
 ### Exporting Your Project as a Package
 
@@ -374,10 +363,9 @@ target_link_libraries(run_all_tests PRIVATE my_lib GTest::GTest GTest::Main)
 add_test(NAME MyLib.UnitTests COMMAND run_all_tests)
 ```
 
-> :bulb: **TIP**
+> [!NOTE] **TIP**
 >
 > It's a good practice to adopt a naming convention for your tests, like `Project.Component.TestType`. This makes filtering much easier.
-{: .notice--info}
 
 #### Running Tests
 
@@ -463,10 +451,9 @@ You specify the toolchain file when you first configure your project with `cmake
 cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE=/path/to/my-arm-toolchain.cmake
 ```
 
-> :warning: **WARNING**
+> [!WARNING] **WARNING**
 >
 > A toolchain file is for describing the **environment**, not for project logic. Avoid setting project options or variables in it. Its only job is to set up the compilers and search paths.
-{: .notice--warning}
 
 #### Example Toolchain File
 
@@ -577,19 +564,17 @@ set_target_properties(my_app PROPERTIES
 )
 ```
 
-> :exclamation: **IMPORTANT**
+> [!CAUTION] **IMPORTANT**
 >
 > The major advantage of this approach is that diagnostics from these tools are seamlessly integrated into your build output and appear directly in your IDE, just like regular compiler errors and warnings.
-{: .notice--danger}
 
 ### Best Practice: Analyzing Header Files
 
 A common pitfall is that header files without an associated source file (.cpp) will not be analyzed.
 
-> :bulb: **TIP**
+> [!NOTE] **TIP**
 >
 > For each header file, ensure there is an associated source file that `#include` it, preferably as the very first line. This source file can even be empty otherwise.
-{: .notice--info}
 
 You can use a simple script to create these missing source files:
 

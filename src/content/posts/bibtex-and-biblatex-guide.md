@@ -39,8 +39,8 @@ comment: true
 | `@phdthesis` / `@mastersthesis` | 学位论文 | `author`, `title`, `school`, `year` |
 | `@misc` / `@online`（BibLaTeX） | 网页、预印本 | `author`, `title`, `year`, `howpublished` 或 `url`, `note` |
 
-不同条目在 BibTeX 与 BibLaTeX 中的必填字段会有差异，建议以所用样式文档为准。可以通过 `texdoc biblatex` 或 `texdoc bibtex` 查看官方说明。
-{: .notice--info}
+> [!NOTE]
+> 不同条目在 BibTeX 与 BibLaTeX 中的必填字段会有差异，建议以所用样式文档为准。可以通过 `texdoc biblatex` 或 `texdoc bibtex` 查看官方说明。
 
 ---
 
@@ -180,8 +180,8 @@ title = {Deep Residual Learning for {CNN} Image Recognition},
 
 ## 4. 该如何选择？
 
-如果模板没有明确限制，通常可以优先考虑 `XeLaTeX/LuaLaTeX + BibLaTeX + biber`。
-{: .notice--important}
+> [!IMPORTANT]
+> 如果模板没有明确限制，通常可以优先考虑 `XeLaTeX/LuaLaTeX + BibLaTeX + biber`。
 
 ---
 

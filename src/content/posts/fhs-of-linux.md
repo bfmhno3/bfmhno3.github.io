@@ -99,8 +99,8 @@ Linux 继承了 UNIX 最伟大的哲学：“一切皆文件”。硬件设备�
 
 现在的 Linux 初始化流程（通过 `initramfs`）可以在挂载真正的根目录之前，就把需要的东西加载进内存。因此，现代发行版（如 Arch, Fedora, Ubuntu）正在推行 **"usr-merge"（`/usr` 合并）**：
 
-现在的 `/bin`, `/sbin`, `/lib` 往往只是指向 `/usr/bin`, `/usr/sbin`, `/usr/lib` 的**软链接（Symlinks）**。
-{: .notice--info}
+> [!NOTE]
+> 现在的 `/bin`, `/sbin`, `/lib` 往往只是指向 `/usr/bin`, `/usr/sbin`, `/usr/lib` 的**软链接（Symlinks）**。
 
 这并不是背离了 FHS，而是在**物理条件改变后**的自然进化：既然底层硬件不再受限，那么在逻辑上将 “系统核心二进制” 和 “系统扩展二进制” 统一管理（全部归入静态可共享的 `/usr`），能让系统结构更加干净利落。
 

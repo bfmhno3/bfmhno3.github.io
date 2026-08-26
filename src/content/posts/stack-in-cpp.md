@@ -32,7 +32,7 @@ comment: true
 - 弹出（Pop）：你只能取走最上面的盘子。
 - 查看（Top/Peek）：你只能看到最上面盘子的花纹，无法直接看到底部的盘子。
 
-{% include figure popup=true image_path="/assets/images/a_stack_of_plates.jpg" alt="餐厅里的一摞盘子，展示了后进先出的物理结构" caption="生活中的栈模型：想要拿到底部的盘子，必须先移走顶部的盘子" %}
+![生活中的栈模型：想要拿到底部的盘子，必须先移走顶部的盘子](/assets/images/a_stack_of_plates.jpg)
 
 ### 1.2 为什么它是 “受限” 的？
 
@@ -62,13 +62,13 @@ comment: true
 
 所有，系统在内存中专门开辟了**调用栈**（Call Stack）。每次进入新函数，就把它的返回地址、局部变量和寄存器状态打包成一个**栈帧**（Stack Frame）压入栈顶；函数一结束，就将栈顶**弹出**，完美恢复上一层函数的现场。没有栈，现代编程语言的函数嵌套和递归机制就根本无法实现。
 
-{% include figure popup=true image_path="/assets/images/call_stack_layout.svg" alt="调用栈内存布局示意图：展示了DrawLine子程序位于栈顶，DrawSquare位于下方" caption="调用栈示例：如果子程序 `DrawSquare` 调用了 `DrawLine`，`DrawLine` 的栈帧就会被压入栈顶（如图中绿色部分所示）。栈指针（Stack Pointer）始终指向最新的栈顶位置" %}
+![调用栈示例：如果子程序 `DrawSquare` 调用了 `DrawLine`，`DrawLine` 的栈帧就会被压入栈顶（如图中绿色部分所示）。栈指针（Stack Pointer）始终指向最新的栈顶位置](/assets/images/call_stack_layout.svg)
 
 ### 2.2 递归（Recursion）
 
 既然函数调用依赖栈来保存上下文，那么**递归**可以说是把栈的这种特性压榨到了机制。
 
-{% include figure popup=true image_path="/assets/images/recursive_drawing_of_a_sierpinski_triangle_through_turtle_graphics.gif" alt="使用海龟绘图递归绘制谢尔宾斯基三角形的动画" caption="使用海龟绘图（Turtle Graphics）递归绘制谢尔宾斯基三角形（Sierpinski triangle）的过程" %}
+![使用海龟绘图（Turtle Graphics）递归绘制谢尔宾斯基三角形（Sierpinski triangle）的过程](/assets/images/recursive_drawing_of_a_sierpinski_triangle_through_turtle_graphics.gif)
 
 从人类的思维来看，递归是**自己调用自己**，但在 CPU 和内存眼里，根本没有 “同一个函数” 的概念。对于计算机而言，不管是 `func_a()` 调用 `func)b()`，还是 `func_a()` 调用 `func_a()`，动作是完全一样的——仅仅是 PC（程序计数器）指针跳转，并在内存中开辟一个新的栈帧。
 
@@ -102,7 +102,7 @@ comment: true
 1. **扫描与入栈**：逐个字符读取，只要遇到 “左括号”（如 `{`、`[`、`(`），不管三七二十一，直接压入栈中。这代表着进入了一个新的层级，正在等待它的结束。
 2. **匹配与出栈**：一旦遇到 “右括号”（如 `)`、`]`、`}`），此时立刻去查看**栈顶**元素。如果栈顶正好是能与它匹配的左括号，说明当前最内层的逻辑闭环了，于是将栈顶弹出，继续往下走。
 
-{% include figure popup=true image_path="/assets/images/parentheses_matching.webp" alt="栈用于括号匹配的流程图" caption="利用栈进行括号匹配的逻辑：左括号入栈，右括号消栈，最后栈空则合法" %}
+![利用栈进行括号匹配的逻辑：左括号入栈，右括号消栈，最后栈空则合法](/assets/images/parentheses_matching.webp)
 
 如果遇到右括号时栈是空的（说明没有多余的左括号等待闭合），或者栈顶的左括号类型不匹配（比如 `{` 遇到了 `]`），那么编译器就可以立刻抛出 `Syntax Error`（语法错误）。当整个文件扫描完，如果栈里面还有残留的左括号，说明有作用域没关上。
 
@@ -137,7 +137,7 @@ comment: true
 |判空|`empty()`|栈为空返回 `true`|操作前务必检查|
 |大小|`size()`|返回元素数量|-|
 
-{% include figure popup=true image_path="/assets/images/a_stack_runtime_with_push_and_pop_operations.svg" alt="栈的 Push 和 Pop 操作示意图" caption="Push 操作将元素压入栈顶，Pop 操作移除栈顶元素，两者都不能触及栈底" %}
+![Push 操作将元素压入栈顶，Pop 操作移除栈顶元素，两者都不能触及栈底](/assets/images/a_stack_runtime_with_push_and_pop_operations.svg)
 
 ### 3.3 为什么 C++ 的 `pop()` 不返回元素？
 
@@ -418,7 +418,7 @@ class stack;
 1. **扩容代价**：`std::vector` 在内存不足扩容时，需要把所有元素搬运到新内存块，代价较大。`std::deque` 是分段内存，扩容时只需分配新段，不需要搬运旧数据。
 2. **内存效率**：对于大量进出的栈操作，`std::deque` 的内存回收和分配策略通常比 `std::vector` 更平滑。
 
-{% include figure popup=true image_path="/assets/images/double_ended_queue_in_stl.png" alt="STL 中双端队列 deque 的内部结构示意图" caption="std::deque 的内部结构：由中控器（Map）管理的一系列分段连续内存缓冲区，非常适合两端操作" %}
+![std::deque 的内部结构：由中控器（Map）管理的一系列分段连续内存缓冲区，非常适合两端操作](/assets/images/double_ended_queue_in_stl.png)
 
 当然，如果你确定需要极致的连续内存性能，也可以手动指定：
 
