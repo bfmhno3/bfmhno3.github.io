@@ -1,3 +1,21 @@
-Tempor velit sint sunt ipsum tempor enim ad qui ullamco. Est dolore anim ad velit duis dolore minim sunt aliquip amet commodo labore. Ut eu pariatur aute ea aute excepteur laborum. Esse ea esse excepteur minim mollit qui cillum excepteur ex dolore magna. Labore deserunt fugiat incididunt incididunt sint ea. Consequat dolore aute laboris quis proident quis non et est consectetur ex eiusmod sit culpa.
+## 关于我
 
-Cupidatat ea do et in excepteur in. Ad nostrud ut est esse eu duis ea sunt eiusmod. Aliquip tempor veniam sint elit fugiat. Velit incididunt laboris amet incididunt labore dolore irure velit excepteur commodo deserunt laborum. Consectetur eu fugiat veniam veniam Lorem labore magna eiusmod. Ea occaecat reprehenderit pariatur consectetur minim labore ut aliquip.
+你好，我是 **bfmhno3**。
+
+这是一个用来记录学习、实践和思考的个人博客。我主要关注 Linux、C++、操作系统、计算机体系结构和数学，也会把阅读、实验以及解决问题时留下的痕迹整理下来。
+
+我不太相信一次就能得到正确答案。很多理解都来自反复尝试、犯错、修正，再重新开始。写下这些内容，既是为了给未来的自己留下线索，也是为了把仍然不完整的思考整理得更清楚。
+
+## 关于这个站点
+
+`Better Mistakes` 对我来说，不是把错误美化成成就，而是提醒自己：错误本身并不可怕，重要的是能否从中理解些什么，并在下一次做得更好。
+
+我也一直在思考一个没有简单答案的问题：人的一生如此短暂，而死亡又不可避免，那么活着的意义究竟是什么？我还没有找到确定的答案。现在能做的，是保持好奇，认真生活，持续学习，并在这个过程中逐渐接近真正的自己。
+
+## 我的 GitHub
+
+这里是本站的源码仓库：
+
+::github{repo="bfmhno3/bfmhno3.github.io"}
+
+如果你发现文章中的错误，或对内容有任何建议，欢迎通过评论区或站点上的联系方式告诉我。
