@@ -5,7 +5,7 @@ export const announcementConfig: AnnouncementConfig = {
 	title: "",
 
 	// 公告内容
-	content: "欢迎来到我的博客！这是一则示例公告。",
+	content: "本站曾使用 Jekyll + Minimal Mistakes 主题，现已迁移至 Astro + Firefly。博客内容未变，但文章链接有所调整，请自行查找需要的文章。",
 
 	// 是否允许用户关闭公告
 	closable: true,
