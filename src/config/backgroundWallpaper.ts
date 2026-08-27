@@ -73,17 +73,16 @@ export const backgroundWallpaper: BackgroundWallpaperConfig = {
 			// 是否启用主页横幅文字
 			enable: true,
 			// 主页横幅主标题
-			title: "Lovely firefly!",
+			title: "Becoming...",
 			// 主页横幅主标题字体大小
 			titleSize: "4.5rem",
 			// 主页横幅副标题
 			subtitle: [
-				"In Reddened Chrysalis, I Once Rest",
-				"From Shattered Sky, I Free Fall",
-				"Amidst Silenced Stars, I Deep Sleep",
-				"Upon Lighted Fyrefly, I Soon Gaze",
-				"From Undreamt Night, I Thence Shine",
-				"In Finalized Morrow, I Full Bloom",
+				"Life is short, yet every moment leaves a trace.",
+				"Death is certain, but meaning is something we must create.",
+				"I am searching for an answer hidden somewhere within.",
+				"Past every name, role, and expectation, I hope to find myself",
+				"Until the end, I will keep becoming.",
 			],
 			// 主页横幅副标题字体大小
 			subtitleSize: "1.5rem",
@@ -107,18 +106,18 @@ export const backgroundWallpaper: BackgroundWallpaperConfig = {
 				{
 					name: "GitHub",
 					icon: "fa7-brands:github",
-					url: "https://github.com/CuteLeaf/Firefly",
+					url: "https://github.com/bfmhno3/bfmhno3.github.io",
 					showName: true,
 				},
 				{
 					name: "Email",
 					icon: "fa7-solid:envelope",
-					url: "mailto:xiaye@msn.com",
+					url: "mailto:bfmhno3@gmail.com",
 				},
 				{
 					name: "Sponsor",
 					icon: "material-symbols:favorite",
-					url: "https://blog.cuteleaf.cn/sponsor/",
+					url: "https://bfmhno3.github.io/sponsor/",
 				},
 				{
 					name: "RSS",

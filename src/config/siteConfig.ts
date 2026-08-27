@@ -24,9 +24,9 @@ const pages = resolvePageToggles({
 	// 书签导航页面开关
 	booknav: true,
 	// 哔哩哔哩追番页面开关
-	bilibili: false,
+	bilibili: true,
 	// 番组计划页面开关
-	bangumi: true,
+	bangumi: false,
 	// VNDB页面开关
 	vndb: false,
 	// MyAnimeList页面开关
@@ -226,7 +226,7 @@ export const siteConfig: SiteConfig = {
 	// ── Bilibili配置 ──────────────────────────────────
 	bilibili: {
 		// 你的 Bilibili 用户 UID
-		uid: "38932988",
+		uid: "1142304437",
 	},
 
 	// ── 番组计划bangumi配置 ──────────────────────────────────
