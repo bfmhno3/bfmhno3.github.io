@@ -11,7 +11,7 @@ description: "与优秀的朋友们一起成长"
 
 ```text
 站点名称: Better Mistakes
-站点描述: 飞萤之火自无梦的长夜亮起，绽放在终竟的明天。
+站点描述: 记录技术实践与生活思考的个人博客。
 站点链接: https://bfmhno3.github.io
 头像链接: https://q1.qlogo.cn/g?b=qq&nk=7618557&s=640
 ```
