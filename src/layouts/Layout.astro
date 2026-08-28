@@ -177,6 +177,7 @@ const siteLogo = await getSiteLogo();
     )}
 
     <link rel="canonical" href={Astro.url} />
+    <link rel="sitemap" href={new URL("sitemap-index.xml", siteConfig.site_url).href} />
     <meta property="og:site_name" content={siteConfig.title} />
     <meta property="og:url" content={Astro.url} />
     <meta property="og:title" content={pageTitle} />

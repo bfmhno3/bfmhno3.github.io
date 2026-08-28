@@ -18,6 +18,8 @@ jobs:
     steps:
       - name: Checkout your repository using git
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -36,6 +38,17 @@ jobs:
       - name: Build site
         run: pnpm run build
 
+      - name: Create IndexNow key file
+        env:
+          INDEXNOW_KEY: ${{ secrets.INDEXNOW_KEY }}
+        run: |
+          if [[ -z "$INDEXNOW_KEY" || ! "$INDEXNOW_KEY" =~ ^[A-Za-z0-9-]{8,128}$ ]]; then
+            echo "INDEXNOW_KEY is missing or invalid"
+            exit 1
+          fi
+          printf '%s' "$INDEXNOW_KEY" > "dist/${INDEXNOW_KEY}.txt"
+
+
       - name: Create .nojekyll file
         run: touch dist/.nojekyll
 
@@ -45,3 +58,11 @@ jobs:
           branch: pages # 部署到pages分支
           folder: dist # Astro默认构建输出目录
           clean: true # 清理目标分支中的旧文件
+
+      - name: Submit changed URLs to IndexNow
+        env:
+          INDEXNOW_KEY: ${{ secrets.INDEXNOW_KEY }}
+          INDEXNOW_SITE: https://bfmhno3.github.io
+          INDEXNOW_BASE_SHA: ${{ github.event.before }}
+          INDEXNOW_HEAD_SHA: ${{ github.sha }}
+        run: npx tsx scripts/submit-indexnow.ts
