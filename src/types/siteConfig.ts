@@ -32,6 +32,8 @@ export type SiteConfig = {
 	site_url: string;
 	description?: string; // 网站描述，用于生成 <meta name="description">
 	keywords?: string[]; // 站点关键词，用于生成 <meta name="keywords">
+	googleSiteVerification?: string; // Google Search Console 验证码
+	bingSiteVerification?: string; // Bing Webmaster Tools 验证码
 
 	lang: "en" | "zh_CN" | "zh_TW" | "ja" | "ru" | "ko";
 

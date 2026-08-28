@@ -169,6 +169,12 @@ const siteLogo = await getSiteLogo();
       )
     }
     <meta name="author" content={profileConfig.name} />
+    {siteConfig.googleSiteVerification && (
+      <meta name="google-site-verification" content={siteConfig.googleSiteVerification} />
+    )}
+    {siteConfig.bingSiteVerification && (
+      <meta name="msvalidate.01" content={siteConfig.bingSiteVerification} />
+    )}
 
     <link rel="canonical" href={Astro.url} />
     <meta property="og:site_name" content={siteConfig.title} />

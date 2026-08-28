@@ -48,6 +48,9 @@ export const siteConfig: SiteConfig = {
 	// 站点 URL
 	site_url: "https://bfmhno3.github.io",
 
+	// 搜索引擎站点验证
+	googleSiteVerification: "UUnU8OnGqO_2FFdhrv7eEABM5p_cNPhM4Se6HB1KFSk",
+	bingSiteVerification: "FC3BA97765A3C90F8CA771F70AE34FB8",
 	// 站点描述
 	description:
 		"Ever tried. Ever failed. No matter. Try Again. Fail again. Fail better.",
