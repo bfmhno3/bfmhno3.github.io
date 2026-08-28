@@ -95,7 +95,7 @@ Podman 用户必须使用 rootful mode。
 2. 更新主题组件、布局、样式、工具、页面、插件、依赖和 schema。
 3. 按当前 upstream 结构重新应用个人配置，不要整体覆盖 `src/config/`。
 4. 保留 `src/content/`、`public/assets/` 以及部署、Nix、Docker 文件。
-5. 更新后按仓库流程运行 `pnpm install --frozen-lockfile`、`node scripts/validate-content.mjs`、`pnpm check` 和 `pnpm build`。
+5. 更新后按仓库流程运行 `pnpm install --frozen-lockfile`、`pnpm check` 和 `pnpm build`。
 
 README 只保留主题维护提示，不展开完整的 Firefly 配置字段手册。
 
