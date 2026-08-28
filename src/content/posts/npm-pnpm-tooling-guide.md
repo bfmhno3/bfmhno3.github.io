@@ -1,7 +1,7 @@
 ---
-title: "npm 与 pnpm：从 WSL2 环境搭建到命令执行"
+title: "npm 与 pnpm 安装的到底是什么？从 JavaScript 包到原生模块"
 published: "2026-08-28 20:00:00 +08:00"
-description: "在 WSL2 Ubuntu 22.04 中安装 Node.js、启用 Corepack，并通过一个隔离项目理解 npm、pnpm、依赖文件和命令入口。"
+description: "我原以为 npm 和 pnpm 安装的只是 JavaScript 或 TypeScript 包，直到遇到 sharp 这类包含原生模块和平台产物的依赖。本文在 WSL2 中动手实验，沿着 registry、lockfile、store、node_modules 和 CLI 入口把这件事弄清楚。"
 category: Tutorial
 tags:
   - Node.js
@@ -14,9 +14,11 @@ comment: true
 slug: npm-pnpm-tooling-guide
 ---
 
-很多人第一次接触 Node.js 项目时，会把 Node.js、npm、pnpm、nvm 和 Corepack 当成一组相似的安装工具。它们其实处在不同层次。先把这些边界分清，再看依赖如何下载、文件如何落盘，遇到 `command not found` 或版本错误时就不会只能反复重装。
+我一开始也以为 npm 和 pnpm 安装的就是 JavaScript 或 TypeScript 包，最多再附带几段配置文件。直到我见到的包越来越多，尤其是 `sharp` 这类会带上原生 `.node` 模块、预编译二进制和平台依赖的包，这个模型终于不够用了。于是我在 WSL2 里建了一个隔离项目，沿着 registry、tarball、lockfile、store 和 `node_modules` 一路观察：我们安装的到底是什么，最后又是谁把它变成了一个可以执行的命令。
 
-本文以 WSL2 中的 Ubuntu 22.04 LTS 为例。命令行提示符统一使用虚构的 `user@wsl`，路径中的用户名、主机名、硬件、IP、Windows 路径和日志路径均已省略，不要把示例输出中的路径当成自己的环境事实。
+本文以 WSL2 中的 Ubuntu 22.04 LTS 为例，命令行提示符统一使用虚构的 `user@wsl`。路径中的用户名、主机名、硬件、IP、Windows 路径和日志路径均已省略；示例版本和下载数量也会随时间变化，不要把它们当成自己的环境事实。
+
+我会先建立一份隔离实验，再回头解释每个文件和命令为什么出现。这样比背安装咒语可靠得多：包管理器就像仓库管理员，lockfile 是出入库账本，`node_modules` 则是当前项目真正拿来工作的装配区。
 
 ## npm、pnpm、Node.js 和 nvm 分别是什么
 
@@ -87,9 +89,11 @@ Corepack 最容易被误解成“另一个包管理器”。更准确的分层�
 1. Node.js 执行 JavaScript。
 2. npm 是一个包管理器，通常随 Node.js 分发。
 3. pnpm 和 Yarn 是其他包管理器。
-4. Corepack 为 pnpm、Yarn 等包管理器准备版本，并提供转发入口。
+4. Corepack 是包管理器版本管理器，为 pnpm、Yarn 等准备版本并提供转发入口。
 
 Corepack 解决的问题是：**应该运行哪个版本的包管理器**。它不解决：**项目应该安装哪些依赖**。后一个问题仍由 `pnpm install`、`pnpm add`、`npm install` 等命令负责。
+
+这里有一个容易随 Node.js 版本变化的现实：不能假设每个 Node.js 发行版都内置 Corepack。检查命令是否存在；如果不存在，按项目文档安装 pnpm，或者使用 pnpm 官方提供的安装方式。无论采用哪种方式，最后都要检查实际运行的 `pnpm --version`，而不是只检查安装命令是否成功。
 
 ### `corepack enable pnpm` 发生了什么
 
@@ -139,6 +143,8 @@ manage-package-manager-versions = true
 - Corepack shim：让命令能够进入版本准备和转发流程。
 - `pnpm install`：真正安装项目依赖。
 
+这个配置键是 pnpm 的设置，不是 npm 的通用配置。若同一目录还会运行 npm，npm 可能提示 `Unknown project config`；这不是安装失败，但说明不应把 pnpm 专属选项当成跨工具协议。项目最好只保留实际使用的包管理器配置，并把团队约定写进项目文档或自动检查中。
+
 检查四个版本时，命令和输出应分别理解：
 
 ```bash
@@ -153,6 +159,9 @@ user@wsl:~$ pnpm --version
 ```
 
 如果某个 Node.js 发行版没有提供 Corepack，`corepack` 命令可能不存在。这时应按照项目文档安装 pnpm，最后仍然用 `pnpm --version` 检查实际运行版本。全局安装 pnpm、Corepack 提供命令入口、`pnpm add` 安装项目依赖，是三个不同动作。
+
+> [!WARNING]
+> 不要把 `corepack enable`、全局安装 pnpm 和 `pnpm add` 混成一个动作。前两者处理“命令从哪里来、运行哪个版本”，最后一个才修改当前项目的依赖。
 
 ## 用隔离项目观察安装过程
 
@@ -197,6 +206,23 @@ user@wsl:/tmp/tmp.xxxxxxxx$ cat package.json
 ```
 
 `pnpm init` 在不同版本中生成的字段可能不同。不要把临时项目的名字、版本或格式当成固定模板。
+
+### 用 npm 做一次对照
+
+我会再开一个目录，只安装一个开发工具。这样实验不会把 npm 和 pnpm 的文件混在一起：
+
+```bash
+user@wsl:~$ npm_dir=$(mktemp -d)
+user@wsl:~$ cd "$npm_dir"
+user@wsl:/tmp/tmp.yyyyyyyy$ npm init -y
+Wrote to /tmp/tmp.yyyyyyyy/package.json
+user@wsl:/tmp/tmp.yyyyyyyy$ npm install --save-dev typescript
+added 1 package, and audited 2 packages in 1s
+user@wsl:/tmp/tmp.yyyyyyyy$ npm exec tsc -- --version
+Version 7.0.2
+```
+
+这个目录会得到 `package-lock.json`，而不是 `pnpm-lock.yaml`。`npm exec` 和 `pnpm exec` 都优先使用项目本地的 CLI，但两者不会共享锁文件格式，也不应该在同一个项目里轮流负责更新依赖。这个对照实验的价值不在于哪一个命令少敲两个字符，而在于把“同一个 registry 生态”和“不同的项目安装实现”分开观察。
 
 ## 包不是语言
 
@@ -313,13 +339,23 @@ Version 7.0.2
 3. `pnpm run dev`：读取 `package.json` 的 `scripts`，并注入本地 `.bin` PATH。
 4. 脚本启动 Node.js、shell 或其他子进程：子进程继承脚本环境。
 
-`pnpm dlx`、`npx` 和 `npm exec` 适合临时获取并执行 CLI，不会自动把它变成项目依赖。需要可复现的工具，应写入 `dependencies` 或 `devDependencies`，再通过 `scripts` 或 `pnpm exec` 使用。
+### `npm run`、`pnpm run` 和直接执行
+
+`npm run build` 与 `pnpm run build` 都会读取 `package.json` 的 `scripts` 字段，并把项目的 `node_modules/.bin` 放到脚本环境的 `PATH` 前面。脚本因此可以直接调用本地安装的 `tsc`、`astro` 或 `vite`，不需要用户把它们全局安装一份。
+
+我通常把入口分成三类：
+
+1. `node src/index.mjs`：Node.js 直接运行文件，完全绕开包管理器脚本。
+2. `pnpm exec tsc --version`：从当前项目依赖中寻找并运行本地 CLI。
+3. `pnpm run type-check`：读取脚本定义，并注入 `.bin` PATH；npm 项目对应 `npm run type-check`。
+
+`pnpm dlx`、`npx` 和 `npm exec` 适合一次性获取并执行 CLI。它们的便利之处也是风险所在：命令可能触发一次临时下载，且不会把工具记录为项目依赖。需要可复现的工具，应写入 `devDependencies`，再通过脚本或 `pnpm exec` 使用。
 
 ## registry、换源和网络故障
 
 registry 是提供包元数据和 tarball 的 HTTP 服务。它可以是 npm 默认 registry、第三方镜像、公司私有 registry 或代理缓存。切换 registry 只改变查询和下载的来源，不改变项目依赖目录，也不会自动修复错误的版本范围。
 
-先检查当前配置：
+我会先检查当前配置，而不是直接删除缓存：
 
 ```bash
 user@wsl:/tmp/tmp.xxxxxxxx$ pnpm config get registry
@@ -354,7 +390,7 @@ user@wsl:/tmp/tmp.xxxxxxxx$ pnpm audit --prod
 No known vulnerabilities found
 ```
 
-安装依赖本身也可能执行代码。`preinstall`、`install`、`postinstall` 和 `prepare` 可能编译 native addon、下载平台产物、生成代码，甚至执行任意脚本。安装前应审查包来源和生命周期脚本，不要把关闭安全检查作为第一步修复。
+安装依赖本身也可能执行代码。`preinstall`、`install`、`postinstall` 和 `prepare` 可能编译 native addon、下载平台产物、生成代码，甚至执行任意脚本。安装前应审查包来源和生命周期脚本；在 CI 中可以评估 `--ignore-scripts` 是否适合项目，但不要把关闭安全检查当成第一步修复。
 
 如果项目的 `package.json` 声明了 `devEngines.packageManager`，却使用了错误的包管理器，npm 可能报：
 
@@ -370,11 +406,14 @@ npm error Invalid name "pnpm" does not match "npm"
 新机器可以按以下顺序操作：
 
 1. 在 WSL2 中准备 Ubuntu 和 shell。
-2. 使用 nvm 安装满足项目 `engines` 的 Node.js。
+2. 使用 nvm 安装满足项目 `engines` 的 Node.js，并确认 shell 启动文件已加载 nvm。
 3. 检查 `node --version` 和 `npm --version`。
-4. 启用或安装项目规定的 pnpm，并检查 `corepack --version` 和 `pnpm --version`。
-5. 进入项目根目录，执行 `pnpm install --frozen-lockfile`。
-6. 按项目文档执行开发、检查、构建和预览命令。
+4. 启用或安装项目规定的 pnpm，并检查 `corepack --version`（若存在）和 `pnpm --version`。
+5. 进入项目根目录，先阅读 `package.json` 的 `packageManager`、`engines` 和 lockfile 类型。
+6. 执行项目规定的锁定安装：pnpm 项目使用 `pnpm install --frozen-lockfile`，npm 项目通常使用 `npm ci`。
+7. 按项目文档执行开发、检查、构建和预览命令。
+
+如果项目位于 `/mnt/c` 或其他 Windows 挂载路径，安装和大量小文件访问可能明显慢于 Linux 文件系统中的 `~/projects`。这是 I/O 边界的代价，不是 pnpm store 损坏；我通常把源码和 store 放在 WSL2 的 Linux 文件系统里，只通过编辑器或 Git 与 Windows 侧协作。
 
 最小排错表：
 
@@ -405,7 +444,7 @@ flowchart LR
   J --> H
 ```
 
-真正值得记住的不是一串安装咒语，而是这条边界链：包从哪个 registry 来，版本解析记录在哪里，文件落在哪一层，命令由哪个入口转给哪个 Node.js。顺着这条链排查，npm 和 pnpm 的差异就会变成可以观察和验证的实现选择。
+真正值得记住的不是一串安装咒语，而是这条边界链：包从哪个 registry 来，版本解析记录在哪里，文件落在哪一层，命令由哪个入口转给哪个 Node.js。顺着这条链排查，npm 和 pnpm 的差异就会变成可以观察和验证的实现选择。未来包管理器大概还会继续把“下载一个包”包装成更多自动化，但 lockfile、脚本和运行时边界不会凭空消失；理解它们，至少能让下一次 `command not found` 变成一个可定位的实验，而不是一次祈祷。
 
 ## 参考资料
 
