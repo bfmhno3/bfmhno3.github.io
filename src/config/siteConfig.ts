@@ -220,7 +220,8 @@ export const siteConfig: SiteConfig = {
 		// 是否开启分享海报生成功能
 		sharePoster: true,
 		// OpenGraph图片功能，注意开启后要渲染很长时间，不建议本地调试的时候开启
-		generateOgImages: false,
+		generateOgImages:
+			import.meta.env?.PROD ?? process.env.NODE_ENV === "production",
 	},
 
 	// ── Bilibili配置 ──────────────────────────────────
