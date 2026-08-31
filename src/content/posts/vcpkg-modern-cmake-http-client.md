@@ -374,7 +374,7 @@ int main(int argc, char* argv[]) {
 vhttp https://example.com/api | jq .
 ```
 
-这里的命令是 `jq`，不是 `jp`。`jq` 是一个处理 JSON 的命令行工具；管道符 `|` 会把 `vhttp` 写到标准输出的响应 body 交给 `jq`，最后的 `.` 表示读取并格式化整个 JSON 值。例如服务返回一行紧凑 JSON 时，`jq .` 会把它缩进为更容易阅读的多行结构。`jq` 不是 `vhttp` 的依赖，需要按操作系统单独安装；如果不需要格式化 JSON，直接运行 `vhttp https://example.com/api` 即可。
+`jq` 是一个处理 JSON 的命令行工具；管道符 `|` 会把 `vhttp` 写到标准输出的响应 body 交给 `jq`，最后的 `.` 表示读取并格式化整个 JSON 值。例如服务返回一行紧凑 JSON 时，`jq .` 会把它缩进为更容易阅读的多行结构。`jq` 不是 `vhttp` 的依赖，需要按操作系统单独安装；如果不需要格式化 JSON，直接运行 `vhttp https://example.com/api` 即可。
 
 返回码也区分了几类失败：参数或 Header 错误返回 1，传输错误返回 2，HTTP 4xx/5xx 返回 3。HTTP 404 和 TCP 连接失败不是一回事，CLI 最好不要把它们都压成一个含糊的 `false`。
 
@@ -389,14 +389,39 @@ cmake --build --preset dev
 
 我的实际构建只有 2 个 Ninja step：编译 `main.cpp`，然后链接 `vhttp`。
 
-```text
+```bash
 [1/2] Building CXX object CMakeFiles/vhttp.dir/src/main.cpp.o
 [2/2] Linking CXX executable vhttp
 ```
 
-为了避免把外部网络状态混进验证，我在本机启动了一个 HTTP server，并准备了一个 17 bytes 的响应文件。运行结果如下：
+为了避免把外部网络状态混进验证，我使用 Python 3 标准库自带的 `http.server` 在本机启动了一个静态文件服务器。它不需要额外安装 Web 框架，只要系统中的 `python3` 命令可用即可。
 
-```console
+我先在项目根目录创建测试目录和响应文件。`printf` 不会额外改写内容，因此这个文件恰好是 17 bytes：
+
+```bash
+mkdir -p http-fixture
+printf 'hello from vhttp\n' > http-fixture/hello.txt
+```
+
+然后打开第一个终端，在项目根目录启动服务器：
+
+```bash
+$ python3 -m http.server 18080 \
+    --bind 127.0.0.1 \
+    --directory http-fixture
+Serving HTTP on 127.0.0.1 port 18080 (http://127.0.0.1:18080/) ...
+```
+
+- `-m http.server` 让 Python 运行标准库中的静态 HTTP server 模块。
+- `18080` 是监听端口。
+- `--bind 127.0.0.1` 只允许本机访问，避免把临时测试服务暴露到局域网。
+- `--directory http-fixture` 把刚才创建的目录作为网站根目录。
+
+这条命令会占用当前终端并持续运行。验证结束后按 <kbd>Ctrl</kbd> + <kbd>C</kbd> 停止服务。Windows 如果安装了 Python Launcher，也可以把命令开头的 `python3` 换成 `py`。
+
+接着打开第二个终端，仍然进入 `vhttp` 项目根目录，再运行客户端。URL 中的 `/hello.txt` 对应 `http-fixture/hello.txt`：
+
+```bash
 $ ./build/dev/vhttp -v http://127.0.0.1:18080/hello.txt
 [debug] GET http://127.0.0.1:18080/hello.txt (timeout=5000 ms)
 [info] HTTP 200 in 76 ms, 17 bytes
