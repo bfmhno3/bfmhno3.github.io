@@ -219,6 +219,7 @@ The complete set of Front Matter fields is listed below:
 | Property | Type | Required | Description |
 | --- | --- | --- | --- |
 | `title` | `string` | Yes | Post title. |
+| `commentId` | `string` | Yes | Permanent Giscus discussion ID for posts. Generate it when the post is created, normally as `post:<initial-slug>`, and never change it when renaming the file, slug, route, title, or theme. |
 | `published` | `date` | Yes | Publication date. |
 | `updated` | `date` | No | Last updated date. Defaults to the publication date when omitted. |
 | `description` | `string` | No | Short post description displayed on the home-page post card. |
