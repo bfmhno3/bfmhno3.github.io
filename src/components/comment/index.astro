@@ -17,7 +17,12 @@ interface Props {
 	title?: string;
 }
 
-const { post, commentId, customPath, title: customTitle } = Astro.props as Props;
+const {
+	post,
+	commentId,
+	customPath,
+	title: customTitle,
+} = Astro.props as Props;
 
 // 根据页面类型确定路径
 const slugFromPath = (customPath || "/").replace(/^\/+|\/+$/g, "") || "index";

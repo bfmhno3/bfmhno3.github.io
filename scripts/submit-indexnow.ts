@@ -22,10 +22,14 @@ function siteUrl(value: string): URL {
 }
 
 export function postUrl(path: string): string | undefined {
-	if (!/^src\/content\/posts\/(?!_quarantine(?:\/|$)).+\.(?:md|mdx)$/i.test(path)) {
+	if (
+		!/^src\/content\/posts\/(?!_quarantine(?:\/|$)).+\.(?:md|mdx)$/i.test(path)
+	) {
 		return undefined;
 	}
-	const slug = path.slice("src/content/posts/".length).replace(/\.(?:md|mdx)$/i, "");
+	const slug = path
+		.slice("src/content/posts/".length)
+		.replace(/\.(?:md|mdx)$/i, "");
 	return `/posts/${encodeURI(slug)}/`;
 }
 export function dynamicChanged(path: string): boolean {
@@ -40,7 +44,8 @@ export function parseNameStatus(output: string): ChangedFile[] {
 		if (status.startsWith("R") || status.startsWith("C")) {
 			const oldPath = fields[index++];
 			const newPath = fields[index++];
-			if (oldPath && newPath) result.push({ status, paths: [oldPath, newPath] });
+			if (oldPath && newPath)
+				result.push({ status, paths: [oldPath, newPath] });
 		} else {
 			const path = fields[index++];
 			if (path) result.push({ status, paths: [path] });
@@ -54,7 +59,10 @@ export function sitemapUrls(xml: string, site: URL): string[] {
 	for (const match of xml.matchAll(/<loc>\s*([^<]+?)\s*<\/loc>/gi)) {
 		try {
 			const candidate = new URL(match[1]);
-			if (candidate.host === site.host && candidate.protocol === site.protocol) {
+			if (
+				candidate.host === site.host &&
+				candidate.protocol === site.protocol
+			) {
 				urls.push(candidate.href);
 			}
 		} catch {
@@ -68,7 +76,10 @@ function toAbsolute(path: string, site: URL): string {
 	return new URL(path, site).href;
 }
 
-async function changedFiles(baseSha: string | undefined, head: string): Promise<ChangedFile[] | undefined> {
+async function changedFiles(
+	baseSha: string | undefined,
+	head: string,
+): Promise<ChangedFile[] | undefined> {
 	let diffBase = baseSha && !/^0+$/.test(baseSha) ? baseSha : undefined;
 	if (!diffBase) {
 		try {
@@ -78,34 +89,60 @@ async function changedFiles(baseSha: string | undefined, head: string): Promise<
 			return undefined;
 		}
 	}
-	const diff = await execFileAsync("git", ["diff", "--name-status", "-z", diffBase, head]);
+	const diff = await execFileAsync("git", [
+		"diff",
+		"--name-status",
+		"-z",
+		diffBase,
+		head,
+	]);
 	return parseNameStatus(diff.stdout);
 }
 
-export async function submit(urls: string[], key: string, site: URL): Promise<void> {
+export async function submit(
+	urls: string[],
+	key: string,
+	site: URL,
+): Promise<void> {
 	const keyLocation = new URL(`${key}.txt`, site).href;
 	const urlList = [...new Set(urls)];
-	console.log(`IndexNow: submitting ${urlList.length} URL(s) in ${Math.ceil(urlList.length / MAX_URLS_PER_BATCH)} batch(es)`);
+	console.log(
+		`IndexNow: submitting ${urlList.length} URL(s) in ${Math.ceil(urlList.length / MAX_URLS_PER_BATCH)} batch(es)`,
+	);
 	for (let offset = 0; offset < urlList.length; offset += MAX_URLS_PER_BATCH) {
 		const batch = urlList.slice(offset, offset + MAX_URLS_PER_BATCH);
 		const response = await fetch(INDEXNOW_ENDPOINT, {
 			method: "POST",
 			headers: { "content-type": "application/json; charset=utf-8" },
-			body: JSON.stringify({ host: site.host, key, keyLocation, urlList: batch }),
+			body: JSON.stringify({
+				host: site.host,
+				key,
+				keyLocation,
+				urlList: batch,
+			}),
 		});
-		console.log(`IndexNow: batch ${Math.floor(offset / MAX_URLS_PER_BATCH) + 1} HTTP ${response.status}`);
+		console.log(
+			`IndexNow: batch ${Math.floor(offset / MAX_URLS_PER_BATCH) + 1} HTTP ${response.status}`,
+		);
 		if (response.status !== 200 && response.status !== 202) {
 			const retryAfter = response.headers.get("retry-after");
-			const summary = (await response.text()).slice(0, 300).replace(/\s+/g, " ");
-			throw new Error(`IndexNow HTTP ${response.status}${retryAfter ? ` (Retry-After: ${retryAfter})` : ""}: ${summary}`);
+			const summary = (await response.text())
+				.slice(0, 300)
+				.replace(/\s+/g, " ");
+			throw new Error(
+				`IndexNow HTTP ${response.status}${retryAfter ? ` (Retry-After: ${retryAfter})` : ""}: ${summary}`,
+			);
 		}
 	}
 }
 
 export async function main(): Promise<void> {
 	const key = process.env.INDEXNOW_KEY;
-	if (!key || !KEY_PATTERN.test(key)) throw new Error("INDEXNOW_KEY is missing or invalid");
-	const site = siteUrl(process.env.INDEXNOW_SITE ?? "https://bfmhno3.github.io");
+	if (!key || !KEY_PATTERN.test(key))
+		throw new Error("INDEXNOW_KEY is missing or invalid");
+	const site = siteUrl(
+		process.env.INDEXNOW_SITE ?? "https://bfmhno3.github.io",
+	);
 	const head = process.env.INDEXNOW_HEAD_SHA ?? "HEAD";
 	const xml = await readFile("dist/sitemap-0.xml", "utf8");
 	const currentUrls = sitemapUrls(xml, site);
@@ -115,9 +152,14 @@ export async function main(): Promise<void> {
 		return;
 	}
 	const urls = files === undefined ? [...currentUrls] : [];
-	let globalChange = files?.some(({ paths }) => paths.some((path) =>
-		/^(src\/(config|pages|layouts|components|plugins|styles)\/|astro\.config\.mjs$)/.test(path),
-	)) ?? false;
+	let globalChange =
+		files?.some(({ paths }) =>
+			paths.some((path) =>
+				/^(src\/(config|pages|layouts|components|plugins|styles)\/|astro\.config\.mjs$)/.test(
+					path,
+				),
+			),
+		) ?? false;
 	const changedPosts = new Set<string>();
 	for (const file of files ?? []) {
 		for (const path of file.paths) {
@@ -130,7 +172,8 @@ export async function main(): Promise<void> {
 	if (changedPosts.size > 0) {
 		for (const absolute of currentUrls) {
 			const pathname = new URL(absolute).pathname;
-			if (pathname === "/archive/" || /^\/\d+\/$/.test(pathname)) urls.push(absolute);
+			if (pathname === "/archive/" || /^\/\d+\/$/.test(pathname))
+				urls.push(absolute);
 		}
 		for (const path of ["/", "/sitemap-index.xml"]) {
 			urls.push(new URL(path, site).href);
@@ -140,7 +183,9 @@ export async function main(): Promise<void> {
 		const dynamic = toAbsolute("/dynamic/", site);
 		if (currentUrls.includes(dynamic)) urls.push(dynamic);
 	}
-	const filtered = [...new Set(urls)].filter((value) => new URL(value).host === site.host);
+	const filtered = [...new Set(urls)].filter(
+		(value) => new URL(value).host === site.host,
+	);
 	if (filtered.length === 0) {
 		console.log("IndexNow: no URLs to submit");
 		return;

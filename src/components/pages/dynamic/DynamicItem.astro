@@ -18,12 +18,7 @@ interface Props {
 	commentId?: string;
 }
 
-const {
-	entry,
-	detailUrl,
-	showInlineComments = false,
-	commentId,
-} = Astro.props;
+const { entry, detailUrl, showInlineComments = false, commentId } = Astro.props;
 const { Content } = await render(entry);
 const anchorId = dynamicAnchor(entry.id);
 const published = formatDynamicDate(entry.data.published);
