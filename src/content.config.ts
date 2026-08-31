@@ -5,6 +5,7 @@ import { type ZodType, z } from "astro/zod";
 
 type PostData = {
 	title: string;
+	commentId: string;
 	published: Date;
 	updated?: Date;
 	draft: boolean;
@@ -44,6 +45,7 @@ const postsCollection: ContentCollection<PostData> = defineCollection({
 	loader: glob({ pattern: "**/*.{md,mdx}", base: "./src/content/posts" }),
 	schema: z.object({
 		title: z.string(),
+		commentId: z.string().min(1),
 		published: z.coerce.date(),
 		updated: z.date().optional(),
 		draft: z.boolean().optional().default(false),

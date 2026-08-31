@@ -1,3 +1,11 @@
+export type GiscusMapping =
+	| "pathname"
+	| "url"
+	| "title"
+	| "og:title"
+	| "specific"
+	| "number";
+
 export type CommentConfig = {
 	/**
 	 * 当前启用的评论系统类型
@@ -49,7 +57,7 @@ export type CommentConfig = {
 		repoId: string;
 		category: string;
 		categoryId: string;
-		mapping: string;
+		mapping: GiscusMapping;
 		strict: string;
 		reactionsEnabled: string;
 		emitMetadata: string;

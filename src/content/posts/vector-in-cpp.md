@@ -1,5 +1,6 @@
 ---
 title: "C++ 中的 vector"
+commentId: "post:vector-in-cpp"
 published: "2026-01-03 18:50:00 +08:00"
 description: "深入理解 C++ 中最常用的容器 std::vector：动态数组的核心特性、内存管理、扩容机制、迭代器失效问题，以及 reserve、emplace_back 等现代化最佳实践。特别提醒 std::vector<bool> 的陷阱和 C++20 新特性。"
 category: Note

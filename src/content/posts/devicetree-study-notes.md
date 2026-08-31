@@ -1,5 +1,6 @@
 ---
 title: "设备树入门：从第一份 DTS 到 Linux 驱动匹配"
+commentId: "post:devicetree-study-notes"
 published: "2026-05-20 11:15:00 +08:00"
 description: "我从一份可编译的最小 DTS 开始，走完 DTS、DTB、boot program 到 Linux 驱动匹配的链路，再用真实工具和内核调试路径验证设备树。"
 category: Note

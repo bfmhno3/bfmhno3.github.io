@@ -1,5 +1,6 @@
 ---
 title: "LaTeX 项目结构与 latexmk 配置"
+commentId: "post:latex-project-structure"
 published: "2026-06-18 11:20:00 +08:00"
 description: "我用 LaTeX 写东西时的项目目录结构、main.tex 模板，以及一份跨平台的 .latexmkrc 配置。"
 category: Note

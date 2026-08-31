@@ -1,5 +1,6 @@
 ---
 title: "从暂停到理解：GDB 调试完整实践"
+commentId: "post:gdb-debugging-guide"
 published: "2026-08-25 20:00:00 +08:00"
 description: "我用一个带有逻辑错误、递归、线程和崩溃路径的 C++20 小程序，从第一次启动 GDB 开始，实作源码定位、断点、栈帧、内存、寄存器、异常、线程、远程调试、优化、脚本和反向执行。"
 category: Tutorial

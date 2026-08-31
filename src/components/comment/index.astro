@@ -12,11 +12,12 @@ import Waline from "./Waline.astro";
 
 interface Props {
 	post?: CollectionEntry<"posts"> | CollectionEntry<"spec">;
+	commentId?: string;
 	customPath?: string;
 	title?: string;
 }
 
-const { post, customPath, title: customTitle } = Astro.props as Props;
+const { post, commentId, customPath, title: customTitle } = Astro.props as Props;
 
 // 根据页面类型确定路径
 const slugFromPath = (customPath || "/").replace(/^\/+|\/+$/g, "") || "index";
@@ -28,6 +29,8 @@ const path = customPath
 			? `/posts/${slug}`
 			: `/${slug}`
 		: `/${slug}`;
+const resolvedCommentId =
+	post?.collection === "posts" ? post.data.commentId : commentId;
 const url = `${Astro.site?.href}${path}`;
 const postTitle = post && "title" in post.data ? post.data.title : undefined;
 
@@ -58,7 +61,7 @@ let commentService: string = commentConfig?.type || "none";
       <div class="relative z-10 pl-2 pr-2">
         {commentService === "twikoo" && <Twikoo path={path} />}
         {commentService === "waline" && <Waline path={path} />}
-        {commentService === "giscus" && <Giscus />}
+        {commentService === "giscus" && <Giscus term={resolvedCommentId} />}
         {commentService === "disqus" && <Disqus identifier={slug} url={url} title={customTitle || postTitle || slug} />}
           {commentService === "artalk" && <Artalk path={path} />}
         {commentService === "none" && (

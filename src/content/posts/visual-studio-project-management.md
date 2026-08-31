@@ -1,5 +1,6 @@
 ---
 title: "Visual Studio C++ 工程实践指南"
+commentId: "post:visual-studio-project-management"
 published: "2025-07-30 01:50 +08:00"
 description: "详解 Visual Studio 解决方案与项目的组织结构、过滤器与路径配置技巧、常用宏的使用，以及静态库与动态库的引用方法，并介绍了 CMake 的集成支持，帮助开发者构建清晰规范的 C++。"
 category: Note

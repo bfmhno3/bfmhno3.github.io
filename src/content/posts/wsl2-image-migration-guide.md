@@ -1,5 +1,6 @@
 ---
 title: "如何将 WSL2 镜像无损迁移至非系统盘"
+commentId: "post:wsl2-image-migration-guide"
 published: "2026-03-14 13:16:00 +08:00"
 description: "详细记录在 Windows 11 环境下，将默认安装在 C 盘的 WSL2 Ubuntu 镜像无损迁移至其他数据盘的完整过程，包含导出、导入、默认用户配置及原实例清理，有效释放系统盘空间。"
 category: Tutorial

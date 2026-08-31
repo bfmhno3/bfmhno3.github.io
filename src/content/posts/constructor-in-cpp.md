@@ -1,5 +1,6 @@
 ---
 title: "C++ 中的构造函数"
+commentId: "post:constructor-in-cpp"
 published: "2026-01-03 21:05:00 +08:00"
 description: "深入理解 C++ 构造函数的本质：从资源管理到性能优化。涵盖默认构造、拷贝构造、移动构造，以及 RAII、explicit、constexpr 等关键机制。"
 category: Note

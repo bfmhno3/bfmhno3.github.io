@@ -15,14 +15,14 @@ interface Props {
 	entry: CollectionEntry<"dynamic">;
 	detailUrl?: string;
 	showInlineComments?: boolean;
-	commentPath?: string;
+	commentId?: string;
 }
 
 const {
 	entry,
 	detailUrl,
 	showInlineComments = false,
-	commentPath,
+	commentId,
 } = Astro.props;
 const { Content } = await render(entry);
 const anchorId = dynamicAnchor(entry.id);
@@ -93,9 +93,9 @@ const profileUrl = url(dynamicConfig.profileUrl || "/about/");
 			<Content />
 		</div>
 		<DynamicGallery sourceId={`${anchorId}-content`} />
-		{showInlineComments && commentPath && (
+		{showInlineComments && commentId && (
 			<DynamicInlineComments
-				src={`/dynamic/comments/?path=${encodeURIComponent(commentPath)}`}
+				src={`/dynamic/comments/?path=${encodeURIComponent(commentId)}`}
 			/>
 		)}
 	</article>

@@ -1,5 +1,6 @@
 ---
 title: "C++ 中的 list"
+commentId: "post:list-in-cpp"
 published: "2026-01-03 21:05:00 +08:00"
 description: "深入理解 C++ 中的 std::list 双向链表容器，探讨其底层原理、独有优势（如头部操作、接合等）、迭代器特性，以及与 std::vector 的选择权衡。"
 category: Note

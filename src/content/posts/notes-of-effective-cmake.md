@@ -1,5 +1,6 @@
 ---
 title: "Notes of Effective CMake"
+commentId: "post:notes-of-effective-cmake"
 published: "2025-08-08 23:17:00 +08:00"
 description: >-
 category: Note

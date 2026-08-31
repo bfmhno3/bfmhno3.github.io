@@ -68,6 +68,8 @@ slug = slug
 	})
 	.join("/");
 
+const commentId = `post:${slug.replaceAll("/", ":")}`;
+
 if (fs.existsSync(fullPath)) {
 	console.error(`Error: File ${fullPath} already exists `);
 	process.exit(1);
@@ -81,6 +83,7 @@ if (!fs.existsSync(dirPath)) {
 
 const content = `---
 title: ${args[0]}
+commentId: "${commentId}"
 published: ${getDate()}
 description: ''
 image: ''

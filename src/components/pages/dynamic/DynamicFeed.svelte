@@ -228,7 +228,7 @@ function createItem(entry: DynamicData) {
 	if (comments) {
 		if (showComments) {
 			comments.dataset.src = `/dynamic/comments/?path=${encodeURIComponent(
-				`/dynamic/${entry.id}/`,
+				`dynamic:${entry.id}`,
 			)}`;
 		} else {
 			comments.remove();

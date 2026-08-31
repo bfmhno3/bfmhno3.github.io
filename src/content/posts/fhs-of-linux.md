@@ -1,5 +1,6 @@
 ---
 title: "从 FHS 到 Linux 运行时目录体系"
+commentId: "post:fhs-of-linux"
 published: "2026-04-21 15:00:00 +08:00"
 description: "从 FHS 的官方目录分层出发，顺着静态与可变、共享与本机专属这两条线，一路理解 Linux 根目录如何演化为今天庞大的运行时目录体系。"
 category: Note

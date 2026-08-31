@@ -1,5 +1,6 @@
 ---
 title: "GNU 汇编（GAS）通用语法与伪指令指南"
+commentId: "post:gnu-assembly"
 published: "2026-04-05 16:35:00 +08:00"
 description: "本文不聚焦某一指令集细节，而是系统梳理 GNU Assembler 的通用语法与伪指令体系，涵盖注释规则、操作数方向、寻址模式、宽度后缀、段与符号控制，以及局部标签与宏等实用写法，帮助你在 x86、ARM、RISC-V 间建立统一理解。"
 category: Note

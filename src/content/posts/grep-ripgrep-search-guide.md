@@ -1,5 +1,6 @@
 ---
 title: "我终于学会了 grep，然后换成了 ripgrep"
+commentId: "post:grep-ripgrep-search-guide"
 published: "2026-08-31 15:00:00 +08:00"
 description: "我一直在复制 grep 命令，却没有真正理解它。这次我从单个日志文件开始，弄清模式、正则、管道和退出状态，再把同一套搜索迁移到更适合代码仓库的 ripgrep，并做了一次 126 MiB 的实测。"
 category: Tutorial

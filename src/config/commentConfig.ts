@@ -62,9 +62,9 @@ export const commentConfig: CommentConfig = {
 		// 获取 Giscus 评论系统分类ID
 		categoryId: "DIC_kwDOQCQGxs4CzG3a",
 		// 获取 Giscus 评论系统映射方式
-		mapping: "title",
+		mapping: "specific",
 		// 获取 Giscus 评论系统严格模式
-		strict: "0",
+		strict: "1",
 		// 获取 Giscus 评论系统反应功能
 		reactionsEnabled: "1",
 		// 获取 Giscus 评论系统元数据功能

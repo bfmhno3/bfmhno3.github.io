@@ -1,6 +1,12 @@
 ---
 import { commentConfig } from "@/config";
 
+interface Props {
+	term?: string;
+}
+
+const { term } = Astro.props as Props;
+
 if (!commentConfig?.giscus) {
 	throw new Error("Giscus comments are not configured");
 }
@@ -22,6 +28,7 @@ const darkTheme = "transparent_dark";
   categoryId={giscus.categoryId}
   mapping={giscus.mapping}
   strict={giscus.strict}
+  term={term}
   reactionsEnabled={giscus.reactionsEnabled}
   emitMetadata={giscus.emitMetadata}
   inputPosition={giscus.inputPosition}
@@ -31,14 +38,20 @@ const darkTheme = "transparent_dark";
 />
 
 <script is:inline define:vars={{ lightTheme, darkTheme }}>
-  const requestedPath = new URLSearchParams(window.location.search).get("path");
+  const requestedTerm = new URLSearchParams(window.location.search).get("path")?.trim();
   const widget = document.querySelector("giscus-widget");
-  if (requestedPath && widget) {
+  if (requestedTerm && widget) {
     widget.setAttribute("mapping", "specific");
-    widget.setAttribute("term", requestedPath);
+    widget.setAttribute("term", requestedTerm);
   }
 
-  import("https://esm.sh/giscus");
+  const mapping = widget?.getAttribute("mapping");
+  const finalTerm = widget?.getAttribute("term")?.trim();
+  if (mapping === "specific" && !finalTerm) {
+    console.error("Giscus specific mapping requires a non-empty term");
+  } else {
+    import("https://esm.sh/giscus");
+  }
 
   function updateGiscusTheme() {
     const isDark = document.documentElement.classList.contains('dark');

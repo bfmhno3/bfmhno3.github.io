@@ -1,5 +1,6 @@
 ---
 title: "Cudy TR3000 256 MB 刷入 ImmortalWrt：一次完整的图形化流程"
+commentId: "post:cudy-tr3000-immortalwrt-flashing-guide"
 published: "2026-08-27 09:00:00 +08:00"
 description: "记录 Cudy TR3000 256 MB V1 从原厂固件、签名中间固件到 ImmortalWrt 25.12.1 和自定义镜像的完整图形化刷机流程，并介绍官方 TFTP 恢复方法。"
 category: Tutorial

@@ -1,5 +1,6 @@
 ---
 title: "操作系统中的进程"
+commentId: "post:process-in-os"
 published: "2026-01-27 06:10:00 +08:00"
 description: "教科书对于进程常定义通常极为简洁凝练，但其诞生是为了解决什么问题？本文通过回顾从 ENIAC 到分时系统的演进历史，探讨进程是如何为了填补人、I/O 与 CPU 之间的速度鸿沟而进化出来的。"
 category: Note

@@ -1,5 +1,6 @@
 ---
 title: "C++ 中的初始化列表和列表初始化"
+commentId: "post:initialization-in-cpp"
 published: "2026-01-03 23:07:00 +08:00"
 description: "深入理解 C++ 中初始化列表与列表初始化的区别：前者解决对象生命周期与内存模型问题，后者统一初始化语法并提供类型安全保障。"
 category: Note

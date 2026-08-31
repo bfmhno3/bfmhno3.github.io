@@ -1,5 +1,6 @@
 ---
 title: "BibTeX 与 BibLaTeX 入门：.bib 文件结构、引用与编译流程"
+commentId: "post:bibtex-and-biblatex-guide"
 published: "2026-05-19 22:00:00 +08:00"
 description: "从 .bib 条目结构出发，结合 BibTeX 与 BibLaTeX 两种工作流，梳理引用写法、编译顺序和常见注意事项。"
 category: Note

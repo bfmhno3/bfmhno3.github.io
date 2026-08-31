@@ -1,5 +1,6 @@
 ---
 title: "学习 fgets 函数和 strcspn 函数"
+commentId: "post:learning-fgets-and-strcspn"
 published: "2023-08-20 23:44:31 +08:00"
 description: "本文记录了在 C 语言刷题过程中遇到的字符串输入问题。详细介绍了 fgets 函数和 strcspn 函数的用法，用于解决 scanf 无法读取带空格字符串以及换行符处理的问题，并补充了 scanf(\"%[^\\n]\") 这一更简洁的替代方案。"
 category: Note

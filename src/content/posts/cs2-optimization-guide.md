@@ -1,5 +1,6 @@
 ---
 title: "CS2 游戏设置优化"
+commentId: "post:cs2-optimization-guide"
 published: "2025-11-25 23:00:00 +08:00"
 description: "告别默认设置！本文提供从画面优化、鼠标灵敏度到枪械配装的全方位 CS2 入门指引，助你提升 FPS 与游戏体验。"
 category: Tutorial

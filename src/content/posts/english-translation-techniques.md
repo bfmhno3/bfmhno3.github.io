@@ -1,5 +1,6 @@
 ---
 title: "英语翻译技巧"
+commentId: "post:english-translation-techniques"
 published: "2025-12-02 09:35:00 +08:00"
 description: "本文深入解析了中英翻译中的核心思维差异（如动态与静态、意合与形合），介绍了英语句法的平衡学原则（尾重原则），并提供了一套实用的“翻译三步法”（拆解、降级、润色），旨在帮助备考 CET-6 或雅思的同学克服中式英语，提升学术写作与翻译水平。"
 category: Note

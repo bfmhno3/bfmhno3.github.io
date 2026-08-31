@@ -1,5 +1,6 @@
 ---
 title: "npm 与 pnpm 安装的到底是什么？从 JavaScript 包到原生模块"
+commentId: "post:npm-pnpm-tooling-guide"
 published: "2026-08-28 20:00:00 +08:00"
 description: "我原以为 npm 和 pnpm 安装的只是 JavaScript 或 TypeScript 包，直到遇到 sharp 这类包含原生模块和平台产物的依赖。本文在 WSL2 中动手实验，沿着 registry、lockfile、store、node_modules 和 CLI 入口把这件事弄清楚。"
 category: Tutorial
