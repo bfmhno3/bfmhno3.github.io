@@ -1,0 +1,8 @@
+{
+	"[markdown]": {
+		"editor.wordWrap": "bounded",
+		"editor.wordWrapColumn": 80,
+		"editor.wrappingStrategy": "advanced",
+		"editor.rulers": [80]
+	}
+}
