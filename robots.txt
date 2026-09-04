@@ -1,4 +1,7 @@
 User-agent: *
 Disallow: /_astro/
+Disallow: /archive/?tag=
+Disallow: /archive/?category=
+Disallow: /archive/?uncategorized=
 
 Sitemap: https://bfmhno3.github.io/sitemap-index.xml
