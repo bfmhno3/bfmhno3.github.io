@@ -2225,3 +2225,359 @@ counter=2000
 再往前看，这个距离大概只会继续变长：编译器更激进，LTO 跨文件内联，异步运行时把一个函数切成好几个状态机片段，越来越多的代码也不是人一行一行写出来的。调试器也许会被接到更聪明的前端上，但我怀疑底层问题不会变：暂停一个进程，然后把寄存器和内存里的字节翻译回人能理解的名字和行号。能读懂这层翻译，就能在任何前端失灵的时候退回来自己看。
 
 现在我可以把 `values.size() - 1` 改回来，重新编译，然后去吃点东西。GDB 不会替我修 bug，它只是非常耐心地证明我确实写错了。
+
+## 题外话：我平时用的 gdb-dashboard
+
+前面所有会话我都加了 `-nx`，因为我想让你看到 GDB 最原始的输出。但我日常调试时并不这样用。我的 `~/.gdbinit` 由 home-manager 生成，里面加载了 [gdb-dashboard](https://github.com/cyrus-and/gdb-dashboard)：每次程序停下，它都会在终端里重画一整屏状态，源码、汇编、寄存器、调用栈、线程、变量一次看全。
+
+::github{repo="cyrus-and/gdb-dashboard"}
+
+### 配置
+
+这是我 NixOS 配置里的 `home/dev/gdb.nix`：
+
+```nix
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
+let
+  cfg = config.myHome.dev.gdb;
+in
+{
+  options.myHome.dev.gdb.enable = lib.mkEnableOption "GDB configuration";
+  config = lib.mkIf cfg.enable {
+    home.packages = [ pkgs.gdb ];
+    home.file.".gdbinit".text = ''
+      source ${pkgs.gdb-dashboard}/share/gdb-dashboard/gdbinit
+      set pagination off
+      set print pretty on
+      set confirm off
+      set history save on
+      set history size 1000
+      set history filename ~/.gdb_history
+    '';
+  };
+}
+```
+
+`home.file.".gdbinit".text` 让 home-manager 把这段文本写成 `~/.gdbinit`，第一行 `source` 加载 Nixpkgs 打包的 gdb-dashboard 0.17.4，它是一个 2388 行的 gdbinit 文件，主体是一大段 Python。后面几行是我自己的偏好：
+
+- `set pagination off`：关掉分页。前面 `-O2` 那节里 `disassemble /s main` 输出太长，GDB 停下来问 `--Type <RET> for more, q to quit, c to continue without paging--`，就是分页在起作用。
+- `set print pretty on`：结构体按缩进多行打印，效果和前面 `print mutex` 那节一样。
+- `set confirm off`：不再确认。前面 `quit`、`return 100`、`delete` 时的 `(y or n)` 提问都会消失，GDB 直接照做。这很省事，也意味着手滑的 `delete` 会一次删光所有断点。
+- `set history save on` 和后两行：把命令历史存进 `~/.gdb_history`，下次启动 GDB 还能用上方向键翻到上一次的命令。
+
+### 在本文的 flake 里它坏了
+
+我把这套配置带进本文的 flake shell，第一次 `run` 就得到了一屏 Python 异常：
+
+```text
+$ gdb -q ./gdb_demo
+Reading symbols from ./gdb_demo...
+>>> break 29
+Breakpoint 1 at 0x248d: file gdb_demo.cpp, line 29.
+>>> run
+Starting program: /tmp/gdb-post/gdb_demo
+Traceback (most recent call last):
+  File "<string>", line 430, in on_continue
+  File "<string>", line 616, in get_term_size
+SystemError: buffer overflow
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/nix/store/lm3pknxi0ipypy3lxh1wmm8wvvavdwrn-glibc-2.42-84/lib/libth
+read_db.so.1".
+
+Breakpoint 1, main (argc=1, argv=0x7fffffffb808) at gdb_demo.cpp:29
+29	    std::cout << "total=" << total << ", average=" << average
+Cannot write the dashboard
+Traceback (most recent call last):
+  File "<string>", line 522, in render
+  File "<string>", line 616, in get_term_size
+SystemError: buffer overflow
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "<string>", line 524, in render
+  File "<string>", line 616, in get_term_size
+SystemError: buffer overflow
+```
+
+`get_term_size` 是 dashboard 读取终端宽高的函数，它失败之后整个 dashboard 都画不出来（`Cannot write the dashboard`），只剩 GDB 原本的输出。奇怪的是，同一个 `~/.gdbinit` 在我平时的系统 gdb 里一直正常。两个 gdb 都是 17.2，区别在嵌入的 Python 版本上：
+
+```text
+$ /etc/profiles/per-user/bfmhno3/bin/gdb -nx -batch -ex 'python import sys; print(sys.version)'
+3.13.15 (main, Aug  5 2026, 12:25:43) [GCC 15.3.0]
+$ /etc/profiles/per-user/bfmhno3/bin/gdb -nx -batch -ex 'python import fcntl, termios, struct; print(struct.unpack("hh", fcntl.ioctl(0, termios.TIOCGWINSZ, " " * 4)))'
+(40, 120)
+$ nix develop -c gdb -nx -batch -ex 'python import sys; print(sys.version)' 2>/dev/null | tail -n 1
+3.14.7 (main, Aug  5 2026, 10:29:49) [GCC 15.3.0]
+$ nix develop -c gdb -nx -batch -ex 'python import fcntl, termios, struct; print(struct.unpack("hh", fcntl.ioctl(0, termios.TIOCGWINSZ, " " * 4)))' 2>&1 | tail -n 2
+Python Exception <class 'SystemError'>: buffer overflow
+Error occurred in Python: buffer overflow
+$ nix develop -c gdb -nx -batch -ex 'python import fcntl, termios, struct; print(struct.unpack("hhhh", fcntl.ioctl(0, termios.TIOCGWINSZ, bytes(8))))' 2>&1 | tail -n 1
+(40, 120, 1920, 1280)
+```
+
+我的系统配置还停在 Python 3.13，本文 flake 锁定的 nixpkgs 里 gdb 已经换成了 Python 3.14。dashboard 调用 `fcntl.ioctl(fd, termios.TIOCGWINSZ, ' ' * 4)` 时只准备了 4 个字节的缓冲区，但内核返回的 `struct winsize` 是 4 个 `unsigned short`，一共 8 字节：行数、列数，再加上两个像素尺寸（上面的 `1920, 1280` 就是 tmux 报告的像素宽高）。在 Python 3.13 里这 4 个多出来的字节会被悄悄丢掉；从我的测试看，Python 3.14 改成了直接抛出 `SystemError: buffer overflow`。缓冲区换成 8 字节就恢复正常。
+
+修复不需要改 dashboard 本身。dashboard 启动时会按顺序遍历几个配置目录，其中之一是 `$XDG_CONFIG_HOME/gdb-dashboard`（默认是 `~/.config/gdb-dashboard`），`.py` 文件会先于普通 GDB 命令文件加载，而且和 dashboard 运行在同一个 Python 命名空间里。所以我放一个很小的补丁文件 `~/.config/gdb-dashboard/00-term-size.py`，把 `Dashboard.get_term_size` 换掉：
+
+```python
+# gdb-dashboard 0.17.4 只给 TIOCGWINSZ 传了 4 字节缓冲区，
+# Python 3.14 会因为内核写回 8 字节的 struct winsize 而抛出 SystemError。
+import fcntl
+import struct
+import termios
+
+
+def _get_term_size(fd=1):
+    try:
+        raw = fcntl.ioctl(fd, termios.TIOCGWINSZ, bytes(8))
+        height, width, _, _ = struct.unpack("hhhh", raw)
+        return int(width), int(height)
+    except OSError:
+        return 80, 24
+
+
+Dashboard.get_term_size = staticmethod(_get_term_size)
+```
+
+在 home-manager 里，可以把这个文件保存成 `gdb.nix` 旁边的 `gdb-dashboard-term-size.py`，然后在上面的 `config = lib.mkIf cfg.enable { ... }` 里加上一项：
+
+```nix
+xdg.configFile."gdb-dashboard/00-term-size.py".source = ./gdb-dashboard-term-size.py;
+```
+
+我是用 `XDG_CONFIG_HOME` 指向一个临时目录来验证这个补丁的，下面的截图和输出都在打了补丁的 flake shell 里生成。home-manager 那一行我还没有在自己的配置里 rebuild 过，写法是 home-manager 的标准 `xdg.configFile` 选项。
+
+### 一屏里有什么
+
+补丁生效后，同样停在第 29 行，终端变成了这样（100 列宽的终端，颜色是 dashboard 的默认配色）：
+
+![gdb-dashboard 停在 gdb_demo.cpp 第 29 行时的完整界面，从上到下依次是 Output/messages、Assembly、Breakpoints、Expressions、History、Memory、Registers、Source、Stack、Threads 和 Variables 模块](/assets/images/gdb-dashboard-overview.webp)
+
+纯文本版本如下，方便复制对照：
+
+```text
+─── Output/messages ────────────────────────────────────────────────────────────────────────────────
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/nix/store/lm3pknxi0ipypy3lxh1wmm8wvvavdwrn-glibc-2.42-84/lib/libth
+read_db.so.1".
+
+Breakpoint 1, main (argc=1, argv=0x7fffffffb7e8) at gdb_demo.cpp:29
+29	    std::cout << "total=" << total << ", average=" << average
+─── Assembly ───────────────────────────────────────────────────────────────────────────────────────
+ 0x0000555555556473  main(int, char**)+239 cvtsi2sd %rdx,%xmm0
+ 0x0000555555556478  main(int, char**)+244 addsd  %xmm0,%xmm0
+ 0x000055555555647c  main(int, char**)+248 movsd  -0x118(%rbp),%xmm1
+ 0x0000555555556484  main(int, char**)+256 divsd  %xmm0,%xmm1
+ 0x0000555555556488  main(int, char**)+260 movsd  %xmm1,-0x30(%rbp)
+!0x000055555555648d  main(int, char**)+265 lea    0x2bae(%rip),%rdx        # 0x555555559042
+ 0x0000555555556494  main(int, char**)+272 lea    0x5c65(%rip),%rax        # 0x55555555c100 <_ZSt4co
+ut@GLIBCXX_3.4>
+ 0x000055555555649b  main(int, char**)+279 mov    %rdx,%rsi
+ 0x000055555555649e  main(int, char**)+282 mov    %rax,%rdi
+ 0x00005555555564a1  main(int, char**)+285 call   0x555555556130 <_ZStlsISt11char_traitsIcEERSt13bas
+ic_ostreamIcT_ES5_PKc@plt>
+─── Breakpoints ────────────────────────────────────────────────────────────────────────────────────
+[1] break at 0x000055555555648d in gdb_demo.cpp:29 for gdb_demo.cpp:29 hit 1 time
+─── Expressions ────────────────────────────────────────────────────────────────────────────────────
+─── History ────────────────────────────────────────────────────────────────────────────────────────
+─── Memory ─────────────────────────────────────────────────────────────────────────────────────────
+─── Registers ──────────────────────────────────────────────────────────────────────────────────────
+          rax 0x0000000000000003          rbx 0x0000000000000000         rcx 0x0000555555559380
+          rdx 0x0000000000000010          rsi 0x0000000000000004         rdi 0x00007fffffffb600
+          rbp 0x00007fffffffb6c0          rsp 0x00007fffffffb5a0          r8 0x0000000000000000
+           r9 0x0000000000000000          r10 0x0000000000000000         r11 0x00007ffff797f0c0
+          r12 0x0000555555559380          r13 0x0000000000000004         r14 0x00007ffff7ffd000
+          r15 0x000055555555bd20          rip 0x000055555555648d      eflags [ PF IF ]
+           cs 0x00000033                   ss 0x0000002b                  ds 0x00000000
+           es 0x00000000                   fs 0x00000000                  gs 0x00000000
+      fs_base 0x00007ffff7e90780      gs_base 0x0000000000000000
+─── Source ─────────────────────────────────────────────────────────────────────────────────────────
+ 24  int main(int argc, char* argv[]) {
+ 25      const std::string mode = argc > 1 ? argv[1] : "";
+ 26      std::vector<int> values{3, 5, 7, 9};
+ 27      const int total = recursive_sum(values, 0);
+ 28      const double average = static_cast<double>(total) / (values.size() - 1);
+!29      std::cout << "total=" << total << ", average=" << average
+ 30                << ", expected_average=6\n";
+ 31
+ 32      int counter = 0;
+ 33      std::mutex mutex;
+─── Stack ──────────────────────────────────────────────────────────────────────────────────────────
+[0] from 0x000055555555648d in main(int, char**)+265 at gdb_demo.cpp:29
+─── Threads ────────────────────────────────────────────────────────────────────────────────────────
+[1] id 207278 name gdb_demo from 0x000055555555648d in main(int, char**)+265 at gdb_demo.cpp:29
+─── Variables ──────────────────────────────────────────────────────────────────────────────────────
+arg argc = 1, argv = 0x7fffffffb7e8: 47 '/'
+loc mode = "", values = std::vector of length 4, capacity 4 = {[0] = 3, [1] = 5, [2] = 7, [3] = 9},
+total = 24, average = 8, counter = -1, mutex = {<std::__mutex_base> = {_M_mutex = {__data = {__lock
+= 1128415552,__count = 1195787588,__owner = 143…, first = {_M_id = {_M_thread = 140737346454874}}, s
+econd = {_M_id = {_M_thread = 140737488336448}}
+────────────────────────────────────────────────────────────────────────────────────────────────────
+```
+
+有了前面的铺垫，这一屏里几乎每一块都能对应到一个已经读过的命令：
+
+- `Output/messages`：每次继续执行前，dashboard 会清屏并画出这个分隔线，之后 GDB 自己的输出和程序的输出都落在这里。`Breakpoint 1, main (...) at gdb_demo.cpp:29` 和之前的格式完全一样。
+- `Assembly`：相当于在 pc 附近自动执行 `x/10i`。行首的红色 `!` 表示这条指令上有一个启用的断点，绿色高亮的是当前 pc。紧挨在当前指令上面的那条，就是前面反向执行那一节找到的 `movsd %xmm1,-0x30(%rbp)`，`average` 就是在那里被写成 `8` 的。
+- `Breakpoints`：精简版的 `info breakpoints`，`hit 1 time` 是命中次数。
+- `Expressions`、`History`、`Memory`：默认是空的，需要自己添加监视项，后面会用到。
+- `Registers`：`info registers` 的紧凑版，三列排列。单步之后值发生变化的寄存器会被高亮，这是我最喜欢的功能之一：一眼就能看出上一条指令改了哪个寄存器。
+- `Source`：自动执行的 `list`，`!` 依然是断点，当前行用绿色标出。
+- `Stack`：`bt` 的精简版。`[0] from 0x000055555555648d in main(int, char**)+265 at gdb_demo.cpp:29` 里，`+265` 和 `x/i` 输出里的 `<main(int, char**)+265>` 是同一个意思。
+- `Threads`：`info threads`。`id 207278` 是 LWP，不是 GDB 线程编号，GDB 编号在方括号里。
+- `Variables`：`info args` 加 `info locals`，`arg` 前缀是参数，`loc` 前缀是局部变量。`argv = 0x7fffffffb7e8: 47 '/'` 是 dashboard 顺手对指针做了一次解引用：`argv` 指向的第一个字节是 `'/'`，ASCII 码 47，也就是 `argv[0]` 字符串 `/tmp/gdb-post/gdb_demo` 的第一个字符。太长的值会用 `…` 截断，所以 `mutex` 那一串残留值没显示完。
+
+`next` 两次之后，其他模块在原地刷新，新内容只出现在 `Output/messages` 里（下面只截取了这一块）：
+
+```text
+─── Output/messages ────────────────────────────────────────────────────────────────────────────────
+total=24, average=8, expected_average=6
+32	    int counter = 0;
+```
+
+程序的输出 `total=24, average=8, expected_average=6` 和 GDB 打印的 `32	    int counter = 0;` 挤在一起，这是一次 `next` 期间全部的新输出。
+
+### 定制布局
+
+默认 11 个模块一屏放不下，小终端上源码会被挤到很下面。我通常只留几个，接着上面停在第 29 行的会话输入：
+
+```text
+>>> dashboard -layout source variables expressions memory
+>>> dashboard source -style height 8
+>>> dashboard variables -style compact False
+>>> dashboard expressions watch (double) total / values.size()
+>>> dashboard memory watch &values[0] 16
+>>> next
+>>> next
+```
+
+最后一次 `next` 之后，屏幕上是这样：
+
+```text
+─── Output/messages ────────────────────────────────────────────────────────────────────────────────
+total=24, average=8, expected_average=6
+32	    int counter = 0;
+─── Source ─────────────────────────────────────────────────────────────────────────────────────────
+ 28      const double average = static_cast<double>(total) / (values.size() - 1);
+!29      std::cout << "total=" << total << ", average=" << average
+ 30                << ", expected_average=6\n";
+ 31
+ 32      int counter = 0;
+ 33      std::mutex mutex;
+ 34      std::thread first(worker, std::ref(counter), std::ref(mutex));
+ 35      std::thread second(worker, std::ref(counter), std::ref(mutex));
+─── Variables ──────────────────────────────────────────────────────────────────────────────────────
+arg argc = 1
+arg argv = 0x7fffffffb7e8: 47 '/'
+loc mode = ""
+loc values = std::vector of length 4, capacity 4 = {[0] = 3, [1] = 5, [2] = 7, [3] = 9}
+loc total = 24
+loc average = 8
+loc counter = -1
+loc mutex = {<std::__mutex_base> = {_M_mutex = {__data = {__lock = 1128415552,__count = 1195787588,_
+_owner = 143…
+loc first = {_M_id = {_M_thread = 140737346454874}}
+loc second = {_M_id = {_M_thread = 140737488336448}}
+─── Expressions ────────────────────────────────────────────────────────────────────────────────────
+[1] (double) total / values.size() = 6
+─── Memory ─────────────────────────────────────────────────────────────────────────────────────────
+─── &values[0] ─────────────────────────────────────────────────────────────────────────────────────
+0x000055555556f320  03 00 00 00 05 00 00 00 07 00 00 00 09 00 00 00  ················
+────────────────────────────────────────────────────────────────────────────────────────────────────
+```
+
+- `dashboard -layout` 后面跟模块名，只显示这些模块，顺序也按这里排。
+- `dashboard source -style height 8` 把源码窗口限制为 8 行。每个模块都有自己的一组 style。
+- `dashboard variables -style compact False` 让每个变量独占一行，而不是挤成一段。
+- `dashboard expressions watch ...` 添加一个监视表达式，每次停下都重新求值，效果类似前面的 `display`，但它固定显示在自己的面板里。我把正确公式 `(double) total / values.size()` 放了进去，它一直显示 `6`，而旁边的 `average` 是 `8`，这个 bug 就摆在屏幕上。
+- `dashboard memory watch &values[0] 16` 监视从 `&values[0]` 开始的 16 个字节，格式和前面的 `x/16xb` 一样，右边还附带了 ASCII 列，不可打印字符显示成 `·`。被修改的字节会高亮。
+- 单独执行 `dashboard` 会立即重画一次。
+
+调好之后，`dashboard -configuration` 会把当前布局和样式导出成 GDB 命令：
+
+```text
+>>> dashboard -configuration /tmp/gdb-post/dash-config
+dashboard -layout source variables expressions memory !assembly !breakpoints !history !registers !st
+ack !threads
+dashboard source -style height 8
+dashboard variables -style compact False
+```
+
+前面带 `!` 的模块是被关掉的。把这几行存进 `~/.config/gdb-dashboard/` 里的某个文件（不带 `.py` 后缀，按普通 GDB 命令加载），下次启动就是这个布局。监视表达式不会被导出，因为它们通常和具体程序绑定，我会把它们写进项目自己的 `debug.gdb`。
+
+我还试过 `dashboard -style ansi False` 关掉颜色，想让复制出来的文本带上 `>` 这样的纯文本标记。结果在 0.17.4 里，这个模式下 `Variables` 模块直接抛出 `TypeError: unsupported operand type(s) for +: 'gdb.Symbol' and 'str'`，`Breakpoints` 还把一个启用的断点标成了 `disabled`。读源码看，两处都是 `ansi=False` 分支里的小 bug，所以我一直用默认的彩色模式。
+
+### 把 dashboard 放到另一个终端
+
+dashboard 最舒服的用法是把它输出到另一个终端窗口，GDB 的命令行就能保持干净。我在 tmux 里左右分屏，右边的 pane 只运行一个 `sleep`，让它的终端空着，然后在左边的 GDB 里把 dashboard 指过去。右边 pane 的终端设备可以用 tmux 的 `#{pane_tty}` 格式变量查到，我这里是 `/dev/pts/4`。然后在左边：
+
+```text
+$ gdb -q ./gdb_demo
+Reading symbols from ./gdb_demo...
+>>> dashboard -output /dev/pts/4
+>>> dashboard -layout source variables stack
+ Dashboard    /dev/pts/4
+
+ source       (default TTY)
+ variables    (default TTY)
+ stack        (default TTY)
+!assembly     (default TTY)
+!breakpoints  (default TTY)
+!expressions  (default TTY)
+!history      (default TTY)
+!memory       (default TTY)
+!registers    (default TTY)
+!threads      (default TTY)
+>>> dashboard source -style height 8
+>>> dashboard variables -style compact False
+>>> break 29
+Breakpoint 1 at 0x248d: file gdb_demo.cpp, line 29.
+>>> run
+Starting program: /tmp/gdb-post/gdb_demo
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/nix/store/lm3pknxi0ipypy3lxh1wmm8wvvavdwrn-glibc-2.42-84/lib/libth
+read_db.so.1".
+
+Breakpoint 1, main (argc=1, argv=0x7fffffffb7e8) at gdb_demo.cpp:29
+29	    std::cout << "total=" << total << ", average=" << average
+>>> next
+30	              << ", expected_average=6\n";
+```
+
+右边的 pane 里是这样：
+
+```text
+─── Source ─────────────────────────────────────────────────────────────────────────────────────────
+ 26      std::vector<int> values{3, 5, 7, 9};
+ 27      const int total = recursive_sum(values, 0);
+ 28      const double average = static_cast<double>(total) / (values.size() - 1);
+!29      std::cout << "total=" << total << ", average=" << average
+ 30                << ", expected_average=6\n";
+ 31
+ 32      int counter = 0;
+ 33      std::mutex mutex;
+─── Variables ──────────────────────────────────────────────────────────────────────────────────────
+arg argc = 1
+arg argv = 0x7fffffffb7e8: 47 '/'
+loc mode = ""
+loc values = std::vector of length 4, capacity 4 = {[0] = 3, [1] = 5, [2] = 7, [3] = 9}
+loc total = 24
+loc average = 8
+loc counter = -1
+loc mutex = {<std::__mutex_base> = {_M_mutex = {__data = {__lock = 1128415552,__count = 1195787588,_
+_owner = 143…
+loc first = {_M_id = {_M_thread = 140737346454874}}
+loc second = {_M_id = {_M_thread = 140737488336448}}
+─── Stack ──────────────────────────────────────────────────────────────────────────────────────────
+[0] from 0x00005555555564e2 in main(int, char**)+350 at gdb_demo.cpp:30
+```
+
+`dashboard -output /dev/pts/4` 把整个 dashboard 写到那个终端，`dashboard -layout` 的输出第一行 `Dashboard    /dev/pts/4` 确认了这一点。左边的 GDB 会话看起来和前面 `-nx` 的会话几乎一样，只是提示符变成了 `>>>`；每次停下，右边原地刷新。单个模块也可以分别输出，比如 `dashboard source -output /dev/pts/5`，把源码放到第三个窗口。
+
+说到底，dashboard 并没有给 GDB 增加新的能力。它只是在每次停下时替我执行了一遍 `x/i`、`info registers`、`list`、`bt`、`info threads`、`info locals`，再加上几个 `display`，然后把结果排好版。正因为前面把这些命令的原始输出一行行读过，这一屏信息才不是噪声：我知道 `+265` 是什么，知道为什么 `argv` 后面跟着一个 `'/'`，也知道当 dashboard 自己坏掉时，退回 `gdb -nx` 依然能把事情做完。
