@@ -32,8 +32,8 @@ docker-compose.yaml      # Docker 开发服务
 
 ## 技术栈与运行要求
 
-- Astro `7.2.3`
-- Svelte `5.56.8`
+- Astro `7.3.2`
+- Svelte `5.57.0`
 - Tailwind CSS `4.3.3`
 - Node.js `>=22.23.0`
 - pnpm `11.22.0`
