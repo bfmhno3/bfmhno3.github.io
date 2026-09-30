@@ -1,0 +1,36 @@
+﻿# Better Mistakes
+> Ever tried. Ever failed. No matter. Try Again. Fail again. Fail better.
+
+## Key Pages
+- [主页](https://bfmhno3.github.io/)
+- [归档](https://bfmhno3.github.io/archive/)
+- [关于我](https://bfmhno3.github.io/about/)
+- [友链](https://bfmhno3.github.io/friends/): 这里是我的朋友们，欢迎互相访问交流
+- [留言](https://bfmhno3.github.io/guestbook/): 欢迎在这里留下你的足迹，分享你的想法和建议
+- [动态](https://bfmhno3.github.io/dynamic/): 随手记下此刻的想法与日常。
+- [相册](https://bfmhno3.github.io/gallery/): 记录生活中的美好瞬间
+- [书签导航](https://bfmhno3.github.io/booknav/): 收藏一些好用的网站，按分类整理
+- [哔哩哔哩](https://bfmhno3.github.io/bilibili/): 我的哔哩哔哩追番与追剧列表
+- [打赏](https://bfmhno3.github.io/sponsor/): 如果我的内容对你有帮助，欢迎通过以下方式打赏我，你的支持是我持续创作的动力！
+
+## Recent Posts
+- [我把同一份 Agent 配置写了 4 遍: JSON、TOML、YAML 与配置文件的语法和选择](https://bfmhno3.github.io/posts/configuration-file-formats-for-ai-agents/): 我把同一份包含 16 个叶子值的 Agent 配置分别写成 JSON、TOML、YAML 和 INI，实际解析并比较它们，再解释 JSONC、.env、XML、Schema、覆盖顺序、密钥管理与常见陷阱。
+- [我不想再盲贴正则表达式了: 从语法到 Scoop、Python、CMake、C++ 和 TypeScript](https://bfmhno3.github.io/posts/regular-expressions-from-syntax-to-automation/): 我从一份包含 4 个版本号的发布页开始，逐步写出可解释、可移植、可测试的正则表达式，再把同一套方法放进 Scoop checkver、Python、CMake、C++ 和 JavaScript/TypeScript。
+- [我会用 Git，但它到底在做什么？从对象数据库到现代工作流](https://bfmhno3.github.io/posts/understanding-git/): 我用 Git 2.54.0 建了一个隔离仓库，从 blob、tree、commit、index、ref 和 reflog 拆开 add、commit、branch、merge、rebase、fetch、pull 与 push，再整理一套意图明确、可恢复的现代 Git 命令行。
+- [一台不存在的计算机：QEMU 工作原理与实践](https://bfmhno3.github.io/posts/understanding-qemu/): 我用 QEMU 10.2.4 从零启动一个 512 字节 x86 扇区，运行 992 字节 AArch64 ELF，再沿着 machine、TCG/KVM、设备与后端、VirtIO、QMP、GDB、磁盘、网络和 ARM virt 拆开完整系统模拟链。
+- [我追了一遍 Kbuild: 从一行 obj-m 到可以加载的 Linux 内核模块](https://bfmhno3.github.io/posts/understanding-kbuild/): 我用 Linux 6.18 写了一个双文件外部模块，追踪 obj-m、scripts/Makefile.build、.cmd、modpost 和最终 .ko，再把它装进 QEMU 并迁移回内核树验证 n、m、y。
+- [我拆开了 Kconfig: 从一个选项到 U-Boot 和 Linux 的条件编译](https://bfmhno3.github.io/posts/understanding-kconfig/): 我用 Linux 6.18 的 Kconfig 前端搭了一个 30 行的实验板级配置，再沿着 Kconfig、defconfig、.config、auto.conf、autoconf.h 和 Kbuild 追踪 U-Boot 与 Linux 到底如何裁剪代码。
+- [从错误码到栈展开: 我如何理解 C++ 异常](https://bfmhno3.github.io/posts/cpp-exception/): 我从嵌入式 C 的错误码出发，用一个可运行的栈展开实验串起 C++ 异常、RAII、捕获边界、noexcept、异常安全，以及 std::expected 的适用边界。
+- [我终于学会了 grep，然后换成了 ripgrep](https://bfmhno3.github.io/posts/grep-ripgrep-search-guide/): 我一直在复制 grep 命令，却没有真正理解它。这次我从单个日志文件开始，弄清模式、正则、管道和退出状态，再把同一套搜索迁移到更适合代码仓库的 ripgrep，并做了一次 126 MiB 的实测。
+- [从零学习 vcpkg: 用现代 CMake 做一个 HTTP CLI](https://bfmhno3.github.io/posts/vcpkg-modern-cmake-http-client/): 我用 vcpkg、现代 CMake、CPR、CLI11 和 spdlog 做了一个可运行的命令行 HTTP 客户端，并沿着清单、baseline、triplet、toolchain 和 imported target 把 C/C++ 依赖管理串起来。
+- [npm 与 pnpm 安装的到底是什么？从 JavaScript 包到原生模块](https://bfmhno3.github.io/posts/npm-pnpm-tooling-guide/): 我原以为 npm 和 pnpm 安装的只是 JavaScript 或 TypeScript 包，直到遇到 sharp 这类包含原生模块和平台产物的依赖。本文在 WSL2 中动手实验，沿着 registry、lockfile、store、node_modules 和 CLI 入口把这件事弄清楚。
+- [Cudy TR3000 256 MB 刷入 ImmortalWrt：一次完整的图形化流程](https://bfmhno3.github.io/posts/cudy-tr3000-immortalwrt-flashing-guide/): 记录 Cudy TR3000 256 MB V1 从原厂固件、签名中间固件到 ImmortalWrt 25.12.1 和自定义镜像的完整图形化刷机流程，并介绍官方 TFTP 恢复方法。
+- [从暂停到理解：GDB 调试完整实践](https://bfmhno3.github.io/posts/gdb-debugging-guide/): 我用一个带有逻辑错误、递归、线程、异常、fork 和崩溃路径的 C++20 小程序，在 NixOS 上从零搭环境，把每条 GDB 命令的真实输出贴出来，并逐段解释这些输出到底在说什么。
+- [LaTeX 项目结构与 latexmk 配置](https://bfmhno3.github.io/posts/latex-project-structure/): 我用 LaTeX 写东西时的项目目录结构、main.tex 模板，以及一份跨平台的 .latexmkrc 配置。
+- [设备树入门：从第一份 DTS 到 Linux 驱动匹配](https://bfmhno3.github.io/posts/devicetree-study-notes/): 我从一份可编译的最小 DTS 开始，走完 DTS、DTB、boot program 到 Linux 驱动匹配的链路，再用真实工具和内核调试路径验证设备树。
+- [BibTeX 与 BibLaTeX 入门：.bib 文件结构、引用与编译流程](https://bfmhno3.github.io/posts/bibtex-and-biblatex-guide/): 从 .bib 条目结构出发，结合 BibTeX 与 BibLaTeX 两种工作流，梳理引用写法、编译顺序和常见注意事项。
+- [Tmux 使用笔记](https://bfmhno3.github.io/posts/note-of-tmux/): 理解 tmux 的 C/S 架构和 Session、Window、Pane 的三层模型，快速掌握日常工作中最常用的快捷键，提升远程开发效率。
+- [别再死记 Linux 目录：从 FHS 到运行时文件系统](https://bfmhno3.github.io/posts/fhs-of-linux/): 从 FHS 的两条分类轴出发，拆开持久文件、内核接口与进程视图，再用 5 组命令串起 usr-merge、XDG、namespace、cgroup、容器和嵌入式文件系统。
+- [英语语法综述](https://bfmhno3.github.io/posts/overview-of-english-grammar/): 本文系统梳理了英语语法的主体框架，从最基本的“简单句和五大定基本型”入手，解析句子成分与词性的区别。文章深入剖析了英语语法的核心枢纽——动词，涵盖其分类、时态、语气及非谓语形式，帮助读者以全局视角清晰建立造句的底层逻辑。
+- [GNU 汇编（GAS）通用语法与伪指令指南](https://bfmhno3.github.io/posts/gnu-assembly/): 本文不聚焦某一指令集细节，而是系统梳理 GNU Assembler 的通用语法与伪指令体系，涵盖注释规则、操作数方向、寻址模式、宽度后缀、段与符号控制，以及局部标签与宏等实用写法，帮助你在 x86、ARM、RISC-V 间建立统一理解。
+- [ARMv7-A 指令体系全解：数据处理、访存、分支与同步](https://bfmhno3.github.io/posts/armv7-a-isa/): 以 I.MX6ULL（ARM Cortex-A7）为背景，从物理本质出发，系统梳理 ARMv7-A 指令集的核心要点：定长 32 位指令结构与条件执行机制、16 个核心寄存器的 AAPCS 调用规范，以及数据处理、内存访问、分支控制、系统状态和原子同步五大类指令的功能与应用场景。
