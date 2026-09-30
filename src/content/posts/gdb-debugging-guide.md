@@ -2581,3 +2581,52 @@ loc second = {_M_id = {_M_thread = 140737488336448}}
 `dashboard -output /dev/pts/4` 把整个 dashboard 写到那个终端，`dashboard -layout` 的输出第一行 `Dashboard    /dev/pts/4` 确认了这一点。左边的 GDB 会话看起来和前面 `-nx` 的会话几乎一样，只是提示符变成了 `>>>`；每次停下，右边原地刷新。单个模块也可以分别输出，比如 `dashboard source -output /dev/pts/5`，把源码放到第三个窗口。
 
 说到底，dashboard 并没有给 GDB 增加新的能力。它只是在每次停下时替我执行了一遍 `x/i`、`info registers`、`list`、`bt`、`info threads`、`info locals`，再加上几个 `display`，然后把结果排好版。正因为前面把这些命令的原始输出一行行读过，这一屏信息才不是噪声：我知道 `+265` 是什么，知道为什么 `argv` 后面跟着一个 `'/'`，也知道当 dashboard 自己坏掉时，退回 `gdb -nx` 依然能把事情做完。
+
+## 参考资料
+
+下面是我写这篇文章时实际查阅过的资料。GDB 手册链接指向当前版本的在线文档，行为细节以你手里的 GDB 版本为准。
+
+### GDB 手册
+
+- [Debugging with GDB](https://sourceware.org/gdb/current/onlinedocs/gdb.html/)：GDB 官方手册首页。
+- [Breakpoints](https://sourceware.org/gdb/current/onlinedocs/gdb.html/Breakpoints.html)、[Set Watchpoints](https://sourceware.org/gdb/current/onlinedocs/gdb.html/Set-Watchpoints.html)、[Set Catchpoints](https://sourceware.org/gdb/current/onlinedocs/gdb.html/Set-Catchpoints.html)：断点、watchpoint（包括 `watch -location`）和 catchpoint。
+- [Continuing and Stepping](https://sourceware.org/gdb/current/onlinedocs/gdb.html/Continuing-and-Stepping.html)、[Returning](https://sourceware.org/gdb/current/onlinedocs/gdb.html/Returning.html)：`next`、`step`、`until`、`advance`、`finish` 和 `return`。
+- [Frames](https://sourceware.org/gdb/current/onlinedocs/gdb.html/Frames.html)：栈帧、`backtrace` 和 `info frame`。
+- [Memory](https://sourceware.org/gdb/current/onlinedocs/gdb.html/Memory.html)、[Output Formats](https://sourceware.org/gdb/current/onlinedocs/gdb.html/Output-Formats.html)、[Print Settings](https://sourceware.org/gdb/current/onlinedocs/gdb.html/Print-Settings.html)：`x/nfu`、`print/x` 等格式，以及 `print pretty`、`print frame-arguments`。
+- [Automatic Display](https://sourceware.org/gdb/current/onlinedocs/gdb.html/Auto-Display.html)、[Convenience Variables](https://sourceware.org/gdb/current/onlinedocs/gdb.html/Convenience-Vars.html)：`display` 与 `$_exitcode` 这类便利变量。
+- [Registers](https://sourceware.org/gdb/current/onlinedocs/gdb.html/Registers.html)、[Source and Machine Code](https://sourceware.org/gdb/current/onlinedocs/gdb.html/Machine-Code.html)：`info registers`、`$pc` 和 `disassemble /s`。
+- [Signals](https://sourceware.org/gdb/current/onlinedocs/gdb.html/Signals.html)：`handle` 和 `info signals` 那张表。
+- [Threads](https://sourceware.org/gdb/current/onlinedocs/gdb.html/Threads.html)、[All-Stop Mode](https://sourceware.org/gdb/current/onlinedocs/gdb.html/All_002dStop-Mode.html)、[Stopping and Starting Multi-thread Programs](https://sourceware.org/gdb/current/onlinedocs/gdb.html/Thread-Stops.html)：线程编号、all-stop 模式和 `set scheduler-locking`。
+- [Debugging Forks](https://sourceware.org/gdb/current/onlinedocs/gdb.html/Forks.html)：`follow-fork-mode`、`detach-on-fork` 和多 inferior。
+- [Debugging Remote Programs](https://sourceware.org/gdb/current/onlinedocs/gdb.html/Remote-Debugging.html)：`gdbserver`、`target remote` 与 `set sysroot`。
+- [Core File Generation](https://sourceware.org/gdb/current/onlinedocs/gdb.html/Core-File-Generation.html)：`generate-core-file`。
+- [Debugging Optimized Code](https://sourceware.org/gdb/current/onlinedocs/gdb.html/Optimized-Code.html)：内联函数和 `<optimized out>`。
+- [Process Record and Replay](https://sourceware.org/gdb/current/onlinedocs/gdb.html/Process-Record-and-Replay.html)：`record full` 与各种 `reverse-*` 命令。
+- [TUI](https://sourceware.org/gdb/current/onlinedocs/gdb.html/TUI.html)：`layout`、`focus` 和 TUI 快捷键。
+- [Command Files](https://sourceware.org/gdb/current/onlinedocs/gdb.html/Command-Files.html)：`source`、`-x`、`-batch` 和 `define`。
+- [Debugging Information in Separate Files](https://sourceware.org/gdb/current/onlinedocs/gdb.html/Separate-Debug-Files.html)、[The auto-load safe-path](https://sourceware.org/gdb/current/onlinedocs/gdb.html/Auto_002dloading-safe-path.html)：`debug-file-directory` 和脚本自动加载的安全路径。
+
+### 编译器与平台
+
+- [GCC: Options for Debugging Your Program](https://gcc.gnu.org/onlinedocs/gcc/Debugging-Options.html)：`-g3` 等调试信息选项。
+- [GCC: Options That Control Optimization](https://gcc.gnu.org/onlinedocs/gcc/Optimize-Options.html)：`-O0`、`-O2` 与 `-fno-omit-frame-pointer`。
+- [libstdc++: Debugging Support](https://gcc.gnu.org/onlinedocs/libstdc++/manual/debug.html)：libstdc++ 的 GDB pretty printer。
+- [x86-64 psABI](https://gitlab.com/x86-psABIs/x86-64-ABI)：System V x86-64 调用约定，参数寄存器 `rdi`、`rsi` 的来源。
+- [TIOCGWINSZ(2const)](https://man7.org/linux/man-pages/man2/TIOCGWINSZ.2const.html)：`struct winsize` 的定义，gdb-dashboard 那个 4 字节缓冲区问题的根源。
+- [coredumpctl(1)](https://man7.org/linux/man-pages/man1/coredumpctl.1.html)：`coredumpctl list` 和 `coredumpctl debug`。
+- [Python fcntl 模块文档](https://docs.python.org/3/library/fcntl.html)：`fcntl.ioctl` 的缓冲区参数语义。
+
+### Nix 与 NixOS
+
+- [Nixpkgs 手册：Hardening in Nixpkgs](https://nixos.org/manual/nixpkgs/stable/#sec-hardening-in-nixpkgs)：cc-wrapper 默认启用的加固参数和 `hardeningDisable`。
+- [Nixpkgs cc-wrapper 源码](https://github.com/NixOS/nixpkgs/tree/master/pkgs/build-support/cc-wrapper)：`NIX_DEBUG=1` 打印的 `extra flags before` 就来自这里。
+- [Nixpkgs gdb 包定义](https://github.com/NixOS/nixpkgs/blob/master/pkgs/by-name/gd/gdb/package.nix) 和 [debug-info-from-env.patch](https://github.com/NixOS/nixpkgs/blob/master/pkgs/by-name/gd/gdb/debug-info-from-env.patch)：`auto-load safe-path` 的默认值，以及 `NIX_DEBUG_INFO_DIRS` 是怎么被读取的。
+- [NixOS Wiki: Debug Symbols](https://wiki.nixos.org/wiki/Debug_Symbols)：在 NixOS 上获取分离调试符号的几种方式。
+- [nix develop](https://nix.dev/manual/nix/stable/command-ref/new-cli/nix3-develop)：flake 开发环境。
+- [Home Manager 选项手册](https://nix-community.github.io/home-manager/options.xhtml)：`home.file` 与 `xdg.configFile`。
+
+### 其他工具
+
+- [gdb-dashboard](https://github.com/cyrus-and/gdb-dashboard)、[它的 Wiki](https://github.com/cyrus-and/gdb-dashboard/wiki) 与 [.gdbinit 源码](https://github.com/cyrus-and/gdb-dashboard/blob/master/.gdbinit)：题外话一节里的配置目录、`-layout`、`-output` 和 `get_term_size` 都能在源码里找到。
+- [rr](https://rr-project.org/)：面向多线程程序的录制与回放调试器。
+- [ThreadSanitizer](https://clang.llvm.org/docs/ThreadSanitizer.html)：数据竞争检测工具。
