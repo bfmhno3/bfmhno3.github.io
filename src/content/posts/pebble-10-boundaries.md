@@ -18,6 +18,9 @@ slug: pebble-10-boundaries
 
 如果只写"能算数的东西"，你会停在语言的核心。但真实项目总要碰到操作系统的边界：网络、C 库、裸机。这三样在 Pebble 里各有一个 crate。
 
+> [!TIP] 先读基础篇
+> 本篇分别用到 `async`/`Send`、FFI 的 `unsafe`、以及 `no_std`/`alloc`。基础篇 2 讲线程与智能指针，基础篇 4 讲 `build.rs`，可以先垫一层。
+
 ## async：远程求值服务
 
 `pebble-net` 是一个 TCP 服务：客户端发一段 Pebble 程序，服务端求值，把结果或诊断发回去。协议极简，就是 4 字节大端长度前缀加 UTF-8 负载。

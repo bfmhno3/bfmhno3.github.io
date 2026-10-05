@@ -18,6 +18,9 @@ slug: pebble-11-cli-and-engineering
 
 前十个 crate 都是"零件"。把它们拼成一个能用的工具，是 `pebble-cli` 的事，也是这一篇要讲的工程部分。
 
+> [!TIP] 先读基础篇
+> 本篇讲 CLI 与工程化，`mod`/`use`/`Cargo.toml` 出现得最多。基础篇 4（Cargo 与项目组织）就是它的前传。
+
 ## CLI 是唯一知道所有零件的地方
 
 `pebble` 有六个子命令：
