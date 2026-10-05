@@ -8,29 +8,30 @@
 - [友链](https://bfmhno3.github.io/friends/): 这里是我的朋友们，欢迎互相访问交流
 - [留言](https://bfmhno3.github.io/guestbook/): 欢迎在这里留下你的足迹，分享你的想法和建议
 - [动态](https://bfmhno3.github.io/dynamic/): 随手记下此刻的想法与日常。
+- [项目](https://bfmhno3.github.io/projects/): 这里展示我开发过的项目
 - [相册](https://bfmhno3.github.io/gallery/): 记录生活中的美好瞬间
 - [书签导航](https://bfmhno3.github.io/booknav/): 收藏一些好用的网站，按分类整理
 - [哔哩哔哩](https://bfmhno3.github.io/bilibili/): 我的哔哩哔哩追番与追剧列表
 - [打赏](https://bfmhno3.github.io/sponsor/): 如果我的内容对你有帮助，欢迎通过以下方式打赏我，你的支持是我持续创作的动力！
 
 ## Recent Posts
+- [RAII 到底贵不贵：我把 C++ 的资源管理拆到了汇编](https://bfmhno3.github.io/posts/raii-in-cpp/): 我把 RAII 拆成 8 个可运行的实验：用手工清理对比析构函数，用替换的 operator new/delete 数泄漏对象，用 objdump 比对热路径与栈展开路径的指令数，再实测 unique_ptr 与 shared_ptr 的分配开销，最后整理浅拷贝、自赋值、抛异常的析构函数这些真实的坑。
+- [收尾：CLI、工程化，和一次 `clippy -- -D warnings` 的教训](https://bfmhno3.github.io/posts/pebble-11-cli-and-engineering/): 最后一篇。CLI 和 REPL 把所有 crate 缝在一起；工作区级的 lint、fmt、CI 和 Criterion 决定这个项目能不能长期维护。这一篇还包括一次真实的 clippy 踩坑、150 个测试的分层策略，以及回头看，写一门语言里什么比我想的难、什么比我想的容易。
+- [三个边界：async、FFI 与 no_std](https://bfmhno3.github.io/posts/pebble-10-boundaries/): 一门语言写完求值器，只完成了一半。这一篇讲 Pebble 的三个边界：用 Tokio 做一个异步远程求值服务，用 build.rs 和 cc 调一段 C 代码，以及把一部分求值器降成 no_std 跑在没有标准库的地方。每一块都在教 Rust 的一条边界规则。
+- [栈式 VM：跑指令、登记 GC 根、然后看它到底快多少](https://bfmhno3.github.io/posts/pebble-09-virtual-machine/): 把字节码接上值栈、调用帧和垃圾回收器，就得到一个完整的第二后端。这一篇讲 VM 的主循环、调用约定、GC 根怎么登记、以及怎么让两个后端在可观测语义上严格一致。最后放上真实的 Criterion 数字：VM 比树遍历快 1.2 到 2 倍，以及为什么不是十倍。
+- [手写标记清除垃圾回收器：把第六篇的泄漏收掉](https://bfmhno3.github.io/posts/pebble-08-garbage-collector/): 树遍历后端会因为递归闭包而泄漏。真正的解法不是修补 Rc，而是换一套内存管理：一个能识别环的标记清除回收器。这一篇讲泛型 Heap<O>、用 Cell 做内部可变性的标记阶段、用显式工作栈避免递归爆栈，以及一个用 MaybeUninit 和裸指针写的 bump 分配器。
+- [字节码编译器：跳转回填与一个顺序写反的 bug](https://bfmhno3.github.io/posts/pebble-07-bytecode-compiler/): 为了让程序变成线性的、能被一个循环驱动，我写了字节码编译器。这一篇讲指令流与常量池、用占位再回填处理前向跳转、把 for 脱糖成隐藏计数器循环，以及一次「callee 和参数压栈顺序写反」让我盯着列表报错「不是函数」看了半天的经历。
+- [树遍历解释器：Rc、RefCell，和一个我自己制造的内存泄漏](https://bfmhno3.github.io/posts/pebble-06-tree-walking-interpreter/): 第二个前端做完了，该让它跑起来。这一篇讲 Pebble 的运行时对象模型：用 Rc<RefCell<..>> 表达可变且共享的列表，用环境链实现闭包，把控制流做成一个返回值。最后我会告诉你，为什么递归闭包会让这个后端泄漏内存，以及这如何逼出了后面的垃圾回收器。
+- [解析器：递归下降、Pratt 与「错了也要继续」](https://bfmhno3.github.io/posts/pebble-05-parser/): 解析器是整条前端里我最怕写错的一环。Pebble 用递归下降处理语句，用 Pratt（优先级爬升）处理表达式，所有函数都返回 Result<T, Diagnostic>。更重要的是错误恢复：一个文件里写错三处，就要一次性报三处，而不是第一个就撂挑子。
+- [AST 与三种宏：用枚举表达语法树](https://bfmhno3.github.io/posts/pebble-04-ast-and-macros/): AST 是 Rust 枚举真正发光的地方：递归枚举 + Box + 模式匹配。这一篇还写了三种宏：用 #[derive(Spanned)] 让每个节点自动知道自己的位置，用函数式宏 opcode_set! 生成字节码指令表，用声明式宏 chunk! 拼一段指令流。
+- [零拷贝词法器：让 token 借用源码](https://bfmhno3.github.io/posts/pebble-03-lexer/): 词法器是我第一个真正跟借用检查器较劲的地方。token 里的标识符直接借用 &str，字符串用 Cow 只在需要处理转义时才分配，扫到未知字符就记一条诊断然后继续。这一篇讲零拷贝怎么做到、关键字表怎么查、以及为什么未闭合的字符串应该在换行处停手。
+- [编译器第一课：把「第几行第几列」做对](https://bfmhno3.github.io/posts/pebble-02-span-and-diagnostics/): 写编译器最容易被忽视、却贯穿全部代码的东西不是求值，而是位置。我用一个 no_std 的 pebble-span 保存字节偏移与源码映射，用二分查找把偏移换算成行列，再用 pebble-diag 把它渲染成带插入符的错误。这一篇还包括一个我自己写出来、测试却没能发现的渲染 bug。
+- [我决定用写一门语言来学 Rust：Pebble 从零开始](https://bfmhno3.github.io/posts/pebble-01-why-build-a-language/): 官方教程写得很好，但我看不进去。于是我用 Rust 从零写了一个小型脚本语言 Pebble：手写词法器、解析器、树遍历解释器、字节码 VM 和垃圾回收器，拆成 16 个 crate。这是这个系列的第一篇，先交代为什么这么做、做成了什么、以及后面会怎么写。
+- [Cargo 与项目组织：16 个 crate 是怎么摆的](https://bfmhno3.github.io/posts/pebble-rust-04-cargo-layout/): 语法、标准库、所有权都会了，还剩一个很实际的问题：代码往哪放。这篇讲清楚 package、crate、module 三个词的区别，逐段拆 workspace 的 Cargo.toml 和四种 crate 清单，讲 mod/use/pub use 的模块系统，讲 Cargo.lock、build.rs、工具链配置和 CI，最后给出 16 个 crate 的分层图和「怎么再加一个 crate」的步骤。
+- [所有权、借用与生命周期：我把编译器惹毛了三次](https://bfmhno3.github.io/posts/pebble-rust-03-ownership/): 所有权是 Rust 里唯一一个别的语言没有的东西，也是新手最先撞墙的地方。这篇不背规则，而是直接写错三段代码，把 rustc 的原话抄下来，再解释它在说什么：移动之后为什么不能再用、共享借用和可变借用为什么不能同时存在、'src 那个尖括号里的东西到底标什么。全部用 Span 和 Lexer 的真实代码收尾。
+- [Rust 标准库速览：我在这门语言里用到的每一个容器和指针](https://bfmhno3.github.io/posts/pebble-rust-02-stdlib/): 语法会读之后，真正每天打交道的是标准库。这篇按「什么时候用哪个」过一遍我能用到的全部：&str 和 String 怎么选、Vec 和 HashMap、Box/Rc/RefCell/Cell 各管什么、Option 和 Result 的常用方法、迭代器那一串 .map().collect()、fmt、错误类型、时间、文件和线程。每个都指向 Pebble 里真实用到它的那段代码。
+- [Rust 语法速览：从 Span 的十行代码开始](https://bfmhno3.github.io/posts/pebble-rust-01-syntax/): 如果你还没写过 Rust，直接读实现篇会被语法绊住。这篇是基础篇的第一篇：变量为什么默认不可变、标量和复合类型、函数里最后一个表达式就是返回值、struct 与 impl、enum 与穷尽 match、Option 和 Result 入门。每个语法点都用 Pebble 里真实存在的 pebble-span 代码来讲。
 - [我把同一份 Agent 配置写了 4 遍: JSON、TOML、YAML 与配置文件的语法和选择](https://bfmhno3.github.io/posts/configuration-file-formats-for-ai-agents/): 我把同一份包含 16 个叶子值的 Agent 配置分别写成 JSON、TOML、YAML 和 INI，实际解析并比较它们，再解释 JSONC、.env、XML、Schema、覆盖顺序、密钥管理与常见陷阱。
 - [我不想再盲贴正则表达式了: 从语法到 Scoop、Python、CMake、C++ 和 TypeScript](https://bfmhno3.github.io/posts/regular-expressions-from-syntax-to-automation/): 我从一份包含 4 个版本号的发布页开始，逐步写出可解释、可移植、可测试的正则表达式，再把同一套方法放进 Scoop checkver、Python、CMake、C++ 和 JavaScript/TypeScript。
 - [我会用 Git，但它到底在做什么？从对象数据库到现代工作流](https://bfmhno3.github.io/posts/understanding-git/): 我用 Git 2.54.0 建了一个隔离仓库，从 blob、tree、commit、index、ref 和 reflog 拆开 add、commit、branch、merge、rebase、fetch、pull 与 push，再整理一套意图明确、可恢复的现代 Git 命令行。
 - [一台不存在的计算机：QEMU 工作原理与实践](https://bfmhno3.github.io/posts/understanding-qemu/): 我用 QEMU 10.2.4 从零启动一个 512 字节 x86 扇区，运行 992 字节 AArch64 ELF，再沿着 machine、TCG/KVM、设备与后端、VirtIO、QMP、GDB、磁盘、网络和 ARM virt 拆开完整系统模拟链。
-- [我追了一遍 Kbuild: 从一行 obj-m 到可以加载的 Linux 内核模块](https://bfmhno3.github.io/posts/understanding-kbuild/): 我用 Linux 6.18 写了一个双文件外部模块，追踪 obj-m、scripts/Makefile.build、.cmd、modpost 和最终 .ko，再把它装进 QEMU 并迁移回内核树验证 n、m、y。
-- [我拆开了 Kconfig: 从一个选项到 U-Boot 和 Linux 的条件编译](https://bfmhno3.github.io/posts/understanding-kconfig/): 我用 Linux 6.18 的 Kconfig 前端搭了一个 30 行的实验板级配置，再沿着 Kconfig、defconfig、.config、auto.conf、autoconf.h 和 Kbuild 追踪 U-Boot 与 Linux 到底如何裁剪代码。
-- [从错误码到栈展开: 我如何理解 C++ 异常](https://bfmhno3.github.io/posts/cpp-exception/): 我从嵌入式 C 的错误码出发，用一个可运行的栈展开实验串起 C++ 异常、RAII、捕获边界、noexcept、异常安全，以及 std::expected 的适用边界。
-- [我终于学会了 grep，然后换成了 ripgrep](https://bfmhno3.github.io/posts/grep-ripgrep-search-guide/): 我一直在复制 grep 命令，却没有真正理解它。这次我从单个日志文件开始，弄清模式、正则、管道和退出状态，再把同一套搜索迁移到更适合代码仓库的 ripgrep，并做了一次 126 MiB 的实测。
-- [从零学习 vcpkg: 用现代 CMake 做一个 HTTP CLI](https://bfmhno3.github.io/posts/vcpkg-modern-cmake-http-client/): 我用 vcpkg、现代 CMake、CPR、CLI11 和 spdlog 做了一个可运行的命令行 HTTP 客户端，并沿着清单、baseline、triplet、toolchain 和 imported target 把 C/C++ 依赖管理串起来。
-- [npm 与 pnpm 安装的到底是什么？从 JavaScript 包到原生模块](https://bfmhno3.github.io/posts/npm-pnpm-tooling-guide/): 我原以为 npm 和 pnpm 安装的只是 JavaScript 或 TypeScript 包，直到遇到 sharp 这类包含原生模块和平台产物的依赖。本文在 WSL2 中动手实验，沿着 registry、lockfile、store、node_modules 和 CLI 入口把这件事弄清楚。
-- [Cudy TR3000 256 MB 刷入 ImmortalWrt：一次完整的图形化流程](https://bfmhno3.github.io/posts/cudy-tr3000-immortalwrt-flashing-guide/): 记录 Cudy TR3000 256 MB V1 从原厂固件、签名中间固件到 ImmortalWrt 25.12.1 和自定义镜像的完整图形化刷机流程，并介绍官方 TFTP 恢复方法。
-- [从暂停到理解：GDB 调试完整实践](https://bfmhno3.github.io/posts/gdb-debugging-guide/): 我用一个带有逻辑错误、递归、线程、异常、fork 和崩溃路径的 C++20 小程序，在 NixOS 上从零搭环境，把每条 GDB 命令的真实输出贴出来，并逐段解释这些输出到底在说什么。
-- [LaTeX 项目结构与 latexmk 配置](https://bfmhno3.github.io/posts/latex-project-structure/): 我用 LaTeX 写东西时的项目目录结构、main.tex 模板，以及一份跨平台的 .latexmkrc 配置。
-- [设备树入门：从第一份 DTS 到 Linux 驱动匹配](https://bfmhno3.github.io/posts/devicetree-study-notes/): 我从一份可编译的最小 DTS 开始，走完 DTS、DTB、boot program 到 Linux 驱动匹配的链路，再用真实工具和内核调试路径验证设备树。
-- [BibTeX 与 BibLaTeX 入门：.bib 文件结构、引用与编译流程](https://bfmhno3.github.io/posts/bibtex-and-biblatex-guide/): 从 .bib 条目结构出发，结合 BibTeX 与 BibLaTeX 两种工作流，梳理引用写法、编译顺序和常见注意事项。
-- [Tmux 使用笔记](https://bfmhno3.github.io/posts/note-of-tmux/): 理解 tmux 的 C/S 架构和 Session、Window、Pane 的三层模型，快速掌握日常工作中最常用的快捷键，提升远程开发效率。
-- [别再死记 Linux 目录：从 FHS 到运行时文件系统](https://bfmhno3.github.io/posts/fhs-of-linux/): 从 FHS 的两条分类轴出发，拆开持久文件、内核接口与进程视图，再用 5 组命令串起 usr-merge、XDG、namespace、cgroup、容器和嵌入式文件系统。
-- [英语语法综述](https://bfmhno3.github.io/posts/overview-of-english-grammar/): 本文系统梳理了英语语法的主体框架，从最基本的“简单句和五大定基本型”入手，解析句子成分与词性的区别。文章深入剖析了英语语法的核心枢纽——动词，涵盖其分类、时态、语气及非谓语形式，帮助读者以全局视角清晰建立造句的底层逻辑。
-- [GNU 汇编（GAS）通用语法与伪指令指南](https://bfmhno3.github.io/posts/gnu-assembly/): 本文不聚焦某一指令集细节，而是系统梳理 GNU Assembler 的通用语法与伪指令体系，涵盖注释规则、操作数方向、寻址模式、宽度后缀、段与符号控制，以及局部标签与宏等实用写法，帮助你在 x86、ARM、RISC-V 间建立统一理解。
-- [ARMv7-A 指令体系全解：数据处理、访存、分支与同步](https://bfmhno3.github.io/posts/armv7-a-isa/): 以 I.MX6ULL（ARM Cortex-A7）为背景，从物理本质出发，系统梳理 ARMv7-A 指令集的核心要点：定长 32 位指令结构与条件执行机制、16 个核心寄存器的 AAPCS 调用规范，以及数据处理、内存访问、分支控制、系统状态和原子同步五大类指令的功能与应用场景。

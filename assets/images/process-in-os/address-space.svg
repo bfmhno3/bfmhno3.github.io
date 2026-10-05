@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 680" width="860" height="680" role="img" aria-label="进程的虚拟地址空间布局">
+  <rect width="860" height="680" fill="#ffffff"/>
+  <style>
+    text { font-family: 'Noto Sans SC','PingFang SC','Microsoft YaHei','Source Han Sans SC',system-ui,sans-serif; }
+    .b { font-size: 15px; font-weight: 600; fill: #1f2937; }
+    .t { font-size: 13px; fill: #374151; }
+    .s { font-size: 11.5px; fill: #6b7280; }
+    .m { font-family: ui-monospace,'SFMono-Regular','JetBrains Mono',Menlo,Consolas,monospace; font-size: 12px; fill: #4b5563; }
+  </style>
+  <defs>
+    <marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L7,3 L0,6 z" fill="#6b7280"/>
+    </marker>
+  </defs>
+
+  <text class="b" x="40" y="36">进程的虚拟地址空间（进程视角：一整块连续内存）</text>
+
+  <line x1="176" y1="600" x2="176" y2="96" stroke="#6b7280" stroke-width="1.6" marker-end="url(#ah)"/>
+  <text class="s" x="150" y="90">高地址</text>
+  <text class="s" x="150" y="616">低地址</text>
+
+  <rect x="200" y="80" width="320" height="62" fill="#e5e7eb" stroke="#9ca3af" stroke-dasharray="5 4"/>
+  <text class="b" x="216" y="108">内核空间</text>
+  <text class="s" x="216" y="128">用户态不可访问；每个进程都映射同一份内核</text>
+
+  <rect x="200" y="142" width="320" height="118" fill="#fee2e2" stroke="#f87171"/>
+  <text class="b" x="216" y="170">栈 stack</text>
+  <text class="t" x="216" y="192">局部变量、返回地址、函数调用帧</text>
+  <text class="s" x="216" y="214">↓ 向低地址方向增长</text>
+
+  <rect x="200" y="260" width="320" height="82" fill="#fef3c7" stroke="#fbbf24"/>
+  <text class="b" x="216" y="288">内存映射区 mmap</text>
+  <text class="t" x="216" y="310">共享库 (.so)、文件映射、大块 malloc</text>
+
+  <rect x="200" y="342" width="320" height="34" fill="#f9fafb" stroke="#d1d5db" stroke-dasharray="5 4"/>
+  <text class="s" x="216" y="364">空洞（按需分配，尚未映射）</text>
+
+  <rect x="200" y="376" width="320" height="106" fill="#d1fae5" stroke="#34d399"/>
+  <text class="b" x="216" y="404">堆 heap</text>
+  <text class="t" x="216" y="426">malloc / new 申请的动态内存</text>
+  <text class="s" x="216" y="448">↑ 向高地址方向增长</text>
+
+  <rect x="200" y="482" width="320" height="56" fill="#e0e7ff" stroke="#818cf8"/>
+  <text class="b" x="216" y="508">.data / .bss</text>
+  <text class="t" x="216" y="528">已初始化 / 未初始化全局与静态变量</text>
+
+  <rect x="200" y="538" width="320" height="62" fill="#dbeafe" stroke="#60a5fa"/>
+  <text class="b" x="216" y="564">.text</text>
+  <text class="t" x="216" y="584">机器指令；进程启动时加载，通常只读</text>
+
+  <text class="m" x="536" y="86">0xffff_ffff_ffff_ffff</text>
+  <text class="m" x="536" y="606">0x0000_0000_0000_0000</text>
+
+  <line x1="196" y1="142" x2="196" y2="600" stroke="#60a5fa" stroke-width="2"/>
+  <text class="s" x="40" y="380" transform="rotate(-90 40 380)">用户空间（每个进程独立）</text>
+
+  <rect x="536" y="616" width="288" height="52" rx="6" fill="#f3f4f6" stroke="#d1d5db"/>
+  <text class="s" x="550" y="638">进程认为自己独占这一整块连续内存，</text>
+  <text class="s" x="550" y="656">实际由 MMU + 页表映射到物理页。</text>
+</svg>

@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" width="960" height="600" role="img" aria-label="有栈协程与无栈协程的对比">
+  <rect width="960" height="600" fill="#ffffff"/>
+  <style>
+    text { font-family: 'Noto Sans SC','PingFang SC','Microsoft YaHei','Source Han Sans SC',system-ui,sans-serif; }
+    .b { font-size: 15px; font-weight: 600; fill: #1f2937; }
+    .t { font-size: 12.5px; fill: #374151; }
+    .s { font-size: 11.5px; fill: #6b7280; }
+  </style>
+  <defs>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 z" fill="#9ca3af"/></marker>
+  </defs>
+
+  <text class="b" x="40" y="34">协程的两种实现：有栈（stackful）与无栈（stackless）</text>
+
+  <rect x="30" y="52" width="440" height="470" rx="10" fill="#ffffff" stroke="#9ca3af"/>
+  <text class="b" x="50" y="78">有栈协程（stackful）</text>
+
+  <text class="s" x="56" y="140">主栈</text>
+  <rect x="56" y="148" width="112" height="320" fill="#d1fae5" stroke="#34d399"/>
+  <text class="t" x="76" y="316">main</text>
+
+  <text class="s" x="196" y="140">协程 A 栈</text>
+  <rect x="196" y="148" width="100" height="200" fill="#fee2e2" stroke="#f87171"/>
+  <text class="t" x="222" y="256">A</text>
+
+  <text class="s" x="316" y="140">协程 B 栈</text>
+  <rect x="316" y="148" width="100" height="200" fill="#fee2e2" stroke="#f87171"/>
+  <text class="t" x="342" y="256">B</text>
+
+  <path d="M168,200 C 182,200 186,200 194,200" fill="none" stroke="#9ca3af" stroke-width="1.6" marker-end="url(#ar)"/>
+  <path d="M296,240 C 308,240 308,240 314,240" fill="none" stroke="#9ca3af" stroke-width="1.6" marker-end="url(#ar)"/>
+
+  <text class="t" x="56" y="500">每个协程自带一段栈，空间开销 KB 到 MB 级；</text>
+  <text class="t" x="56" y="520">可以在任意嵌套调用深处挂起；切换就是换栈指针 SP。</text>
+
+  <rect x="490" y="52" width="440" height="470" rx="10" fill="#ffffff" stroke="#9ca3af"/>
+  <text class="b" x="510" y="78">无栈协程（stackless）</text>
+
+  <text class="s" x="516" y="140">运行栈（全程只有一个）</text>
+  <rect x="516" y="148" width="112" height="320" fill="#d1fae5" stroke="#34d399"/>
+  <text class="t" x="536" y="316">call / return</text>
+
+  <rect x="680" y="148" width="232" height="140" rx="6" fill="#e0e7ff" stroke="#818cf8"/>
+  <text class="b" x="696" y="174">协程 A 的状态机帧</text>
+  <text class="t" x="696" y="200">状态 = 2 / 3（记住恢复到哪）</text>
+  <text class="t" x="696" y="224">局部变量、await 点、引用</text>
+  <text class="s" x="696" y="252">帧大小编译期确定：C++ 72 B，Rust 16 B</text>
+
+  <rect x="680" y="300" width="232" height="140" rx="6" fill="#e0e7ff" stroke="#818cf8"/>
+  <text class="b" x="696" y="326">协程 B 的状态机帧</text>
+  <text class="t" x="696" y="352">状态 = 1 / 3</text>
+  <text class="t" x="696" y="376">局部变量、await 点、引用</text>
+
+  <path d="M660,300 C 668,300 672,300 678,300" fill="none" stroke="#9ca3af" stroke-width="1.6" marker-end="url(#ar)"/>
+  <text class="s" x="516" y="500">只能在 await / yield 处挂起；</text>
+  <text class="s" x="516" y="520">恢复 = 调度器按状态跳到对应位置，帧分配在堆上。</text>
+
+  <rect x="30" y="540" width="900" height="46" rx="6" fill="#fffbeb" stroke="#fbbf24"/>
+  <text class="t" x="46" y="562">无栈协程没有自己的栈，所以能开到几十万、上百万个；</text>
+  <text class="t" x="46" y="580">代价是函数被编译器改写成状态机，只能停在显式的 await / yield 点。</text>
+</svg>

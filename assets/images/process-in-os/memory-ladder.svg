@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 480" width="900" height="480" role="img" aria-label="每种并发实体的内存对数刻度对照">
+  <rect width="900" height="480" fill="#ffffff"/>
+  <style>
+    text { font-family: 'Noto Sans SC','PingFang SC','Microsoft YaHei','Source Han Sans SC',system-ui,sans-serif; }
+    .b { font-size: 15px; font-weight: 600; fill: #1f2937; }
+    .lab { font-size: 12.5px; fill: #374151; }
+    .val { font-size: 12px; font-weight: 600; fill: #374151; }
+    .ax { font-size: 11px; fill: #6b7280; }
+  </style>
+
+  <text class="b" x="40" y="30">每个并发实体的内存（对数刻度，本机实测）</text>
+
+  <line x1="230" y1="60" x2="230" y2="330" stroke="#d1d5db"/>
+  <line x1="333" y1="60" x2="333" y2="330" stroke="#e5e7eb"/>
+  <line x1="437" y1="60" x2="437" y2="330" stroke="#e5e7eb"/>
+  <line x1="540" y1="60" x2="540" y2="330" stroke="#e5e7eb"/>
+  <line x1="643" y1="60" x2="643" y2="330" stroke="#e5e7eb"/>
+  <line x1="747" y1="60" x2="747" y2="330" stroke="#e5e7eb"/>
+  <line x1="850" y1="60" x2="850" y2="330" stroke="#e5e7eb"/>
+
+  <text class="ax" x="222" y="350">10 B</text>
+  <text class="ax" x="320" y="350">100 B</text>
+  <text class="ax" x="422" y="350">1 KB</text>
+  <text class="ax" x="522" y="350">10 KB</text>
+  <text class="ax" x="620" y="350">100 KB</text>
+  <text class="ax" x="726" y="350">1 MB</text>
+  <text class="ax" x="824" y="350">10 MB</text>
+
+  <text class="lab" x="220" y="88" text-anchor="end">Rust Future</text>
+  <rect x="230" y="70" width="21" height="26" fill="#10b981"/>
+  <text class="val" x="261" y="88">16 B</text>
+
+  <text class="lab" x="220" y="148" text-anchor="end">C++20 协程帧</text>
+  <rect x="230" y="130" width="89" height="26" fill="#10b981"/>
+  <text class="val" x="329" y="148">72 B</text>
+
+  <text class="lab" x="220" y="208" text-anchor="end">Python asyncio Task</text>
+  <rect x="230" y="190" width="192" height="26" fill="#f59e0b"/>
+  <text class="val" x="432" y="208">712 B</text>
+
+  <text class="lab" x="220" y="268" text-anchor="end">OS 线程（预留栈）</text>
+  <rect x="230" y="250" width="612" height="26" fill="#ef4444"/>
+  <text class="val" x="342" y="268" fill="#ffffff">8 MiB</text>
+
+  <rect x="60" y="380" width="380" height="76" rx="6" fill="#f0fdf4" stroke="#34d399"/>
+  <text class="b" x="76" y="404">100 万个同时挂起</text>
+  <text class="lab" x="76" y="428">Rust 15 MB / C++ 69 MB / Python 679 MB</text>
+
+  <rect x="470" y="380" width="370" height="76" rx="6" fill="#fef2f2" stroke="#f87171"/>
+  <text class="b" x="486" y="404">100 万个线程 = 8 TiB 虚拟栈</text>
+  <text class="lab" x="486" y="428">地址空间直接放不下，所以线程只能开到几万级</text>
+</svg>

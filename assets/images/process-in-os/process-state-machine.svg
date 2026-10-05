@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 500" width="920" height="500" role="img" aria-label="进程状态机">
+  <rect width="920" height="500" fill="#ffffff"/>
+  <style>
+    text { font-family: 'Noto Sans SC','PingFang SC','Microsoft YaHei','Source Han Sans SC',system-ui,sans-serif; }
+    .n { font-size: 15px; font-weight: 600; fill: #1f2937; }
+    .e { font-size: 12.5px; fill: #4b5563; }
+  </style>
+  <defs>
+    <marker id="a" markerWidth="10" markerHeight="10" refX="8" refY="3.4" orient="auto"><path d="M0,0 L8,3.4 L0,6.8 z" fill="#6b7280"/></marker>
+  </defs>
+
+  <circle cx="320" cy="40" r="8" fill="#374151"/>
+
+  <rect x="260" y="70" width="120" height="44" rx="8" fill="#e0e7ff" stroke="#818cf8"/>
+  <text class="n" x="320" y="98" text-anchor="middle">新建</text>
+
+  <rect x="260" y="170" width="120" height="44" rx="8" fill="#fef3c7" stroke="#fbbf24"/>
+  <text class="n" x="320" y="198" text-anchor="middle">就绪</text>
+
+  <rect x="260" y="280" width="120" height="44" rx="8" fill="#d1fae5" stroke="#34d399"/>
+  <text class="n" x="320" y="308" text-anchor="middle">运行</text>
+
+  <rect x="560" y="400" width="120" height="44" rx="8" fill="#fee2e2" stroke="#f87171"/>
+  <text class="n" x="620" y="428" text-anchor="middle">阻塞</text>
+
+  <rect x="760" y="280" width="120" height="44" rx="8" fill="#e5e7eb" stroke="#9ca3af"/>
+  <text class="n" x="820" y="308" text-anchor="middle">终止</text>
+
+  <circle cx="820" cy="382" r="10" fill="none" stroke="#374151" stroke-width="2"/>
+  <circle cx="820" cy="382" r="4.5" fill="#374151"/>
+
+  <path d="M320,48 L320,70" fill="none" stroke="#6b7280" stroke-width="1.6" marker-end="url(#a)"/>
+  <path d="M320,114 L320,170" fill="none" stroke="#6b7280" stroke-width="1.6" marker-end="url(#a)"/>
+  <text class="e" x="334" y="146">创建完成</text>
+
+  <path d="M320,214 L320,280" fill="none" stroke="#6b7280" stroke-width="1.6" marker-end="url(#a)"/>
+  <text class="e" x="334" y="252">被调度</text>
+
+  <path d="M380,302 L760,302" fill="none" stroke="#6b7280" stroke-width="1.6" marker-end="url(#a)"/>
+  <text class="e" x="560" y="294" text-anchor="middle">exit</text>
+
+  <path d="M260,302 C 190,302 190,192 260,192" fill="none" stroke="#6b7280" stroke-width="1.6" marker-end="url(#a)"/>
+  <text class="e" x="180" y="247" text-anchor="end">时间片用完 / 被抢占</text>
+
+  <path d="M380,318 C 470,318 500,400 560,412" fill="none" stroke="#6b7280" stroke-width="1.6" marker-end="url(#a)"/>
+  <text class="e" x="438" y="440">等待 I/O 或事件</text>
+
+  <path d="M620,400 C 620,250 520,210 382,201" fill="none" stroke="#6b7280" stroke-width="1.6" marker-end="url(#a)"/>
+  <text class="e" x="505" y="248">I/O 完成 / 事件就绪</text>
+
+  <path d="M820,324 L820,372" fill="none" stroke="#6b7280" stroke-width="1.6" marker-end="url(#a)"/>
+</svg>
