@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 600" width="900" height="600" role="img" aria-label="切换与创建成本对数刻度对照">
+  <rect width="900" height="600" fill="#ffffff"/>
+  <style>
+    text { font-family: 'Noto Sans SC','PingFang SC','Microsoft YaHei','Source Han Sans SC',system-ui,sans-serif; }
+    .b { font-size: 15px; font-weight: 600; fill: #1f2937; }
+    .lab { font-size: 12.5px; fill: #374151; }
+    .val { font-size: 12px; font-weight: 600; fill: #374151; }
+    .ax { font-size: 11px; fill: #6b7280; }
+  </style>
+
+  <text class="b" x="40" y="30">一次切换 / 恢复 / 创建的耗时（对数刻度，本机实测）</text>
+
+  <rect x="470" y="42" width="14" height="12" fill="#10b981"/><text class="ax" x="490" y="53">用户态协程</text>
+  <rect x="580" y="42" width="14" height="12" fill="#f59e0b"/><text class="ax" x="600" y="53">内核调度切换</text>
+  <rect x="700" y="42" width="14" height="12" fill="#ef4444"/><text class="ax" x="720" y="53">创建 + 回收</text>
+
+  <line x1="190" y1="80" x2="190" y2="520" stroke="#d1d5db"/>
+  <line x1="300" y1="80" x2="300" y2="520" stroke="#e5e7eb"/>
+  <line x1="410" y1="80" x2="410" y2="520" stroke="#e5e7eb"/>
+  <line x1="520" y1="80" x2="520" y2="520" stroke="#e5e7eb"/>
+  <line x1="630" y1="80" x2="630" y2="520" stroke="#e5e7eb"/>
+  <line x1="740" y1="80" x2="740" y2="520" stroke="#e5e7eb"/>
+  <line x1="850" y1="80" x2="850" y2="520" stroke="#e5e7eb"/>
+
+  <text class="ax" x="186" y="540">1 ns</text>
+  <text class="ax" x="292" y="540">10 ns</text>
+  <text class="ax" x="396" y="540">100 ns</text>
+  <text class="ax" x="510" y="540">1 us</text>
+  <text class="ax" x="620" y="540">10 us</text>
+  <text class="ax" x="728" y="540">100 us</text>
+  <text class="ax" x="842" y="540">1 ms</text>
+
+  <text class="lab" x="180" y="126" text-anchor="end">C++20 协程 resume</text>
+  <rect x="190" y="110" width="35" height="22" fill="#10b981"/>
+  <text class="val" x="233" y="126">2.08 ns</text>
+
+  <text class="lab" x="180" y="166" text-anchor="end">Rust Future poll</text>
+  <rect x="190" y="150" width="129" height="22" fill="#10b981"/>
+  <text class="val" x="327" y="166">14.8 ns</text>
+
+  <text class="lab" x="180" y="206" text-anchor="end">CPython 生成器 resume</text>
+  <rect x="190" y="190" width="176" height="22" fill="#10b981"/>
+  <text class="val" x="374" y="206">40 ns</text>
+
+  <text class="lab" x="180" y="246" text-anchor="end">asyncio 切换</text>
+  <rect x="190" y="230" width="366" height="22" fill="#f59e0b"/>
+  <text class="val" x="564" y="246">2.13 us</text>
+
+  <text class="lab" x="180" y="286" text-anchor="end">内核线程切换</text>
+  <rect x="190" y="270" width="377" height="22" fill="#f59e0b"/>
+  <text class="val" x="575" y="286">2.69 us</text>
+
+  <text class="lab" x="180" y="326" text-anchor="end">内核进程切换</text>
+  <rect x="190" y="310" width="379" height="22" fill="#f59e0b"/>
+  <text class="val" x="577" y="326">2.81 us</text>
+
+  <text class="lab" x="180" y="366" text-anchor="end">pthread 创建 + 回收</text>
+  <rect x="190" y="350" width="481" height="22" fill="#ef4444"/>
+  <text class="val" x="679" y="366">23.6 us</text>
+
+  <text class="lab" x="180" y="406" text-anchor="end">Rust 线程创建 + 回收</text>
+  <rect x="190" y="390" width="501" height="22" fill="#ef4444"/>
+  <text class="val" x="699" y="406">36.0 us</text>
+
+  <text class="lab" x="180" y="446" text-anchor="end">Python 线程创建 + 回收</text>
+  <rect x="190" y="430" width="522" height="22" fill="#ef4444"/>
+  <text class="val" x="720" y="446">55.3 us</text>
+
+  <text class="lab" x="180" y="486" text-anchor="end">fork + 回收</text>
+  <rect x="190" y="470" width="576" height="22" fill="#ef4444"/>
+  <text class="val" x="774" y="486">173 us</text>
+
+  <rect x="120" y="556" width="760" height="34" rx="6" fill="#f3f4f6" stroke="#d1d5db"/>
+  <text class="ax" x="136" y="578">协程切换比内核线程切换便宜约 1000 倍；创建和销毁一个进程比协程 resume 贵约 80000 倍。</text>
+</svg>

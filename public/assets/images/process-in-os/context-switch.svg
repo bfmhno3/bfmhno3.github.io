@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 620" width="920" height="620" role="img" aria-label="上下文切换：寄存器与 PCB">
+  <rect width="920" height="620" fill="#ffffff"/>
+  <style>
+    text { font-family: 'Noto Sans SC','PingFang SC','Microsoft YaHei','Source Han Sans SC',system-ui,sans-serif; }
+    .b { font-size: 14px; font-weight: 600; fill: #1f2937; }
+    .t { font-size: 12.5px; fill: #374151; }
+    .s { font-size: 11px; fill: #6b7280; }
+    .m { font-family: ui-monospace,'SFMono-Regular','JetBrains Mono',Menlo,Consolas,monospace; font-size: 11.5px; fill: #4b5563; }
+  </style>
+  <defs>
+    <marker id="a" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 z" fill="#ef4444"/></marker>
+    <marker id="b" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 z" fill="#10b981"/></marker>
+  </defs>
+
+  <text class="b" x="40" y="34">上下文切换：CPU 只有一套寄存器，所以必须把"现场"存进 PCB</text>
+
+  <rect x="300" y="56" width="320" height="150" rx="8" fill="#eff6ff" stroke="#60a5fa"/>
+  <text class="b" x="316" y="82">CPU / 寄存器组（只有一套）</text>
+  <rect x="316" y="94" width="130" height="26" rx="4" fill="#ffffff" stroke="#bfdbfe"/><text class="m" x="324" y="112">PC 程序计数器</text>
+  <rect x="456" y="94" width="150" height="26" rx="4" fill="#ffffff" stroke="#bfdbfe"/><text class="m" x="464" y="112">SP 栈指针</text>
+  <rect x="316" y="126" width="130" height="26" rx="4" fill="#ffffff" stroke="#bfdbfe"/><text class="m" x="324" y="144">RAX - R15</text>
+  <rect x="456" y="126" width="150" height="26" rx="4" fill="#ffffff" stroke="#bfdbfe"/><text class="m" x="464" y="144">EFLAGS 条件码</text>
+  <rect x="316" y="158" width="290" height="26" rx="4" fill="#fee2e2" stroke="#fca5a5"/><text class="m" x="324" y="176">CR3 页表基址（地址空间身份）</text>
+
+  <rect x="60" y="270" width="320" height="260" rx="8" fill="#f9fafb" stroke="#9ca3af"/>
+  <text class="b" x="76" y="296">PCB_A（内核数据结构）</text>
+  <text class="m" x="76" y="326">pid / tgid / state</text>
+  <text class="m" x="76" y="352">PC / SP / 通用寄存器</text>
+  <text class="m" x="76" y="378">CR3（页表基址）</text>
+  <text class="m" x="76" y="404">内核栈指针</text>
+  <text class="m" x="76" y="430">打开文件表 / 信号 / 统计</text>
+  <text class="s" x="76" y="462">进程的"身份 + 现场"都归档在这里</text>
+  <text class="s" x="76" y="484">内核换个指针，就换了一个进程</text>
+
+  <rect x="540" y="270" width="320" height="260" rx="8" fill="#f9fafb" stroke="#9ca3af"/>
+  <text class="b" x="556" y="296">PCB_B（内核数据结构）</text>
+  <text class="m" x="556" y="326">pid / tgid / state</text>
+  <text class="m" x="556" y="352">PC / SP / 通用寄存器</text>
+  <text class="m" x="556" y="378">CR3（页表基址）</text>
+  <text class="m" x="556" y="404">内核栈指针</text>
+  <text class="m" x="556" y="430">打开文件表 / 信号 / 统计</text>
+  <text class="s" x="556" y="462">每个进程都有一份同样的结构</text>
+  <text class="s" x="556" y="484">结构本身放在内核，用户看不到</text>
+
+  <path d="M340,206 C 260,232 220,250 210,268" fill="none" stroke="#ef4444" stroke-width="2" marker-end="url(#a)"/>
+  <text class="s" x="150" y="240" fill="#ef4444">① 保存 A 的现场</text>
+
+  <path d="M750,268 C 740,240 700,220 620,206" fill="none" stroke="#10b981" stroke-width="2" marker-end="url(#b)"/>
+  <text class="s" x="700" y="240" fill="#10b981">② 恢复 B 的现场</text>
+
+  <rect x="200" y="556" width="520" height="48" rx="6" fill="#fffbeb" stroke="#fbbf24"/>
+  <text class="t" x="216" y="578">切换 = 保存 A 的寄存器到 PCB_A，再从 PCB_B 装载寄存器。</text>
+  <text class="t" x="216" y="596">进程切换还要切换 CR3（换地址空间）；线程切换不换 CR3。</text>
+</svg>

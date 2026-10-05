@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 620" width="960" height="620" role="img" aria-label="线程内存模型：共享地址空间，独立栈与寄存器">
+  <rect width="960" height="620" fill="#ffffff"/>
+  <style>
+    text { font-family: 'Noto Sans SC','PingFang SC','Microsoft YaHei','Source Han Sans SC',system-ui,sans-serif; }
+    .b { font-size: 14px; font-weight: 600; fill: #1f2937; }
+    .t { font-size: 12.5px; fill: #374151; }
+    .s { font-size: 11px; fill: #6b7280; }
+  </style>
+
+  <text class="b" x="40" y="32">线程 = 同一个进程内、共享地址空间的多条执行流</text>
+
+  <rect x="40" y="52" width="880" height="520" rx="10" fill="#ffffff" stroke="#9ca3af"/>
+  <text class="b" x="60" y="78">进程（共享）：一个虚拟地址空间</text>
+
+  <rect x="60" y="92" width="380" height="440" rx="6" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text class="b" x="76" y="116">所有线程共享</text>
+
+  <rect x="76" y="128" width="348" height="62" fill="#dbeafe" stroke="#60a5fa"/>
+  <text class="t" x="88" y="154">.text 代码</text><text class="s" x="88" y="176">同一份指令，所有线程都在里面跑</text>
+
+  <rect x="76" y="196" width="348" height="62" fill="#e0e7ff" stroke="#818cf8"/>
+  <text class="t" x="88" y="222">.data / .bss 全局与静态变量</text><text class="s" x="88" y="244">改一个全局变量，所有线程都看得见</text>
+
+  <rect x="76" y="264" width="348" height="72" fill="#d1fae5" stroke="#34d399"/>
+  <text class="t" x="88" y="290">堆 heap（malloc / new）</text><text class="s" x="88" y="312">指针在线程间自由传递，不需要拷贝</text>
+
+  <rect x="76" y="342" width="348" height="62" fill="#fef3c7" stroke="#fbbf24"/>
+  <text class="t" x="88" y="368">共享库 / 文件映射</text><text class="s" x="88" y="390">同一份代码段被多个线程复用</text>
+
+  <rect x="76" y="410" width="348" height="106" fill="#f3f4f6" stroke="#d1d5db"/>
+  <text class="t" x="88" y="436">打开的文件表 / 工作目录</text>
+  <text class="t" x="88" y="458">信号处理 / 进程 ID</text>
+  <text class="s" x="88" y="482">线程"出生"在进程里，共享这些进程级资源</text>
+  <text class="s" x="88" y="504">线程只负责"执行"，不负责"拥有"</text>
+
+  <text class="b" x="470" y="116">每个线程私有</text>
+
+  <rect x="470" y="128" width="100" height="300" fill="#fee2e2" stroke="#f87171"/>
+  <text class="t" x="482" y="290">线程 1</text><text class="t" x="482" y="312">栈</text>
+  <rect x="580" y="128" width="100" height="300" fill="#fee2e2" stroke="#f87171"/>
+  <text class="t" x="592" y="290">线程 2</text><text class="t" x="592" y="312">栈</text>
+  <rect x="690" y="128" width="100" height="300" fill="#fee2e2" stroke="#f87171"/>
+  <text class="t" x="702" y="290">线程 3</text><text class="t" x="702" y="312">栈</text>
+  <rect x="800" y="128" width="100" height="300" fill="#fee2e2" stroke="#f87171"/>
+  <text class="t" x="812" y="290">线程 4</text><text class="t" x="812" y="312">栈</text>
+
+  <text class="s" x="476" y="448">每列 = 一个线程独立的栈、栈指针与寄存器</text>
+  <text class="s" x="476" y="468">另有线程本地存储 TLS、errno、调度状态</text>
+
+  <rect x="470" y="490" width="430" height="42" rx="6" fill="#ecfdf5" stroke="#34d399"/>
+  <text class="t" x="484" y="516">线程切换：换 SP / 寄存器 / TLS，不换 CR3（页表不变）</text>
+
+  <rect x="60" y="548" width="840" height="0" fill="none"/>
+  <text class="s" x="40" y="596">代价：线程共享地址空间，省掉了页表切换，但数据竞争要靠锁、原子操作或语言规则来防。</text>
+</svg>

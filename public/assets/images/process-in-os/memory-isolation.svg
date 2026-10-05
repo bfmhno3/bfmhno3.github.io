@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 560" width="920" height="560" role="img" aria-label="虚拟内存隔离：同样的虚拟地址映射到不同物理页">
+  <rect width="920" height="560" fill="#ffffff"/>
+  <style>
+    text { font-family: 'Noto Sans SC','PingFang SC','Microsoft YaHei','Source Han Sans SC',system-ui,sans-serif; }
+    .b { font-size: 14px; font-weight: 600; fill: #1f2937; }
+    .t { font-size: 12.5px; fill: #374151; }
+    .s { font-size: 11px; fill: #6b7280; }
+    .m { font-family: ui-monospace,'SFMono-Regular','JetBrains Mono',Menlo,Consolas,monospace; font-size: 11.5px; fill: #4b5563; }
+  </style>
+  <defs>
+    <marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L7,3 L0,6 z" fill="#9ca3af"/>
+    </marker>
+  </defs>
+
+  <text class="b" x="40" y="34">隔离：两个进程里的同一个虚拟地址，落在不同的物理页</text>
+
+  <text class="b" x="60" y="76">进程 A 的虚拟地址空间</text>
+  <rect x="60" y="88" width="220" height="360" fill="#f8fafc" stroke="#cbd5e1"/>
+
+  <text class="b" x="320" y="76">进程 B 的虚拟地址空间</text>
+  <rect x="320" y="88" width="220" height="360" fill="#f8fafc" stroke="#cbd5e1"/>
+
+  <text class="b" x="640" y="76">物理内存（页框）</text>
+  <rect x="640" y="88" width="240" height="360" fill="#ffffff" stroke="#cbd5e1"/>
+
+  <!-- page rows: kind colors -->
+  <rect x="72" y="104" width="196" height="72" fill="#dbeafe" stroke="#60a5fa"/>
+  <text class="m" x="84" y="132">0x400000</text><text class="t" x="84" y="156">.text 代码</text>
+
+  <rect x="72" y="184" width="196" height="72" fill="#e0e7ff" stroke="#818cf8"/>
+  <text class="m" x="84" y="212">0x600000</text><text class="t" x="84" y="236">.data 全局变量</text>
+
+  <rect x="72" y="264" width="196" height="72" fill="#d1fae5" stroke="#34d399"/>
+  <text class="m" x="84" y="292">0x700000</text><text class="t" x="84" y="316">堆 heap</text>
+
+  <rect x="72" y="344" width="196" height="88" fill="#fee2e2" stroke="#f87171"/>
+  <text class="m" x="84" y="374">0x7fff0000</text><text class="t" x="84" y="398">栈 stack</text>
+
+  <rect x="332" y="104" width="196" height="72" fill="#dbeafe" stroke="#60a5fa"/>
+  <text class="m" x="344" y="132">0x400000</text><text class="t" x="344" y="156">.text 代码</text>
+
+  <rect x="332" y="184" width="196" height="72" fill="#e0e7ff" stroke="#818cf8"/>
+  <text class="m" x="344" y="212">0x600000</text><text class="t" x="344" y="236">.data 全局变量</text>
+
+  <rect x="332" y="264" width="196" height="72" fill="#d1fae5" stroke="#34d399"/>
+  <text class="m" x="344" y="292">0x700000</text><text class="t" x="344" y="316">堆 heap</text>
+
+  <rect x="332" y="344" width="196" height="88" fill="#fee2e2" stroke="#f87171"/>
+  <text class="m" x="344" y="374">0x7fff0000</text><text class="t" x="344" y="398">栈 stack</text>
+
+  <!-- physical frames -->
+  <rect x="652" y="104" width="216" height="60" fill="#dbeafe" stroke="#60a5fa"/>
+  <text class="m" x="664" y="130">物理帧 0x1a00</text><text class="s" x="664" y="152">属于 A 的 .text</text>
+
+  <rect x="652" y="172" width="216" height="60" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+  <text class="m" x="664" y="198">物理帧 0x2b00</text><text class="s" x="664" y="220">属于 B 的 .text</text>
+
+  <rect x="652" y="240" width="216" height="60" fill="#e0e7ff" stroke="#818cf8"/>
+  <text class="m" x="664" y="266">物理帧 0x3c00</text><text class="s" x="664" y="288">属于 A 的 .data</text>
+
+  <rect x="652" y="308" width="216" height="60" fill="#e0e7ff" stroke="#4f46e5" stroke-width="2"/>
+  <text class="m" x="664" y="334">物理帧 0x5100</text><text class="s" x="664" y="356">属于 B 的 .data</text>
+
+  <rect x="652" y="376" width="216" height="56" fill="#f3f4f6" stroke="#d1d5db" stroke-dasharray="5 4"/>
+  <text class="s" x="664" y="410">空闲物理帧</text>
+
+  <path d="M268,140 C 420,140 470,134 650,134" fill="none" stroke="#9ca3af" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#ah)"/>
+  <path d="M528,140 C 590,140 600,202 650,202" fill="none" stroke="#9ca3af" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#ah)"/>
+
+  <rect x="300" y="470" width="340" height="60" rx="6" fill="#f3f4f6" stroke="#d1d5db"/>
+  <text class="t" x="316" y="494">同一个虚拟地址 .text = 0x400000，</text>
+  <text class="t" x="316" y="516">在 A 里映射到 0x1a00，在 B 里映射到 0x2b00。</text>
+  <text class="b" x="646" y="494">MMU 每次访存都查页表，</text>
+  <text class="b" x="646" y="516">进程写坏自己不会碰到别人。</text>
+</svg>
