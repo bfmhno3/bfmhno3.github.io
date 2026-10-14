@@ -770,7 +770,7 @@ Option<u32>         8
 
 ### 一个带依赖的实验 crate
 
-接下来的几个实验需要用到我们自己的 `pebble-sys`，所以不能放进 `~/rust-lab`（那里只依赖标准库）。另开一个实验 crate：
+接下来的几个实验需要用到我们自己的 `pebble-sys`，所以不能放进 `~/rust-lab`（那里只依赖标准库）。另开一个实验 crate（完整版在仓库的 [lab/lab-ch13-sys](https://github.com/bfmhno3/pebble/tree/tutorial-v1/lab/lab-ch13-sys)，下面的文件都在里面，可以直接用）：
 
 ```bash
 cargo new ~/lab-ch13-sys
@@ -824,7 +824,7 @@ warning: `pebble-sys` (lib) generated 1 warning
     Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.10s
 ```
 
-编译器本身一声没吭，是 clippy 的 `mut_from_ref` 拦下来的：从 `&self` 变出 `&mut` 几乎一定是错的，因为共享引用可以有很多个，每个都能变出一个独占引用。到底会错在哪里？只要 `reset` 也写成 `&self`（它只是改一下 C 里的偏移，看起来无害），就有这个程序（`examples/overlap.rs`，放在这个"错误版本"里）：
+编译器本身一声没吭，是 clippy 的 `mut_from_ref` 拦下来的：从 `&self` 变出 `&mut` 几乎一定是错的，因为共享引用可以有很多个，每个都能变出一个独占引用。到底会错在哪里？只要 `reset` 也写成 `&self`（它只是改一下 C 里的偏移，看起来无害），就有这个程序（`examples/overlap.rs`，放在这个"错误版本"里；这个版本存成了补丁 [lab/exercises/ch13-scratch.patch](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/exercises/ch13-scratch.patch)）：
 
 ```rust
 let arena = Arena::with_capacity(64).expect("no memory");
@@ -1364,7 +1364,7 @@ use std::slice;
 
 ### no_mangle 与 cdylib：做一个 C 能链接的共享库
 
-C 要调用 Rust 函数，需要两样：一个符号名固定的函数，和一个 C 链接器认识的库格式。Rust 的函数名默认会被修饰（mangle，规则和 C++ 的类似），所以要用 `#[unsafe(no_mangle)]` 关掉；函数要用 `extern "C"` 声明调用约定；crate 要在 `Cargo.toml` 里声明 `crate-type = ["cdylib"]` 才会产出 `.so`。注意 `no_mangle` 在 edition 2024 里要包在 `unsafe(...)` 里写，因为"符号名撞车"是编译器看不见的风险。这个实验必须是独立的 crate（`~/lab-ch13-cdylib`）：
+C 要调用 Rust 函数，需要两样：一个符号名固定的函数，和一个 C 链接器认识的库格式。Rust 的函数名默认会被修饰（mangle，规则和 C++ 的类似），所以要用 `#[unsafe(no_mangle)]` 关掉；函数要用 `extern "C"` 声明调用约定；crate 要在 `Cargo.toml` 里声明 `crate-type = ["cdylib"]` 才会产出 `.so`。注意 `no_mangle` 在 edition 2024 里要包在 `unsafe(...)` 里写，因为"符号名撞车"是编译器看不见的风险。这个实验必须是独立的 crate（`~/lab-ch13-cdylib`，完整版在 [lab/lab-ch13-cdylib](https://github.com/bfmhno3/pebble/tree/tutorial-v1/lab/lab-ch13-cdylib)）：
 
 ```toml
 [package]
@@ -2120,7 +2120,7 @@ mod tests {
 
 ### 实验：它真的并发安全吗
 
-"锁无关"不应该只靠读代码相信。实验 `threads.rs`（在 `~/lab-ch13-bump` 里，依赖 `pebble-nostd`，建法同 `lab-ch13-sys`）：四个线程各分配 1000 次，每次 16 字节，把拿到的 4000 个地址收集起来排序去重：
+"锁无关"不应该只靠读代码相信。实验 `threads.rs`（在 `~/lab-ch13-bump` 里，依赖 `pebble-nostd`，建法同 `lab-ch13-sys`；完整版在 [lab/lab-ch13-bump](https://github.com/bfmhno3/pebble/tree/tutorial-v1/lab/lab-ch13-bump)）：四个线程各分配 1000 次，每次 16 字节，把拿到的 4000 个地址收集起来排序去重：
 
 ```text
 4000 allocations, 4000 distinct addresses
@@ -2374,6 +2374,48 @@ diff -r crates/pebble-nostd ~/pebble-tag/crates/pebble-nostd
 
 根目录的 `Cargo.toml` 现在还不用和 tag 一致（它在第 15 篇才完成），只要有这两个 crate 和 `cc` 的三行。没有中间状态的文件：这一篇所有 crate 都是一次到位。
 
+### 实验清单
+
+这一篇用到的所有实验文件都在仓库的 `lab/` 目录里（[lab/rust-lab](https://github.com/bfmhno3/pebble/tree/tutorial-v1/lab/rust-lab) 是主实验室）。按第 1 篇的方式把 tag 克隆到 `~/pebble-tag` 后，它们就在 `~/pebble-tag/lab/rust-lab`，在那里运行（`cd ~/pebble-tag/lab/rust-lab`，也可以把这个目录复制成 `~/rust-lab`）。表里 `lab-` 开头的文件属于旁边的独立实验 crate，命令里写了完整的目录。
+
+补丁（`lab/exercises/*.patch`）要在一份干净的 `~/pebble-tag` 里从仓库根目录应用，跑完用 `git apply -R lab/exercises/ch13-s2.patch` 之类的命令还原。
+
+| 文件 | 命令 | 结果 |
+| --- | --- | --- |
+| [`ch13_extern_plain.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch13_extern_plain.rs) | `cargo build --bin ch13_extern_plain` | 编译失败：`error: extern blocks must be unsafe` |
+| [`ch13_call_unsafe.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch13_call_unsafe.rs) | `cargo build --bin ch13_call_unsafe` | 编译失败：`E0133` |
+| [`ch13_strlen.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch13_strlen.rs) | `cargo run --quiet --bin ch13_strlen` | 运行成功：`strlen = 6` |
+| [`ch13_safe_fn.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch13_safe_fn.rs) | `cargo run --quiet --bin ch13_safe_fn` | 运行成功：`getpid() > 0: true` |
+| [`ch13_repr_c.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch13_repr_c.rs) | `cargo run --quiet --bin ch13_repr_c` | 运行成功：`Rusty: size 8 align 4` |
+| [`ch13_opaque.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch13_opaque.rs) | `cargo build --bin ch13_opaque` | 编译失败：`E0277` |
+| [`lab-ch13-bump/threads.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch13-bump/src/bin/threads.rs) | `cd ~/pebble-tag/lab/lab-ch13-bump && cargo run --quiet --bin threads` | 运行成功：`4000 allocations, 4000 distinct addresses` |
+| [`ch13_niche.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch13_niche.rs) | `cargo run --quiet --bin ch13_niche` | 运行成功：`*mut u8             8` |
+| [`exercises/ch13-scratch.patch`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/exercises/ch13-scratch.patch) | `cd ~/pebble-tag && git apply lab/exercises/ch13-scratch.patch && cargo clippy -p pebble-sys --lib` | clippy 警告：`warning: mutable borrow from immutable input(s)` |
+| 同一个补丁（`examples/overlap.rs`） | `cargo run -p pebble-sys --example overlap` | 运行成功：`a and b start at the same address: true`，下一行 `a[0] = 2` |
+| [`lab-ch13-sys/arena_two_slices.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch13-sys/src/bin/arena_two_slices.rs) | `cd ~/pebble-tag/lab/lab-ch13-sys && cargo build --bin arena_two_slices` | 编译失败：`E0499` |
+| [`lab-ch13-sys/arena_bytes.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch13-sys/src/bin/arena_bytes.rs) | `cd ~/pebble-tag/lab/lab-ch13-sys && cargo run --quiet --bin arena_bytes` | 运行成功：`len  1 at address ...f0` |
+| [`lab-ch13-sys/arena_send.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch13-sys/src/bin/arena_send.rs) | `cd ~/pebble-tag/lab/lab-ch13-sys && cargo build --bin arena_send` | 编译失败：`E0277` |
+| [`lab-ch13-sys/closure_cb.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch13-sys/src/bin/closure_cb.rs) | `cd ~/pebble-tag/lab/lab-ch13-sys && cargo build --bin closure_cb` | 编译失败：`E0308` |
+| [`lab-ch13-sys/fold_nocatch.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch13-sys/src/bin/fold_nocatch.rs) | `cd ~/pebble-tag/lab/lab-ch13-sys && cargo run --quiet --bin fold_nocatch` | 退出码 134（`SIGABRT`）：`thread 'main' panicked at src/bin/fold_nocatch.rs:15:5:` |
+| [`ch13_unwind_safe.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch13_unwind_safe.rs) | `cargo build --bin ch13_unwind_safe` | 编译失败：`E0277` |
+| [`ch13_any_payload.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch13_any_payload.rs) | `cargo run --quiet --bin ch13_any_payload` | 运行成功：`&str: a literal; stderr: thread panicked at src/bin/ch13_any_payload.rs:15:35:` |
+| [`lab-ch13-sys/fold_panic.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch13-sys/src/bin/fold_panic.rs) | `cd ~/pebble-tag/lab/lab-ch13-sys && cargo run --quiet --bin fold_panic` | 运行成功：`` caught on the Rust side: assertion `left != right` failed: closure exploded; stderr: thread panicked at src/bin/fold_panic.rs:6:13: `` |
+| [`lab-ch13-cdylib/src/lib.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch13-cdylib/src/lib.rs) 和 [`main.c`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch13-cdylib/main.c) | `cd ~/pebble-tag/lab/lab-ch13-cdylib && cargo build && cc main.c -Ltarget/debug -lpebble_ffi_demo -o /tmp/ffi_main && LD_LIBRARY_PATH=target/debug /tmp/ffi_main` | 构建无报错；打印 `pebble_add(40, 2) = 42` |
+| [`ch13_repr_transparent.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch13_repr_transparent.rs) | `cargo run --quiet --bin ch13_repr_transparent` | 运行成功：`Handle: size 8 align 8` |
+| [`ch13_repr_u8.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch13_repr_u8.rs) | `cargo run --quiet --bin ch13_repr_u8` | 运行成功：`size_of::<Status>() = 1` |
+| [`ch13_union.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch13_union.rs) | `cargo run --quiet --bin ch13_union` | 运行成功：`1.0f32 as bits = 0x3f800000` |
+| [`ch13_manually_drop.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch13_manually_drop.rs) | `cargo run --quiet --bin ch13_manually_drop` | 运行成功：`before the explicit drop` |
+| [`ch13_static_mut.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch13_static_mut.rs) | `cargo build --bin ch13_static_mut` | 编译失败：`error: creating a shared reference to mutable static` |
+| [`ch13_static_sync.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch13_static_sync.rs) | `cargo build --bin ch13_static_sync` | 编译失败：`E0277` |
+| [`ch13_const_generic.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch13_const_generic.rs) | `cargo run --quiet --bin ch13_const_generic` | 运行成功：`default: capacity 4 size_of 4` |
+| [`ch13_const_generic_mismatch.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch13_const_generic_mismatch.rs) | `cargo build --bin ch13_const_generic_mismatch` | 编译失败：`E0308` |
+| [`lab-ch13-bump/vec_growth.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch13-bump/src/bin/vec_growth.rs) | `cd ~/pebble-tag/lab/lab-ch13-bump && cargo run --quiet --bin vec_growth` | 运行成功：`len    1: capacity    4, arena used     32` |
+| [`lab-ch13-bump/exhaust.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch13-bump/src/bin/exhaust.rs) | `cd ~/pebble-tag/lab/lab-ch13-bump && cargo run --quiet --bin exhaust` | 退出码 134：`arena already used by the runtime: 552 bytes` |
+| [`lab-ch13-bump/stages.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch13-bump/src/bin/stages.rs) | `cd ~/pebble-tag/lab/lab-ch13-bump && cargo run --quiet --bin stages` | 运行成功：`SourceMap::add       352 bytes` |
+| [`exercises/ch13-s2.patch`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/exercises/ch13-s2.patch) | `cd ~/pebble-tag && git apply lab/exercises/ch13-s2.patch && cargo test -p pebble-nostd -p pebble-sys` | 全部通过：nostd 11 个测试，sys 16 个测试，文档测试 1 个加 2 个 |
+
+仓库里还有 [`ch13_extern_panic.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch13_extern_panic.rs)（`cargo run --quiet --bin ch13_extern_panic`，退出码 134，先打印 `callback(1) = 1`），文章没有用到。
+
 ## 练习
 
 **1. 为 C 的 arena 加一个新函数：`pebble_arena_remaining`，返回还没用掉的字节数（不算对齐）。** 要改哪几个文件？为什么 `build.rs` 里的 `rerun-if-changed` 列表里有头文件？
@@ -2398,7 +2440,7 @@ pub fn remaining(&self) -> usize {
 }
 ```
 
-加一个测试 `remaining_plus_used_is_capacity`：新建 64 字节的 arena，断言 `remaining() == 64`，分配 10 字节之后断言 `remaining() + used() == capacity()`。我在重建目录的一份拷贝里做了这些改动，`cargo test -p pebble-sys` 是 16 个单元测试加 2 个文档测试，全部通过。
+加一个测试 `remaining_plus_used_is_capacity`：新建 64 字节的 arena，断言 `remaining() == 64`，分配 10 字节之后断言 `remaining() + used() == capacity()`。我在重建目录的一份拷贝里做了这些改动（存成了补丁 [lab/exercises/ch13-s2.patch](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/exercises/ch13-s2.patch)），`cargo test -p pebble-sys` 是 16 个单元测试加 2 个文档测试，全部通过。
 
 `rerun-if-changed` 里列头文件，是因为 `build.rs` 只在列出的文件变化时才重跑；`.c` 文件 `#include` 了头文件，如果头文件改了而没有列出来，`.c` 不会被重新编译，C 和 Rust 对函数签名的理解就会不一致，而这种不一致编译器和链接器都发现不了。
 

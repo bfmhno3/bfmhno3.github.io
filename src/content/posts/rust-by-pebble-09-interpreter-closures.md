@@ -2596,6 +2596,20 @@ same  crates/pebble-interp/src/lib.rs
 - `crates/pebble-cli/` 下的全部七个文件：`Cargo.toml`、`src/main.rs`、`src/cli.rs`、`src/commands.rs`、`src/sources.rs`、`src/repl.rs`、`tests/cli.rs`。最终版本多出来的东西：字节码和反汇编（第 10 篇）、两个后端的 `Backend` trait、`--vm` 和 `bench`（第 12 篇）、并行的 `check`（第 14 篇）、可选的 `repl` 特性（第 15 篇）。其中 `src/repl.rs` 已经和 tag 一致（除了上面说的两行注释的标点），第 15 篇它只多出一个特性开关。
 - 根 `Cargo.toml` 的 `[workspace.dependencies]`：现在列了 8 个内部 crate 加 `anyhow`、`clap`、`proc-macro2`、`quote`、`rustyline`、`syn`。
 
+### 实验清单
+
+这一篇用到的实验文件都在仓库的 `lab/` 目录里（[`lab/rust-lab`](https://github.com/bfmhno3/pebble/tree/tutorial-v1/lab/rust-lab)）；如果你把仓库克隆到了 `~/pebble-tag`，它们就在 `~/pebble-tag/lab/rust-lab`，先 `cd ~/pebble-tag/lab/rust-lab` 再运行下表的命令（也可以把这个目录复制成 `~/rust-lab`）。
+
+| 文件 | 命令 | 结果 |
+| --- | --- | --- |
+| [`ch09_closures.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch09_closures.rs) | `cargo run --quiet --bin ch09_closures` | 运行，首行 `HELLO HELLO` |
+| [`ch09_closure_escape.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch09_closure_escape.rs) | `cargo build --bin ch09_closure_escape` | 编译失败：E0373 |
+| [`ch09_fnonce_twice.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch09_fnonce_twice.rs) | `cargo build --bin ch09_fnonce_twice` | 编译失败：E0382 |
+| [`ch09_fn_bound.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch09_fn_bound.rs) | `cargo build --bin ch09_fn_bound` | 编译失败：E0507 |
+| [`ch09_iter_mutate.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch09_iter_mutate.rs) | `cargo run --quiet --bin ch09_iter_mutate` | 先打印 `with a snapshot: [1, 2, 3, 10, 20, 30]`，随后 `RefCell already borrowed` panic，退出码 101 |
+| [`ch09_cycle.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch09_cycle.rs) | `cargo run --quiet --bin ch09_cycle` | 运行，首行 `-- a scope without functions`；不带函数的作用域 `alive after drop: false`，存了函数的那个 `alive after drop: true` |
+| [`ch09_weak_env.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch09_weak_env.rs) | `cargo run --quiet --bin ch09_weak_env` | 运行，首行 `first call:  None` |
+
 ## 练习
 
 **1. 加一个 `:env` 元命令。** 它应该列出全局环境里用户定义的名字。需要改哪些地方，会遇到什么障碍？（讨论题）

@@ -20,7 +20,7 @@ slug: rust-by-pebble-15-engineering
 Pebble 现在有 16 个 crate、10515 行 Rust、214 行 C，`Cargo.lock` 里锁了 143 个包，`cargo test --workspace --all-features` 跑 168 个测试。这一篇没有新语法，我想讲的是另一件事：怎样让这堆东西在我不看它的时候也保持正确。打 tag 之前，我在一个干净的工作树里把 CI 里的 rustdoc 命令跑了一遍，它在三个 crate 上报错，原因是我在文档注释里写了三个指向不存在或私有条目的链接。也就是说，如果我当时直接推送，这个仓库的 docs 任务会是红的，而我写了十四篇文章讲"Rust 编译器会替你检查"。这一篇就是讲怎么把"检查"从编译器扩展到整个仓库。
 
 > [!NOTE] 本篇检查点
-> 做完这一篇，你的 `pebble-cli` 会是最终版：`repl` 成了一个默认开启的 Cargo feature，`cargo build -p pebble-cli --no-default-features` 得到一个没有 `pebble repl` 的、小 24% 的二进制。整个工作区（除了 `.github/`、文档和许可证文件，它们直接从 tag 复制）与 tag `tutorial-v1` 逐字节一致，`cargo test --workspace --all-features` 通过 168 个测试。会用到的东西：Cargo features、`cfg`、单元/集成/文档测试、rustdoc 和 intra-doc 链接、工作区 lint、clippy、rustfmt、`rust-toolchain.toml`、发布 profile、CI。上一篇在 [并发与 async](/posts/rust-by-pebble-14-concurrency-async/)，命令行第五版就是从那里来的。
+> 做完这一篇，你的 `pebble-cli` 会是最终版：`repl` 成了一个默认开启的 Cargo feature，`cargo build -p pebble-cli --no-default-features` 得到一个没有 `pebble repl` 的、小 24% 的二进制。整个工作区（除了 `.github/`、文档和许可证文件，它们直接从 tag 复制，以及重建不需要的 `lab/` 实验室）与 tag `tutorial-v1` 逐字节一致，`cargo test --workspace --all-features` 通过 168 个测试。会用到的东西：Cargo features、`cfg`、单元/集成/文档测试、rustdoc 和 intra-doc 链接、工作区 lint、clippy、rustfmt、`rust-toolchain.toml`、发布 profile、CI。上一篇在 [并发与 async](/posts/rust-by-pebble-14-concurrency-async/)，命令行第五版就是从那里来的。
 
 这一篇的结构：先用五小步把命令行从第五版升到 tag 的最终版（每一步都让编译器说一句话）；然后过一遍测试、文档、lint 和配置文件，每样东西都用仓库里真实的文件说话；然后读 CI；然后做最后的对比；最后是一张"Rust 特性对应哪一篇"的索引表。
 
@@ -244,7 +244,7 @@ test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fin
 
 ### `cfg` 还能干什么
 
-`cfg` 的条件不只有 feature。`target_os`、`target_pointer_width`、`debug_assertions`、`test` 都是。`#[cfg(test)] mod tests` 是第 1 篇就写过的。在 `/tmp/rust-lab` 里的 `src/bin/ch15_cfg.rs`：
+`cfg` 的条件不只有 feature。`target_os`、`target_pointer_width`、`debug_assertions`、`test` 都是。`#[cfg(test)] mod tests` 是第 1 篇就写过的。在 `~/rust-lab` 里的 `src/bin/ch15_cfg.rs`（完整版在 [lab/rust-lab/src/bin/ch15_cfg.rs](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch15_cfg.rs)）：
 
 ```rust
 #[cfg(target_os = "linux")]
@@ -301,7 +301,7 @@ note: found an item that was configured out
 
 ## 测试：三种，各管一摊
 
-整个系列写了这么多测试，我一直没有正式区分过它们。Cargo 认三种，位置不同，能力不同。在 `/tmp/lab-ch15-tests` 里放一个最小的 crate：`src/lib.rs` 有一个公开函数 `bump`、一个私有函数 `secret`、一个单元测试模块，`bump` 的文档注释里有一个示例；`tests/api.rs` 是一个集成测试。
+整个系列写了这么多测试，我一直没有正式区分过它们。Cargo 认三种，位置不同，能力不同。在 `~/lab-ch15-tests` 里放一个最小的 crate（完整版在 [lab/lab-ch15-tests](https://github.com/bfmhno3/pebble/tree/tutorial-v1/lab/lab-ch15-tests)）：`src/lib.rs` 有一个公开函数 `bump`、一个私有函数 `secret`、一个单元测试模块，`bump` 的文档注释里有一个示例；`tests/api.rs` 是一个集成测试。
 
 ```rust
 /// Adds one.
@@ -361,10 +361,12 @@ note: the function `secret` is defined here
    | ^^^^^^^^^^^^^^^^^^^^^^^^
 ```
 
+  （仓库的 `lab/lab-ch15-tests` 里没有 `tests/private.rs`：它会让朴素的 `cargo test` 编译失败。要复现这条错误，自己建这个文件，内容就是 `use lab_ch15_tests::secret;`。）
+
   Pebble 的集成测试是 `pebble-cli/tests/cli.rs`（用 `assert_cmd` 运行真的二进制）和 `pebble-bench/tests/differential.rs`（用 `#[differential]` 对比两个后端）。
 - **文档测试**：文档注释里围栏代码块是一个会被编译和运行的程序，它同样只能用公开 API，而且每个示例是单独编译的一个 crate。它保证的是"文档里写的例子是真的能跑的"。
 
-文档测试坏掉时是这样的（我把 `2` 改成了 `3`）：
+文档测试坏掉时是这样的（我把 `src/lib.rs` 里文档示例的 `2` 改成了 `3`；仓库里的是通过的版本）：
 
 ```text
 $ cargo test --doc
@@ -744,15 +746,15 @@ $ cargo run -q -p pebble-cli -- run --vm examples/fib.pebble
 
 ## 检查点
 
-最后一次对比。我在 `/tmp/pebble-rebuild-15` 里：先用 `git archive tutorial-v1` 解开整个 tag（这样 `.github/`、`docs/`、`README.md`、`CHANGELOG.md`、`LICENSE-*` 这些我们没写的东西就是复制来的），然后把 `crates/pebble-cli` 换成第 14 篇结束时的第五版，再按上一节的五步一路改回去。结束后，对着另一份干净解开的 tag 做递归对比：
+最后一次对比。我在 `/tmp/pebble-rebuild-15` 里：先用 `git archive tutorial-v1` 解开整个 tag（这样 `.github/`、`docs/`、`README.md`、`CHANGELOG.md`、`LICENSE-*` 这些我们没写的东西就是复制来的；现在 tag 里还多一个 `lab/` 目录，下面的对比用 `--exclude=lab` 跳过它），然后把 `crates/pebble-cli` 换成第 14 篇结束时的第五版，再按上一节的五步一路改回去。结束后，对着另一份干净解开的 tag 做递归对比：
 
 ```text
-$ diff -rq /tmp/tagcmp /tmp/pebble-rebuild-15 --exclude=target
+$ diff -rq /tmp/tagcmp /tmp/pebble-rebuild-15 --exclude=target --exclude=lab
 $ echo $?
 0
 ```
 
-如果你自己做这一步，把 tag 克隆到 `~/pebble-tag`（第 1 篇的命令），在你的工作区根目录跑 `diff -rq ~/pebble-tag . --exclude=target --exclude=.git`。我上面用的是 `git archive` 解开的两份临时目录，所以路径不同，比较的内容一样。
+如果你自己做这一步，把 tag 克隆到 `~/pebble-tag`（第 1 篇的命令），在你的工作区根目录跑 `diff -rq ~/pebble-tag . --exclude=target --exclude=.git --exclude=lab`。`lab/` 是 tag 里唯一一个被跟踪、但重建不需要复现的目录（它是实验室，不属于 Pebble 的工作区）。另外 tag 里的 `.gitignore` 末尾比第 1 篇写的多两行（一行注释 `# Tutorial lab crates (each has its own workspace and target dir)` 和 `/lab/**/target`），给 `lab/` 里的 `target/` 用；`README.md` 也多一段介绍 `lab/`。这两个文件从 tag 复制就和 tag 一致，自己写的话会在这里看到 `.gitignore` 的差别，把那两行补上即可。我上面用的是 `git archive` 解开的两份临时目录，所以路径不同，比较的内容一样。
 
 没有任何输出，退出码 0：除了 `target/` 以外，没有一个文件有差别（包括 `Cargo.lock`：重新构建没有改它）。然后是行为：
 
@@ -788,6 +790,25 @@ $ echo $?
 - [`crates/pebble-cli/src/main.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/crates/pebble-cli/src/main.rs)
 
 其余的文件（`.github/`、`docs/`、`README.md`、`CHANGELOG.md`、两份许可证、`flake.nix` 等）是从 tag 复制的，没有中间版本。
+
+### 实验清单
+
+这一篇用到的所有实验文件都在仓库的 `lab/` 目录里（[lab/rust-lab](https://github.com/bfmhno3/pebble/tree/tutorial-v1/lab/rust-lab) 是主实验室）。按第 1 篇的方式把 tag 克隆到 `~/pebble-tag` 后，它们就在 `~/pebble-tag/lab/rust-lab`，在那里运行（`cd ~/pebble-tag/lab/rust-lab`，也可以把这个目录复制成 `~/rust-lab`）。表里 `lab-` 开头的文件属于旁边的独立实验 crate，命令里写了完整的目录。
+
+补丁（`lab/exercises/*.patch`）要在一份干净的 `~/pebble-tag` 里从仓库根目录应用，跑完用 `git apply -R lab/exercises/ch15-features.patch` 之类的命令还原。
+
+| 文件 | 命令 | 结果 |
+| --- | --- | --- |
+| [`ch15_cfg.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch15_cfg.rs) | `cargo run --quiet --bin ch15_cfg` | 运行成功：`compiled for linux` |
+| [`ch15_cfg_missing.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch15_cfg_missing.rs) | `cargo build --bin ch15_cfg_missing` | 编译失败：`E0425` |
+| [`lab-ch15-tests/src/lib.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch15-tests/src/lib.rs) 和 [`tests/api.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch15-tests/tests/api.rs) | `cd ~/pebble-tag/lab/lab-ch15-tests && cargo test` | 运行成功：单元测试 `1 passed`，集成测试 `1 passed`，文档测试 `1 passed` |
+| [`ch15_inline.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch15_inline.rs) | `cargo run --quiet --bin ch15_inline` | 运行成功：`38 2654435768 608876246` |
+| [`ch15_deref.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch15_deref.rs) | `cargo run --quiet --bin ch15_deref` | 运行成功：`19` |
+| [`exercises/ch15-features.patch`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/exercises/ch15-features.patch) | `cd ~/pebble-tag && git apply lab/exercises/ch15-features.patch && cargo test -p pebble-cli --test cli` | 运行成功：`13 passed` |
+| 同一个补丁 | `cargo test -p pebble-cli --no-default-features --test cli` | 运行成功：`13 passed` |
+| [`exercises/ch15-doc-link.patch`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/exercises/ch15-doc-link.patch) | `cd ~/pebble-tag && git apply lab/exercises/ch15-doc-link.patch && RUSTDOCFLAGS="-D warnings" cargo doc -p pebble-value --no-deps` | 失败：`error: unresolved link to pebble_vm` |
+
+文章里把 `lab-ch15-tests` 弄坏的两个版本没有放进仓库：把 `src/lib.rs` 文档测试里的 `2` 改成 `3` 就是失败的文档测试；`tests/private.rs`（一行 `use lab_ch15_tests::secret;`）会让朴素的 `cargo test` 直接编译失败，所以我没有把它放进 `lab/`，要复现就自己建这个文件，再跑 `cargo test --test private`，得到文章里的 `E0603`。
 
 ## 练习
 
@@ -828,11 +849,11 @@ test the_repl_subcommand_is_gone_when_the_feature_is_off ... ok
 test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
 ```
 
-两种配置各有一个测试被编译进来，总数都是 13。（副本在 `/tmp/ch15-ex`，没有改 `/tmp/pebble-rebuild-15`，所以上面的"逐字节一致"仍然成立。）
+两种配置各有一个测试被编译进来，总数都是 13。（这份副本现在是 [lab/exercises/ch15-features.patch](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/exercises/ch15-features.patch)，用 `git apply` 打在 tag 上即可；我没有改重建目录，所以上面的"逐字节一致"仍然成立。）
 
 </details>
 
-**2.** 在 `crates/pebble-value/src/lib.rs` 的文档里把 `` `pebble_vm` `` 改回 `` [`pebble_vm`] ``，不运行任何命令，预测 `cargo test -p pebble-value` 会不会失败，`cargo doc -p pebble-value --no-deps` 呢？加上 `RUSTDOCFLAGS="-D warnings"` 呢？
+**2.** 在 `crates/pebble-value/src/lib.rs` 的文档里把 `` `pebble_vm` `` 改回 `` [`pebble_vm`] ``（仓库里的补丁 [lab/exercises/ch15-doc-link.patch](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/exercises/ch15-doc-link.patch) 就是这个改动），不运行任何命令，预测 `cargo test -p pebble-value` 会不会失败，`cargo doc -p pebble-value --no-deps` 呢？加上 `RUSTDOCFLAGS="-D warnings"` 呢？
 
 <details>
 <summary>参考答案</summary>

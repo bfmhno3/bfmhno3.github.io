@@ -393,7 +393,7 @@ pub enum Expr {
 
 `Stmt` 里的 `Expr::Fn` 和 `Stmt::Fn` 同名但互不干扰，`Stmt::Fn` 是 `fn name() {}` 声明，`Expr::Fn` 是 `fn() {}` 匿名函数值。枚举变体的名字属于枚举自己的命名空间。
 
-写完这两个枚举，把 `ch05_box` 里的数字换成真货。我在实验目录之外另建了一个小 crate 去依赖刚写好的 `pebble-ast`（步骤略，核心就是一个 `main` 里的几行 `size_of`），输出：
+写完这两个枚举，把 `ch05_box` 里的数字换成真货。我在实验目录之外另建了一个小 crate 去依赖刚写好的 `pebble-ast`（步骤略，核心就是一个 `main` 里的几行 `size_of`；仓库里的版本是 [`lab/lab-ch05-ast/src/bin/ch05_sizes.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch05-ast/src/bin/ch05_sizes.rs)），输出：
 
 ```text
 Span         = 12 bytes
@@ -567,7 +567,7 @@ error: could not compile `pebble-ast` (lib) due to 3 previous errors
 
 AST 建好了，接下来谁来用它？打印器用，解释器用，字节码编译器用，将来任何分析工具都要用。它们各自要"走遍整棵树"，但对每种节点要做的事不同。如果每个工具都自己写一遍递归 `match`，十五个表达式变体和九个语句变体的"孩子在哪"信息就会被复制到每个工具里。
 
-标准的解决办法是**访问者模式**。C++ 的经典写法（我把它写成了一个可运行的小程序，用 `g++ -std=c++20` 编译通过，输出 `add`、`int 1`、`int 2` 三行）：
+标准的解决办法是**访问者模式**。C++ 的经典写法（我把它写成了一个可运行的小程序 [`lab/cpp/ch05_visitor.cpp`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/cpp/ch05_visitor.cpp)，用 `g++ -std=c++20` 编译通过，输出 `add`、`int 1`、`int 2` 三行）：
 
 ```c
 struct Visitor {
@@ -647,7 +647,7 @@ T largest(T a, T b) {
 }
 ```
 
-它对 `T` 的要求（要有 `operator>`）是**隐藏在函数体里**的，直到有人用不支持的类型实例化它才报错。我写了个空结构体 `Pebble` 试了一下（`g++ -std=c++20`）：
+它对 `T` 的要求（要有 `operator>`）是**隐藏在函数体里**的，直到有人用不支持的类型实例化它才报错。我写了个空结构体 `Pebble` 试了一下（[`lab/cpp/ch05_largest.cpp`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/cpp/ch05_largest.cpp)，`g++ -std=c++20`）：
 
 ```text
 largest.cpp: In instantiation of 'T largest(T, T) [with T = Pebble]':
@@ -784,7 +784,7 @@ For more information about this error, try `rustc --explain E0277`.
 error: could not compile `rust-lab` (bin "ch05_sized") due to 1 previous error
 ```
 
-真实的 `pebble-ast` 里，同样的操作（把三个签名里的 `+ ?Sized` 去掉）得到三个一模一样的错误，每个默认方法一个。
+真实的 `pebble-ast` 里，同样的操作（把三个签名里的 `+ ?Sized` 去掉）得到三个一模一样的错误，每个默认方法一个。这个改动存成了补丁 [`lab/exercises/ch05-sized.patch`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/exercises/ch05-sized.patch)，对 tag 应用后 `cargo build -p pebble-ast` 就能复现。
 
 怎么理解？Rust 里**泛型参数默认带一个隐含约束 `Sized`**：类型大小必须在编译期已知。绝大多数时候这正是你想要的。但 trait 本身（`Self`）不隐含 `Sized`，因为 Rust 想让 `dyn Visit` 这种"动态大小类型"（编译期不知道具体是谁）也能成为 `Self`。于是默认方法里的 `Self` 不一定有大小，不能传给要求 `V: Sized` 的 `walk_expr`。
 
@@ -1247,7 +1247,7 @@ fn add(a, b)
     }
 ```
 
-那个 `"\` 开头的字符串：行尾的反斜杠吞掉紧随其后的换行，让 `fn add(a, b)` 紧贴开头的引号，这样期望值的每一行从第一列开始，读起来就是输出本身。我在一个独立的小程序里把同一棵树直接 `print!("{}", pretty(&program))`，得到的就是上面的五行。（那个"手搓一棵树"的程序之所以这么啰嗦，是因为解析器要到第 7 篇才有。）
+那个 `"\` 开头的字符串：行尾的反斜杠吞掉紧随其后的换行，让 `fn add(a, b)` 紧贴开头的引号，这样期望值的每一行从第一列开始，读起来就是输出本身。我在一个独立的小程序里把同一棵树直接 `print!("{}", pretty(&program))`，得到的就是上面的五行（仓库里是 [`lab/lab-ch05-ast/src/bin/ch05_pretty.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch05-ast/src/bin/ch05_pretty.rs)）。（那个"手搓一棵树"的程序之所以这么啰嗦，是因为解析器要到第 7 篇才有。）
 
 ```rust
     #[test]
@@ -1321,6 +1321,35 @@ test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 - [`crates/pebble-ast/src/lib.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/crates/pebble-ast/src/lib.rs)：我用 `diff` 对照过，和仓库的区别只有这些：头部文档少了最后一句；少了 `pub use pebble_macros::Spanned;` 那一段；`Ident`、`Stmt`、`Expr` 上的 `#[derive(...)]` 里没有 `Spanned`；多了你手写的三个 `impl Spanned`。其余每一行，包括四个测试，逐字节相同。
 - [`crates/pebble-ast/Cargo.toml`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/crates/pebble-ast/Cargo.toml)：少一行 `pebble-macros.workspace = true`。
 
+### 实验清单
+
+这一篇的所有实验文件都在仓库的 `lab/` 目录里（主实验室是 [`lab/rust-lab`](https://github.com/bfmhno3/pebble/tree/tutorial-v1/lab/rust-lab)）。如果你把 tag 克隆在 `~/pebble-tag`，它们就在 `~/pebble-tag/lab/rust-lab`，下面的命令先 `cd ~/pebble-tag/lab/rust-lab`（或者把它复制到 `~/rust-lab`）再运行。
+
+主实验室，每个文件都是 `src/bin/` 下的一个二进制：
+
+| 文件 | 命令 | 结果 |
+| --- | --- | --- |
+| [`ch05_recursive.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch05_recursive.rs) | `cargo build --bin ch05_recursive` | E0072 |
+| [`ch05_box.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch05_box.rs) | `cargo run --quiet --bin ch05_box` | 运行，第一行 `eval = 6` |
+| [`ch05_bound.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch05_bound.rs) | `cargo build --bin ch05_bound` | E0369 |
+| [`ch05_mono.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch05_mono.rs) | `cargo run --quiet --bin ch05_mono` | 运行，第一行 `9` |
+| [`ch05_sized.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch05_sized.rs) | `cargo build --bin ch05_sized` | E0277 |
+| [`ch05_sized_ok.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch05_sized_ok.rs) | `cargo run --quiet --bin ch05_sized_ok` | 运行，第一行 `static dispatch: 1` |
+| [`ch05_into_iter.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch05_into_iter.rs) | `cargo run --quiet --bin ch05_into_iter` | 运行，第一行 `for:      let x = 1;` |
+| [`ch05_into_iter_fail.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch05_into_iter_fail.rs) | `cargo build --bin ch05_into_iter_fail` | E0277 |
+| [`ch05_impl_trait.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch05_impl_trait.rs) | `cargo run --quiet --bin ch05_impl_trait` | 运行，第一行 `42!` |
+
+侧边 crate、C++ 程序和对 `pebble-ast` 的补丁。命令里写了 `cd` 的在侧边 crate 的目录里运行，其余在仓库根目录（`~/pebble-tag`）运行；补丁试完用 `git apply -R` 还原。侧边 crate 依赖 tag 里的最终版 `pebble-ast`：
+
+| 文件 | 命令 | 结果 |
+| --- | --- | --- |
+| [`lab/lab-ch05-ast/src/bin/ch05_sizes.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch05-ast/src/bin/ch05_sizes.rs) | `cd lab/lab-ch05-ast && cargo run --quiet --bin ch05_sizes` | 运行，第一行 `Span         = 12 bytes`，`Stmt` 144、`Expr` 64、`Box<Expr>` 8、`Vec<Expr>` 24 字节 |
+| [`lab/lab-ch05-ast/src/bin/ch05_pretty.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch05-ast/src/bin/ch05_pretty.rs) | `cd lab/lab-ch05-ast && cargo run --quiet --bin ch05_pretty` | 运行，五行树，第一行 `fn add(a, b)` |
+| [`lab/lab-ch05-ast/src/bin/ch05_ex_counter.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch05-ast/src/bin/ch05_ex_counter.rs) | `cd lab/lab-ch05-ast && cargo run --quiet --bin ch05_ex_counter` | 运行，`lets = 1, reads = 2`，然后 `through dyn Visit: lets = 2, reads = 4` |
+| [`lab/cpp/ch05_visitor.cpp`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/cpp/ch05_visitor.cpp) | `g++ -std=c++20 -o /tmp/visitor lab/cpp/ch05_visitor.cpp && /tmp/visitor` | 运行，输出 `add`、`int 1`、`int 2` |
+| [`lab/cpp/ch05_largest.cpp`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/cpp/ch05_largest.cpp) | `g++ -std=c++20 -c lab/cpp/ch05_largest.cpp` | 编译失败：`no match for 'operator>' (operand types are 'Pebble' and 'Pebble')` |
+| [`lab/exercises/ch05-sized.patch`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/exercises/ch05-sized.patch) | `git apply lab/exercises/ch05-sized.patch && cargo build -p pebble-ast` | 编译失败：三个 E0277（`the size for values of type Self cannot be known at compilation time`） |
+
 ## 练习
 
 **1. 给 AST 加一种语句。** 按上文的实验，在 `Stmt` 里加一个 `Block { body: Vec<Stmt>, span: Span }` 变体，让 `cargo test -p pebble-ast` 重新变绿。具体要改哪几处？打印器里 `Block` 该显示成什么？
@@ -1381,7 +1410,7 @@ lets = 1, reads = 2
 through dyn Visit: lets = 2, reads = 4
 ```
 
-第二行是第二次遍历累加的结果（计数器没有被清零），关键是 `let dynamic: &mut dyn Visit = &mut counter; dynamic.visit_program(&program);` 能编译，这就是 `?Sized` 放开的那条路。
+第二行是第二次遍历累加的结果（计数器没有被清零），关键是 `let dynamic: &mut dyn Visit = &mut counter; dynamic.visit_program(&program);` 能编译，这就是 `?Sized` 放开的那条路。完整程序是 [`lab/lab-ch05-ast/src/bin/ch05_ex_counter.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch05-ast/src/bin/ch05_ex_counter.rs)。
 
 </details>
 

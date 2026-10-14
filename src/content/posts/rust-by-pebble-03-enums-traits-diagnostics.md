@@ -129,7 +129,7 @@ use pebble_span::{SourceMap, Span};
 enum Severity { ERROR, WARNING, NOTE, HELP };
 ```
 
-然后在某处写一个 `switch` 把它转成字符串，几个月后有人加了第五个枚举值，忘了改 `switch`。我把这个场景真的编出来跑了一遍（`gcc -Wall -Wextra`）：
+然后在某处写一个 `switch` 把它转成字符串，几个月后有人加了第五个枚举值，忘了改 `switch`。我把这个场景真的编出来跑了一遍（[`lab/cpp/ch03_sev.c`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/cpp/ch03_sev.c)，`gcc -Wall -Wextra`）：
 
 ```text
 sev.c: In function 'as_str':
@@ -1290,6 +1290,28 @@ identical
 
 - 根 `Cargo.toml`：`[workspace.dependencies]` 目前只有 `pebble-span` 和 `pebble-diag` 两行，`[workspace.lints]` 与 tag 的一样；tag 里完整的版本还有外部依赖和 release profile，随后续章节逐步加入。
 
+### 实验清单
+
+这一篇的所有实验文件都在仓库的 [`lab/` 目录](https://github.com/bfmhno3/pebble/tree/tutorial-v1/lab/rust-lab)里。按第 1 篇克隆的 `~/pebble-tag`，它们在 `~/pebble-tag/lab/rust-lab`，先 `cd ~/pebble-tag/lab/rust-lab`（或者把这个目录复制成 `~/rust-lab`）再运行下面的命令。结果列是我用 `rustc 1.95.0` 在调试构建下重新跑出来的。
+
+| 文件 | 命令 | 结果 |
+| --- | --- | --- |
+| [`ch03_match.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch03_match.rs) | `cargo build --bin ch03_match` | 编译失败：E0004 |
+| [`ch03_variant.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch03_variant.rs) | `cargo run --quiet --bin ch03_variant` | 退出码 0，输出 `Point has area 0` |
+| [`ch03_format.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch03_format.rs) | `cargo run --quiet --bin ch03_format` | 退出码 0，第一行 `[7]`；编译时有警告：fields start and message are never read |
+| [`ch03_builder_update.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch03_builder_update.rs) | `cargo run --quiet --bin ch03_builder_update` | 退出码 0，第一行 `Config { name: "demo", retries: 5, verbose: true }`；编译时有警告：field name is never read |
+| [`ch03_iter.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch03_iter.rs) | `cargo run --quiet --bin ch03_iter` | 退出码 0，第一行 `first primary starts at Some(4)` |
+| [`ch03_write_import.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch03_write_import.rs) | `cargo build --bin ch03_write_import` | 编译失败：E0599 |
+| [`ch03_digits.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch03_digits.rs) | `cargo run --quiet --bin ch03_digits` | 退出码 0，第一行 `         0: while=1 loop=1 ilog=1` |
+| [`ch03_supertrait.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch03_supertrait.rs) | `cargo build --bin ch03_supertrait` | 编译失败：E0277 |
+| [`ch03_orphan.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch03_orphan.rs) | `cargo build --bin ch03_orphan` | 编译失败：E0117 |
+| [`ch03_blanket.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch03_blanket.rs) | `cargo run --quiet --bin ch03_blanket` | 退出码 0，输出 `(1, 2)` |
+| [`ch03_sink_dyn.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch03_sink_dyn.rs) | `cargo build --bin ch03_sink_dyn` | 编译失败：E0038 |
+| [`ch03_sev.c`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/cpp/ch03_sev.c) | `cd ~/pebble-tag/lab/cpp && gcc -Wall -Wextra ch03_sev.c -o /tmp/sev && /tmp/sev` | 编译通过但有警告 `enumeration value 'HELP' not handled in switch [-Wswitch]`；程序照常运行，输出 `??? ???` |
+| [`lab-ch03-ex/src/lib.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch03-ex/src/lib.rs) | `cd ~/pebble-tag/lab/lab-ch03-ex && cargo test` | 3 个测试通过（`help_renders_with_its_own_word`、`counting_sink_counts_only_errors`、`two_labels_on_two_lines`）；有未使用导入的编译警告 |
+
+练习 1 和练习 3 的答案放在边车 crate `lab-ch03-ex` 里（依赖 tag 里最终的 `pebble-diag`，自带 `Cargo.toml`，不属于根 workspace）。C 程序是 `lab/cpp/` 里的 `ch03_sev.c`。
+
 ## 练习
 
 **1. 给 `Severity::Help` 加一个渲染测试。** 写一个测试，断言一份 `severity` 是 `Help` 的诊断渲染出来恰好是 `` help: try `let`\n ``。（提示：结构体更新语法。）
@@ -1311,7 +1333,7 @@ fn help_renders_with_its_own_word() {
 }
 ```
 
-我在一个依赖 `pebble-diag` 的临时 crate 里跑了它，通过。它同样也是"盯住边界"的断言：用 `assert_eq!` 对整个字符串，而不是 `contains`。
+我在一个依赖 `pebble-diag` 的临时 crate 里跑了它，通过；完整版在 [`lab/lab-ch03-ex/src/lib.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch03-ex/src/lib.rs)。它同样也是"盯住边界"的断言：用 `assert_eq!` 对整个字符串，而不是 `contains`。
 
 </details>
 

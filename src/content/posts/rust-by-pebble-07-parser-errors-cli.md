@@ -1580,7 +1580,7 @@ pub(crate) fn check(args: &FileArgs) -> Result<u8> {
 
 ### `anyhow` 和 `ExitCode`
 
-`anyhow::Error` 是一个 "装得下任何错误" 的类型，外加一条 "上下文" 的链。`?` 作用在错误上时，会借助上面提到的 `From` 转换，把它装进 `anyhow::Error`（上面的 `Source::load` 里是 `with_context` 做的这一步，`?` 只是把它抛出去）。实验室里（新建一个依赖 `anyhow` 的 crate，`main.rs` 如下）看它的三种打印方式：
+`anyhow::Error` 是一个 "装得下任何错误" 的类型，外加一条 "上下文" 的链。`?` 作用在错误上时，会借助上面提到的 `From` 转换，把它装进 `anyhow::Error`（上面的 `Source::load` 里是 `with_context` 做的这一步，`?` 只是把它抛出去）。实验室里（新建一个依赖 `anyhow` 的 crate，`main.rs` 如下；完整版在 [`lab/lab-ch07-anyhow`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch07-anyhow/src/main.rs)）看它的三种打印方式：
 
 ```rust
 use anyhow::{Context, Result};
@@ -2051,6 +2051,28 @@ same  examples/errors.pebble
 
 - `crates/pebble-cli/` 下的全部六个文件：`Cargo.toml`、`src/main.rs`、`src/cli.rs`、`src/commands.rs`、`src/sources.rs`、`tests/cli.rs`。最终版本多出来的东西：运行子命令和 REPL（第 9 篇）、字节码和反汇编（第 10 篇）、两个后端的 `Backend` trait 和 `bench`（第 12 篇）、并行的 `check`（第 14 篇）、可选的 `repl` 特性（第 15 篇）。
 - 根目录 `Cargo.toml` 的 `[workspace.dependencies]` 现在只列了我们用到的那些，之后每一篇会补上新的依赖。
+
+### 实验清单
+
+这一篇用到的实验文件都在仓库的 `lab/` 目录里（[`lab/rust-lab`](https://github.com/bfmhno3/pebble/tree/tutorial-v1/lab/rust-lab)）；如果你把仓库克隆到了 `~/pebble-tag`，它们就在 `~/pebble-tag/lab/rust-lab`，先 `cd ~/pebble-tag/lab/rust-lab` 再运行下表的命令（也可以把这个目录复制成 `~/rust-lab`）。
+
+| 文件 | 命令 | 结果 |
+| --- | --- | --- |
+| [`ch07_must_use.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch07_must_use.rs) | `cargo run --quiet --bin ch07_must_use` | 运行，打印 `done`；编译警告 ``unused `Result` that must be used`` |
+| [`ch07_question.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch07_question.rs) | `cargo run --quiet --bin ch07_question` | 运行，首行 `Ok(3)` |
+| [`ch07_discriminant.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch07_discriminant.rs) | `cargo run --quiet --bin ch07_discriminant` | 运行，首行 `== : false` |
+| [`ch07_args.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch07_args.rs) | `cargo run --quiet --bin ch07_args` | 不带参数：退出码 2，打印 `usage: target/debug/ch07_args count <file>` |
+| [`ch07_args.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch07_args.rs) | `cargo run --quiet --bin ch07_args -- count src/bin/ch07_args.rs` | 运行，打印 `365 bytes, 13 lines` |
+| [`ch07_args.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch07_args.rs) | `cargo run --quiet --bin ch07_args -- count nope.pebble` | `unwrap` 在 `Os { code: 2, kind: NotFound, .. }` 上 panic，退出码 101 |
+| [`ch07_move_reassign.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch07_move_reassign.rs) | `cargo run --quiet --bin ch07_move_reassign` | 运行，首行 `Add(Add(Add(Int(1), Int(2)), Int(3)), Int(4))` |
+| [`ch07_move_fail.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch07_move_fail.rs) | `cargo build --bin ch07_move_fail` | 编译失败：E0382 |
+| [`ch07_two_phase.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch07_two_phase.rs) | `cargo run --quiet --bin ch07_two_phase` | 运行，首行 `[1, 2, 3, 3]` |
+| [`ch07_two_phase_fail.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch07_two_phase_fail.rs) | `cargo build --bin ch07_two_phase_fail` | 编译失败：E0502 |
+| [`ch07_deferred_fail.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch07_deferred_fail.rs) | `cargo build --bin ch07_deferred_fail` | 编译失败：E0381 |
+| [`ch07_deferred_ok.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch07_deferred_ok.rs) | `cargo run --quiet --bin ch07_deferred_ok` | 运行，打印 `no arguments` |
+| [`main.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch07-anyhow/src/main.rs) | `cd ../lab-ch07-anyhow && cargo run --quiet` | 运行，首行 `{error}   : cannot read nope.pebble`（侧 crate，依赖 `anyhow`） |
+
+仓库里还有 [`ch07_deref.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch07_deref.rs)（运行打印 `examples/fib.pebble (2 components)`，演示 `&PathBuf` 到 `&Path` 的解引用强制转换），文章没有直接用到它。
 
 ## 练习
 

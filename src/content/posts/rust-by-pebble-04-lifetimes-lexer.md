@@ -42,6 +42,8 @@ int main() {
 }
 ```
 
+这个程序在仓库里叫 [`lab/cpp/ch04_view.cpp`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/cpp/ch04_view.cpp)，下面命令里的 `view.cpp` 就是它：
+
 ```bash
 g++ -std=c++17 -Wall -Wextra -o view view.cpp && ./view
 ```
@@ -114,7 +116,7 @@ enum TokenKind {
 
 每个标识符一次堆分配，一次拷贝，对一个只要读一遍就丢掉的 token 流来说很浪费：名字本来就躺在源码里，token 只要记住"从第几个字节到第几个字节"就够了。C++ 程序员的反应是 `std::string_view`，Rust 里对应的是 `&str`：一个指针加一个长度，不拥有任何东西。第 2 篇已经见过它在函数参数里的样子，现在我们要把它**放进结构体**。
 
-试一下（实验文件 `src/bin/ch04_struct_lifetime.rs`，还在第 1 篇建的 `~/rust-lab` 里）：
+试一下（实验文件 [`src/bin/ch04_struct_lifetime.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch04_struct_lifetime.rs)，还在第 1 篇建的 `~/rust-lab` 里）：
 
 ```rust
 struct Token {
@@ -389,7 +391,7 @@ test tests::identifiers_borrow_the_source ... ok
 test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 ```
 
-再让它跑起来看看。临时建一个 `crates/pebble-lexer/src/bin/stage1.rs`（跑完删掉）：
+再让它跑起来看看。临时建一个 `crates/pebble-lexer/src/bin/stage1.rs`（跑完删掉；完整版在 [`lab/lab-ch04-stages`](https://github.com/bfmhno3/pebble/tree/tutorial-v1/lab/lab-ch04-stages)，它依赖 tag 里的最终版 crate，输出相同）：
 
 ```rust
 use pebble_lexer::Lexer;
@@ -548,7 +550,7 @@ error: could not compile `pebble-lexer` (lib) due to 2 previous errors
 
 ### `tokenize` 的签名
 
-`tokenize` 没有 `&self`，规则 3 不适用；它只有一个输入生命周期（`src: &str`，`SourceId` 是个普通整数），所以规则 2 生效，返回类型里所有被省略的生命周期都等于它。我们写成 `Vec<Token<'_>>`。如果你偷懒写 `Vec<Token>`，工作区的 lint 会提醒你：
+`tokenize` 没有 `&self`，规则 3 不适用；它只有一个输入生命周期（`src: &str`，`SourceId` 是个普通整数），所以规则 2 生效，返回类型里所有被省略的生命周期都等于它。我们写成 `Vec<Token<'_>>`。如果你偷懒写 `Vec<Token>`，工作区的 lint 会提醒你（这个改动是 [`lab/exercises/ch04-elide.patch`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/exercises/ch04-elide.patch)，对 tag 应用后 `cargo build -p pebble-lexer`）：
 
 ```text
 warning: hidden lifetime parameters in types are deprecated
@@ -1754,6 +1756,44 @@ identical
 
 - 根 `Cargo.toml`：`[workspace.dependencies]` 目前有 `pebble-span`、`pebble-diag`、`pebble-lexer` 三行，其余和 tag 的一样。
 
+### 实验清单
+
+这一篇的所有实验文件都在仓库的 `lab/` 目录里（主实验室是 [`lab/rust-lab`](https://github.com/bfmhno3/pebble/tree/tutorial-v1/lab/rust-lab)）。如果你把 tag 克隆在 `~/pebble-tag`，它们就在 `~/pebble-tag/lab/rust-lab`，下面的命令先 `cd ~/pebble-tag/lab/rust-lab`（或者把它复制到 `~/rust-lab`）再运行。
+
+主实验室，每个文件都是 `src/bin/` 下的一个二进制：
+
+| 文件 | 命令 | 结果 |
+| --- | --- | --- |
+| [`ch04_struct_lifetime.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch04_struct_lifetime.rs) | `cargo build --bin ch04_struct_lifetime` | E0106 |
+| [`ch04_outlives.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch04_outlives.rs) | `cargo build --bin ch04_outlives` | E0597 |
+| [`ch04_elision_trap.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch04_elision_trap.rs) | `cargo build --bin ch04_elision_trap` | E0499 |
+| [`ch04_elision_fixed.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch04_elision_fixed.rs) | `cargo run --quiet --bin ch04_elision_fixed` | 运行，第一行 `let answer` |
+| [`ch04_static.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch04_static.rs) | `cargo run --quiet --bin ch04_static` | 运行，第一行 `Some("Let")` |
+| [`ch04_copy_cow.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch04_copy_cow.rs) | `cargo build --bin ch04_copy_cow` | E0204 |
+| [`ch04_cow.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch04_cow.rs) | `cargo run --quiet --bin ch04_cow` | 运行，第一行 `plain    Borrowed  "plain"` |
+| [`ch04_float_eq.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch04_float_eq.rs) | `cargo build --bin ch04_float_eq` | E0277 |
+| [`ch04_patterns.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch04_patterns.rs) | `cargo run --quiet --bin ch04_patterns` | 运行，第一行 `'7' -> digit` |
+| [`ch04_iterator.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch04_iterator.rs) | `cargo run --quiet --bin ch04_iterator` | 运行，第一行 `first_two = [5, 4]` |
+| [`ch04_by_ref_moved.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch04_by_ref_moved.rs) | `cargo build --bin ch04_by_ref_moved` | E0382 |
+| [`ch04_hrtb.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch04_hrtb.rs) | `cargo run --quiet --bin ch04_hrtb` | 运行，输出 `6` |
+| [`ch04_variance.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch04_variance.rs) | `cargo run --quiet --bin ch04_variance` | 运行，输出 `Tok { text: "local-and-longer" }` |
+| [`ch04_longest.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch04_longest.rs) | `cargo build --bin ch04_longest` | E0106 |
+| [`ch04_longest_scope.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch04_longest_scope.rs) | `cargo build --bin ch04_longest_scope` | E0597 |
+| [`ch04_longest_ok.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch04_longest_ok.rs) | `cargo run --quiet --bin ch04_longest_ok` | 运行，输出 `abc` |
+
+侧边 crate、C++ 程序和对 `pebble-lexer` 的练习补丁。命令里写了 `cd` 的在侧边 crate 的目录里运行，其余在仓库根目录（`~/pebble-tag`）运行：
+
+| 文件 | 命令 | 结果 |
+| --- | --- | --- |
+| [`lab/lab-ch04-stages/src/bin/stage1.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch04-stages/src/bin/stage1.rs) | `cd lab/lab-ch04-stages && cargo run --quiet --bin stage1` | 运行，第一行 `Ok(Token { kind: Ident("total"), span: 0..5 })`，后面还有 `err unexpected character` 那一行 |
+| [`lab/lab-ch04-stages/src/bin/hidden.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch04-stages/src/bin/hidden.rs) | `cd lab/lab-ch04-stages && cargo run --quiet --bin hidden` | 运行，输出 `Some(Token { kind: Ident("hello"), span: 0..5 })`，构建时有两条警告（隐藏生命周期参数已弃用；隐藏了别处省略的生命周期） |
+| [`lab/cpp/ch04_view.cpp`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/cpp/ch04_view.cpp) | `g++ -std=c++17 -Wall -Wextra -fsanitize=address -o /tmp/view lab/cpp/ch04_view.cpp && /tmp/view` | AddressSanitizer 报告 `stack-use-after-scope`（不加 `-fsanitize=address` 时打印 `let`） |
+| [`lab/exercises/ch04-elide.patch`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/exercises/ch04-elide.patch) | `git apply lab/exercises/ch04-elide.patch && cargo build -p pebble-lexer` | 能编译，两条警告：`hidden lifetime parameters in types are deprecated`、`hiding a lifetime that's elided elsewhere is confusing` |
+| [`lab/exercises/ch04-hex.patch`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/exercises/ch04-hex.patch) | `git apply lab/exercises/ch04-hex.patch && cargo test -p pebble-lexer` | `14 passed; 0 failed`（练习 1 的 `0x` 十六进制字面量） |
+| [`lab/exercises/ch04-peek.patch`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/exercises/ch04-peek.patch) | `git apply lab/exercises/ch04-peek.patch && cargo test -p pebble-lexer` | `12 passed; 0 failed`（练习 3 的 `peek_second_byte`） |
+
+补丁彼此独立，每个都在干净的 tag 上应用；换下一个之前先 `git apply -R` 还原。
+
 ## 练习
 
 **1. 支持 `0x` 十六进制字面量。** `0xff` 应该得到 `Int(255)`，`0x_1F`、`0X1_0` 同样合法，`0x` 后面什么也没有应该报错。（提示：`i64::from_str_radix`，错误码可以叫 `E0004`。）
@@ -1913,7 +1953,7 @@ fn peek_second_byte(&self) -> Option<u8> {
 
 五处调用改成 `self.peek_second_byte() == Some(b'/')` 和 `self.peek_second_byte().is_some_and(|b| b.is_ascii_digit())`（`u8` 也有 `is_ascii_digit`，`b'/'` 是字节字面量）。就算第一个字符不是 ASCII，它的后续字节都 `>= 0x80`，也不可能和任何 ASCII 字节相等，所以不会误判。
 
-我在一份临时拷贝里做了这个替换，`cargo test -p pebble-lexer` 仍然是 `12 passed`。我没有测量它快了多少：这个词法分析器的瓶颈几乎肯定不在这里，我也就没有把它放进 tag。这是个"能做，但你应该先量一量值不值得"的优化。
+我在一份临时拷贝里做了这个替换（补丁是 [`lab/exercises/ch04-peek.patch`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/exercises/ch04-peek.patch)），`cargo test -p pebble-lexer` 仍然是 `12 passed`。我没有测量它快了多少：这个词法分析器的瓶颈几乎肯定不在这里，我也就没有把它放进 tag。这是个"能做，但你应该先量一量值不值得"的优化。
 
 </details>
 

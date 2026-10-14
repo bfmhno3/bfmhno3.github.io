@@ -1155,34 +1155,37 @@ diff <(git -C ~/pebble-tag show tutorial-v1:crates/pebble-span/Cargo.toml) crate
 
 ### 实验清单
 
-`~/rust-lab/src/bin/` 下，这一篇用到的实验：
+这一篇的所有实验文件都在仓库的 [`lab/` 目录](https://github.com/bfmhno3/pebble/tree/tutorial-v1/lab/rust-lab)里。按第 1 篇克隆的 `~/pebble-tag`，它们在 `~/pebble-tag/lab/rust-lab`，先 `cd ~/pebble-tag/lab/rust-lab`（或者把这个目录复制成 `~/rust-lab`）再运行下面的命令。结果列是我用 `rustc 1.95.0` 在调试构建下重新跑出来的。
 
 | 文件 | 命令 | 结果 |
 | --- | --- | --- |
-| `ch02_string.rs` | `cargo run --quiet --bin ch02_string` | 运行：24 与 16 字节 |
-| `ch02_move.rs` | `cargo build --bin ch02_move` | E0382 |
-| `ch02_clone.rs` | `cargo run --quiet --bin ch02_clone` | 运行 |
-| `ch02_getter.rs` | `cargo build --bin ch02_getter` | E0597 |
-| `ch02_getter_ok.rs` | `cargo run --quiet --bin ch02_getter_ok` | 运行 |
-| `ch02_vec.rs` | `cargo run --quiet --bin ch02_vec` | 运行后越界 panic |
-| `ch02_option.rs` | `cargo run --quiet --bin ch02_option` | 运行 |
-| `ch02_copied.rs` | `cargo build --bin ch02_copied` | E0308 |
-| `ch02_closure_pattern.rs` | `cargo build --bin ch02_closure_pattern` | E0308 |
-| `ch02_closure_ok.rs` | `cargo run --quiet --bin ch02_closure_ok` | 运行：3、3、1 |
-| `ch02_dangling.rs` | `cargo build --bin ch02_dangling` | E0106 |
-| `ch02_dangling_local.rs` | `cargo build --bin ch02_dangling_local` | E0515 |
-| `ch02_dangling_ok.rs` | `cargo run --quiet --bin ch02_dangling_ok` | 运行 |
-| `ch02_utf8.rs` | `cargo run --quiet --bin ch02_utf8` | 运行后切片 panic |
-| `ch02_into.rs` | `cargo run --quiet --bin ch02_into` | 运行 |
-| `ch02_into_bad.rs` | `cargo build --bin ch02_into_bad` | E0277 |
-| `ch02_borrow.rs` | `cargo build --bin ch02_borrow` | E0502 |
-| `ch02_nll.rs` | `cargo run --quiet --bin ch02_nll` | 运行 |
-| `ch02_take.rs` | `cargo build --bin ch02_take` | E0507 |
-| `ch02_take_ok.rs` | `cargo run --quiet --bin ch02_take_ok` | 运行 |
-| `ch02_ops_missing.rs` | `cargo build --bin ch02_ops_missing` | E0369 |
-| `ch02_ops.rs` | `cargo run --quiet --bin ch02_ops` | 运行后越界 panic |
+| [`ch02_string.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch02_string.rs) | `cargo run --quiet --bin ch02_string` | 退出码 0，第一行 `literal = a.pebble, owned = a.pebble.bak, view = a.pebble` |
+| [`ch02_move.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch02_move.rs) | `cargo build --bin ch02_move` | 编译失败：E0382 |
+| [`ch02_clone.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch02_clone.rs) | `cargo run --quiet --bin ch02_clone` | 退出码 0，第一行 `8 bytes in a.pebble` |
+| [`ch02_getter.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch02_getter.rs) | `cargo build --bin ch02_getter` | 编译失败：E0597 |
+| [`ch02_getter_ok.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch02_getter_ok.rs) | `cargo run --quiet --bin ch02_getter_ok` | 退出码 0，第一行 `a.pebble a.pebble` |
+| [`ch02_vec.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch02_vec.rs) | `cargo run --quiet --bin ch02_vec` | 退出码 101：先打印 `slice = [4, 9], len = 2`，随后越界 panic 于 `src/bin/ch02_vec.rs:13:39` |
+| [`ch02_option.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch02_option.rs) | `cargo run --quiet --bin ch02_option` | 退出码 0，第一行 `Some(3)` |
+| [`ch02_copied.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch02_copied.rs) | `cargo build --bin ch02_copied` | 编译失败：E0308 |
+| [`ch02_closure_pattern.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch02_closure_pattern.rs) | `cargo build --bin ch02_closure_pattern` | 编译失败：E0308 |
+| [`ch02_closure_ok.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch02_closure_ok.rs) | `cargo run --quiet --bin ch02_closure_ok` | 退出码 0，第一行 `3` |
+| [`ch02_dangling.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch02_dangling.rs) | `cargo build --bin ch02_dangling` | 编译失败：E0106 |
+| [`ch02_dangling_local.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch02_dangling_local.rs) | `cargo build --bin ch02_dangling_local` | 编译失败：E0515 |
+| [`ch02_dangling_ok.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch02_dangling_ok.rs) | `cargo run --quiet --bin ch02_dangling_ok` | 退出码 0，输出 `let` |
+| [`ch02_utf8.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch02_utf8.rs) | `cargo run --quiet --bin ch02_utf8` | 退出码 101：先打印 `len()           = 7`，随后切片 panic 于 `src/bin/ch02_utf8.rs:11:25` |
+| [`ch02_into.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch02_into.rs) | `cargo run --quiet --bin ch02_into` | 退出码 0，输出 `8 9 8` |
+| [`ch02_into_bad.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch02_into_bad.rs) | `cargo build --bin ch02_into_bad` | 编译失败：E0277 |
+| [`ch02_borrow.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch02_borrow.rs) | `cargo build --bin ch02_borrow` | 编译失败：E0502 |
+| [`ch02_nll.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch02_nll.rs) | `cargo run --quiet --bin ch02_nll` | 退出码 0，第一行 `first = a.pebble` |
+| [`ch02_take.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch02_take.rs) | `cargo build --bin ch02_take` | 编译失败：E0507 |
+| [`ch02_take_ok.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch02_take_ok.rs) | `cargo run --quiet --bin ch02_take_ok` | 退出码 0，第一行 `stolen = "a.pebble"` |
+| [`ch02_ops_missing.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch02_ops_missing.rs) | `cargo build --bin ch02_ops_missing` | 编译失败：E0369 |
+| [`ch02_ops.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch02_ops.rs) | `cargo run --quiet --bin ch02_ops` | 退出码 101：先打印 `Offset(7) Offset(4) 14`，随后越界 panic 于 `src/bin/ch02_ops.rs:51:25` |
+| [`ch02_first_word.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch02_first_word.rs) | `cargo build --bin ch02_first_word` | 编译失败：E0106（练习 2） |
 
 这里面的大多数（尤其是编译错误的那些）是上文给出的几行代码外加一个 `fn main`；`ch02_ops.rs` 是上面三个 `impl` 加一个 `Offset` 和一个 `Names(Vec<String>)` 的完整小程序。动手写一遍比抄快。
+
+仓库里还有 `ch02_exercise_borrow.rs` 和 `ch02_exercise_borrow_ok.rs`（用 `Vec<String>` 做的练习 3 的缩小版，前者 E0502，后者输出 `b.pebble`），文章正文没有引用它们。
 
 ## 练习
 

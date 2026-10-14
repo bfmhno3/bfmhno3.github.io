@@ -3145,6 +3145,17 @@ same  crates/pebble-gc/src/lib.rs
 - `crates/pebble-cli/` 下的全部八个文件（`Cargo.toml`、`src/` 下六个、`tests/cli.rs`）：第四版。相对第三版的改动就是上面的那几处：新增 `backend.rs`，`cli.rs` 多了 `--vm` 和 `bench`，`commands.rs` 的 `run` 重写并多了 `bench` 及四个泛型函数，`main.rs` 多一行 `mod backend;` 和一个 `Bench` 分支，`Cargo.toml` 多一个依赖，测试多一条。最终版多出来的东西：并行的 `check`（第 14 篇）、可选的 `repl` 特性（第 15 篇）。
 - 根 `Cargo.toml`：现在列了 11 个内部 crate（多了 `pebble-gc` 和 `pebble-vm`），外部多了 `criterion` 和 `rand`，还多了两段 profile。最终版还有 `pebble-sys`、`pebble-nostd`、`pebble-net`、`pebble-cli`、`cc`、`tokio`（第 13 到 15 篇）。
 
+### 实验清单
+
+这一篇用到的实验文件都在仓库的 `lab/` 目录里（[`lab/rust-lab`](https://github.com/bfmhno3/pebble/tree/tutorial-v1/lab/rust-lab)）。`git clone` 到 `~/pebble-tag` 的话，它们就在 `~/pebble-tag/lab/rust-lab`，用 `cd ~/pebble-tag/lab/rust-lab` 运行（也可以把这个目录拷到 `~/rust-lab`）。这一篇的实验都只在 `rust-lab` 里，没有侧 crate。
+
+| 文件 | 命令 | 结果 |
+| --- | --- | --- |
+| [`ch12_dispatch.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch12_dispatch.rs) | `cargo run --quiet --bin ch12_dispatch` | 运行，首行 `fast -> 42` |
+| [`ch12_gat_missing.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch12_gat_missing.rs) | `cargo build --bin ch12_gat_missing` | 编译失败：`error: missing lifetime in associated type`（没有 E 编码） |
+| [`ch12_gat.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch12_gat.rs) | `cargo run --quiet --bin ch12_gat` | 运行，首行 `borrowing:   6` |
+| [`ch12_object_safety.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch12_object_safety.rs) | `cargo build --bin ch12_object_safety` | 编译失败：E0038 |
+
 ## 练习
 
 **1. 让 VM 的 `let` 有块级作用域。**（讨论题）你会改哪几处？最容易漏掉什么？

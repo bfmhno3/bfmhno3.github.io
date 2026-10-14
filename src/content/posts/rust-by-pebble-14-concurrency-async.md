@@ -44,7 +44,7 @@ tokio = { version = "1", features = [
 
 Tokio 把功能拆成了很多 feature，不开就不编译：`rt-multi-thread` 是多线程运行时，`net` 是 TCP，`io-util` 是 `read_exact` 这类读写辅助，`macros` 是 `#[tokio::main]`、`#[tokio::test]`、`select!`，`sync` 是 Tokio 自己的 `Mutex` 和 `oneshot`，`time` 是 `timeout` 和 `sleep`，`signal` 是 `Ctrl-C`。这一篇每一个我们都会用到。
 
-第 1 篇说过，实验在 `~/rust-lab` 里做，每个实验一个 `src/bin/ch14_<主题>.rs`。这一篇有一半的实验要用 Tokio，我把它们放在另一个独立的 crate `~/lab-ch14-tokio` 里（`Cargo.toml` 在用到的时候给出），免得给 `rust-lab` 添一堆依赖。
+第 1 篇说过，实验在 `~/rust-lab` 里做，每个实验一个 `src/bin/ch14_<主题>.rs`。这一篇有一半的实验要用 Tokio，我把它们放在另一个独立的 crate `~/lab-ch14-tokio` 里（`Cargo.toml` 在用到的时候给出；完整版在仓库的 [lab/lab-ch14-tokio](https://github.com/bfmhno3/pebble/tree/tutorial-v1/lab/lab-ch14-tokio)，可以直接用），免得给 `rust-lab` 添一堆依赖。
 
 ## 线程
 
@@ -868,7 +868,7 @@ C 世界对这个问题的标准回答是 `epoll` 加手写的状态机：每个
 
 ### 并发不是并行
 
-先看一眼它的效果。实验 `ch14_join.rs`（在 `~/lab-ch14-tokio/src/bin/`）模拟两个各要 200 毫秒的"检查"：
+先看一眼它的效果。实验 `ch14_join.rs`（在 `~/lab-ch14-tokio/src/bin/`，完整版在 [lab/lab-ch14-tokio/src/bin/ch14_join.rs](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch14-tokio/src/bin/ch14_join.rs)）模拟两个各要 200 毫秒的"检查"：
 
 ```rust
 use std::time::{Duration, Instant};
@@ -2019,7 +2019,7 @@ thiserror = "2"
 anyhow = "1"
 ```
 
-两个 `pebble-*` 依赖指向我的重建目录，换成你自己的路径。每个实验是 `src/bin/ch14_<主题>.rs`，用 `cargo run --quiet --bin ch14_<主题>` 运行（编译失败的演示用 `cargo build --bin`）。
+两个 `pebble-*` 依赖指向我的重建目录，换成你自己的路径。（仓库里 [lab/lab-ch14-tokio/Cargo.toml](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch14-tokio/Cargo.toml) 的写法是 `path = "../../crates/pebble-interp"`，指向 tag 里的 crate。）每个实验是 `src/bin/ch14_<主题>.rs`，用 `cargo run --quiet --bin ch14_<主题>` 运行（编译失败的演示用 `cargo build --bin`）。
 
 ## 检查点
 
@@ -2072,6 +2072,49 @@ diff -r crates/pebble-net ~/pebble-tag/crates/pebble-net
 
 - `crates/pebble-cli/` 下的全部八个文件（`Cargo.toml`、`src/` 下六个、`tests/cli.rs`）：第五版。相对第四版只改了这几处：`cli.rs` 多一个 `CheckArgs`、`Check` 变体改用它；`commands.rs` 的 `check` 重写，多出 `CheckReport` 和 `check_file`，多两行 `use`；`tests/cli.rs` 多两个测试；`main.rs`、`backend.rs`、`repl.rs`、`sources.rs`、`Cargo.toml` 一个字都没动。最终版多出来的东西：可选的 `repl` 特性（第 15 篇）。
 - `examples/*.pebble`：和第 12 篇相同，没有变。
+
+### 实验清单
+
+这一篇用到的所有实验文件都在仓库的 `lab/` 目录里（[lab/rust-lab](https://github.com/bfmhno3/pebble/tree/tutorial-v1/lab/rust-lab) 是主实验室）。按第 1 篇的方式把 tag 克隆到 `~/pebble-tag` 后，它们就在 `~/pebble-tag/lab/rust-lab`，在那里运行（`cd ~/pebble-tag/lab/rust-lab`，也可以把这个目录复制成 `~/rust-lab`）。表里 `lab-` 开头的文件属于旁边的独立实验 crate，命令里写了完整的目录。
+
+| 文件 | 命令 | 结果 |
+| --- | --- | --- |
+| [`ch14_race.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch14_race.rs) | `cargo build --bin ch14_race` | 编译失败：`E0499` |
+| [`ch14_spawn.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch14_spawn.rs) | `cargo build --bin ch14_spawn` | 编译失败：`E0373` |
+| [`ch14_spawn_move.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch14_spawn_move.rs) | `cargo run --quiet --bin ch14_spawn_move` | 运行成功：`checking 2 files` |
+| [`ch14_scope.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch14_scope.rs) | `cargo run --quiet --bin ch14_scope` | 运行成功：`[10, 12]` |
+| [`ch14_rc_send.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch14_rc_send.rs) | `cargo build --bin ch14_rc_send` | 编译失败：`E0277` |
+| [`ch14_cell_sync.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch14_cell_sync.rs) | `cargo build --bin ch14_cell_sync` | 编译失败：`E0277` |
+| [`ch14_send_sync_table.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch14_send_sync_table.rs) | `cargo build --bin ch14_send_sync_table` | 编译失败：`E0277` |
+| [`ch14_arc_mutex.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch14_arc_mutex.rs) | `cargo run --quiet --bin ch14_arc_mutex` | 运行成功：`count = 8000` |
+| [`ch14_mutex_forgot_lock.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch14_mutex_forgot_lock.rs) | `cargo build --bin ch14_mutex_forgot_lock` | 编译失败：`E0308` |
+| [`ch14_poison.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch14_poison.rs) | `cargo run --quiet --bin ch14_poison` | 运行成功：`is_poisoned = true; stderr: thread panicked at src/bin/ch14_poison.rs:12:13:` |
+| [`ch14_rwlock.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch14_rwlock.rs) | `cargo run --quiet --bin ch14_rwlock` | 运行成功：`every reader saw 3 or 4 elements: true` |
+| [`ch14_channel.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch14_channel.rs) | `cargo run --quiet --bin ch14_channel` | 运行成功：`checked errors.pebble` |
+| [`ch14_atomic.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch14_atomic.rs) | `cargo run --quiet --bin ch14_atomic` | 运行成功：`requests = 8000` |
+| [`ch14_lazy_join.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch14_lazy_join.rs) | `cargo run --quiet --bin ch14_lazy_join` | 运行成功：`chained spawn+join:    [0, 1, 2, 3] in ~400 ms` |
+| [`lab-ch14-tokio/ch14_many_tasks.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch14-tokio/src/bin/ch14_many_tasks.rs) | `cd ~/pebble-tag/lab/lab-ch14-tokio && cargo run --quiet --bin ch14_many_tasks` | 运行成功：`100000 tasks, sum 4999950000, took ~600 ms` |
+| [`lab-ch14-tokio/ch14_many_threads.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch14-tokio/src/bin/ch14_many_threads.rs) | `cd ~/pebble-tag/lab/lab-ch14-tokio && cargo run --quiet --bin ch14_many_threads` | 运行成功：`10000 threads, sum 49995000, took ~700 ms` |
+| [`lab-ch14-tokio/ch14_join.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch14-tokio/src/bin/ch14_join.rs) | `cd ~/pebble-tag/lab/lab-ch14-tokio && cargo run --quiet --bin ch14_join` | 运行成功：`checked fib, checked hello: sequential took 400 ms` |
+| [`ch14_manual_future.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch14_manual_future.rs) | `cargo run --quiet --bin ch14_manual_future` | 运行成功：`countdown:` |
+| [`ch14_pin_new.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch14_pin_new.rs) | `cargo build --bin ch14_pin_new` | 编译失败：`E0277` |
+| [`lab-ch14-tokio/ch14_block_the_runtime.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch14-tokio/src/bin/ch14_block_the_runtime.rs) | `cd ~/pebble-tag/lab/lab-ch14-tokio && cargo run --quiet --bin ch14_block_the_runtime` | 运行成功：`blocking the only worker thread for 500 ms` |
+| [`lab-ch14-tokio/ch14_blocking_ok.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch14-tokio/src/bin/ch14_blocking_ok.rs) | `cd ~/pebble-tag/lab/lab-ch14-tokio && cargo run --quiet --bin ch14_blocking_ok` | 运行成功：`blocking on a dedicated thread for 500 ms` |
+| [`lab-ch14-tokio/ch14_rc_across_await.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch14-tokio/src/bin/ch14_rc_across_await.rs) | `cd ~/pebble-tag/lab/lab-ch14-tokio && cargo build --bin ch14_rc_across_await` | 编译失败：`error: future cannot be sent between threads safely` |
+| [`lab-ch14-tokio/ch14_interp_across_await.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch14-tokio/src/bin/ch14_interp_across_await.rs) | `cd ~/pebble-tag/lab/lab-ch14-tokio && cargo build --bin ch14_interp_across_await` | 编译失败：`error: future cannot be sent between threads safely` |
+| [`lab-ch14-tokio/ch14_std_mutex_await.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch14-tokio/src/bin/ch14_std_mutex_await.rs) | `cd ~/pebble-tag/lab/lab-ch14-tokio && cargo build --bin ch14_std_mutex_await` | 编译失败：`error: future cannot be sent between threads safely` |
+| [`lab-ch14-tokio/ch14_wire.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch14-tokio/src/bin/ch14_wire.rs) | `cd ~/pebble-tag/lab/lab-ch14-tokio && cargo run --quiet --bin ch14_wire` | 运行成功：`request  : 00 00 00 0a 31 20 2b 20 32 20 2a 20 33 3b` |
+| [`lab-ch14-tokio/ch14_naive_frame.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch14-tokio/src/bin/ch14_naive_frame.rs) | `cd ~/pebble-tag/lab/lab-ch14-tokio && cargo run --quiet --bin ch14_naive_frame` | 运行成功：`kind    : InvalidData` |
+| [`lab-ch14-tokio/ch14_error_chain.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch14-tokio/src/bin/ch14_error_chain.rs) | `cd ~/pebble-tag/lab/lab-ch14-tokio && cargo run --quiet --bin ch14_error_chain` | 运行成功：`display : frame payload is not valid UTF-8` |
+| [`lab-ch14-tokio/ch14_non_exhaustive.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch14-tokio/src/bin/ch14_non_exhaustive.rs) | `cd ~/pebble-tag/lab/lab-ch14-tokio && cargo build --bin ch14_non_exhaustive` | 编译失败：`E0004` |
+| [`lab-ch14-tokio/ch14_thiserror.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch14-tokio/src/bin/ch14_thiserror.rs) | `cd ~/pebble-tag/lab/lab-ch14-tokio && cargo run --quiet --bin ch14_thiserror` | 运行成功：`frame length 1024 exceeds maximum frame size 16` |
+| [`lab-ch14-tokio/ch14_select_cancel.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch14-tokio/src/bin/ch14_select_cancel.rs) | `cd ~/pebble-tag/lab/lab-ch14-tokio && cargo run --quiet --bin ch14_select_cancel` | 运行成功：`slow's local dropped` |
+| [`lab-ch14-tokio/ch14_timeout_blocking.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch14-tokio/src/bin/ch14_timeout_blocking.rs) | `cd ~/pebble-tag/lab/lab-ch14-tokio && cargo run --quiet --bin ch14_timeout_blocking` | 运行成功：`timeout fired: true (after ~200 ms)` |
+| [`lab-ch14-tokio/ch14_server_demo.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch14-tokio/src/bin/ch14_server_demo.rs) | `cd ~/pebble-tag/lab/lab-ch14-tokio && cargo run --quiet --bin ch14_server_demo` | 运行成功：`fib(24)  -> 46368` |
+| [`lab-ch14-tokio/ch14_cooperative_cancel.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch14-tokio/src/bin/ch14_cooperative_cancel.rs) | `cd ~/pebble-tag/lab/lab-ch14-tokio && cargo run --quiet --bin ch14_cooperative_cancel` | 运行成功：`timeout fired, flag set (~200 ms)` |
+| [`lab-ch14-tokio/ch14_local_set.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch14-tokio/src/bin/ch14_local_set.rs) | `cd ~/pebble-tag/lab/lab-ch14-tokio && cargo run --quiet --bin ch14_local_set` | 运行成功：`an Rc across an await: 5` |
+
+两个计时实验（`ch14_many_tasks`、`ch14_many_threads`）的毫秒数是约值，随机器和构建方式（debug 或 release）变化；表里是 debug 构建、默认参数下的结果（`ch14_many_threads` 默认只启动 1 万个线程）；文章 10 万个线程的 `~3900 ms` 是 release 构建、命令行带 `100000` 量的，机器噪声也会让数字有出入。
 
 ## 练习
 

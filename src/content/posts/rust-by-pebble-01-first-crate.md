@@ -58,7 +58,7 @@ flowchart LR
 
 **边写边建。** 每一章你会写某几个 crate 的核心部分，从一个最小版本开始，逐步长成仓库里的样子。重复、冗长、和本章主题无关的部分（比如 30 个只是名字不同的 builtin 函数），我会指名道姓让你从仓库里复制，并告诉你为什么现在可以不读。
 
-**实验场。** 每次我说"这段代码不会编译"，你都应该自己试一遍。所以现在就建一个 `~/rust-lab`（下面马上建），所有实验都是里面的一个文件，文件名我会写出来：`src/bin/ch01_bindings.rs`，`ch` 后面是章节号。
+**实验场。** 每次我说"这段代码不会编译"，你都应该自己试一遍。所以现在就建一个 `~/rust-lab`（下面马上建），所有实验都是里面的一个文件，文件名我会写出来：`src/bin/ch01_bindings.rs`，`ch` 后面是章节号。（整个系列的全部实验已经放在仓库的 [`lab/rust-lab`](https://github.com/bfmhno3/pebble/tree/tutorial-v1/lab/rust-lab) 里，可以直接复制过来，不必一个文件一个文件地敲；我还是建议你至少手敲前几个，错误信息是自己撞出来才记得住的。）
 
 **真实输出。** 本系列里所有的编译错误、命令输出、测试统计，都是我在这台机器上用 `rustc 1.95.0` 实际跑出来的。输出偶尔会被截断（用 `...` 标出），但每一行都不会被我改写。路径里的 `/tmp/rust-lab` 是我机器上的位置，你的会是 `~/rust-lab`。如果你的编译器版本不同，措辞可能略有出入。
 
@@ -160,7 +160,7 @@ Hello, world!
 
 第三，多出来的 `target/` 目录：编译产物都在这里，`target/debug/` 是调试构建，`cargo run --release` 会用 `target/release/`。它是 `.gitignore` 里的第一行，对应 CMake 的 `build/`。
 
-接下来我们会在这个项目里往 `src/bin/` 下面放实验文件，每个文件自动成为一个独立的可执行程序，名字是文件名（不带 `.rs`）。运行某一个：`cargo run --quiet --bin ch01_bindings`。`--quiet` 去掉 cargo 自己的 "Compiling..." 噪音。注意，一旦 `src/bin/` 里有多个程序，单独一个 `cargo run` 会因为不知道跑哪个而报错，所以以后总是带 `--bin`（不带的话，cargo 会报错 "could not determine which binary to run"，并让你用 `--bin` 指定，我试过）。
+接下来我们会在这个项目里往 `src/bin/` 下面放实验文件（完整的实验场在 [`lab/rust-lab`](https://github.com/bfmhno3/pebble/tree/tutorial-v1/lab/rust-lab)，`cp -r ~/pebble-tag/lab/rust-lab ~/rust-lab` 就能得到所有章节的文件），每个文件自动成为一个独立的可执行程序，名字是文件名（不带 `.rs`）。运行某一个：`cargo run --quiet --bin ch01_bindings`。`--quiet` 去掉 cargo 自己的 "Compiling..." 噪音。注意，一旦 `src/bin/` 里有多个程序，单独一个 `cargo run` 会因为不知道跑哪个而报错，所以以后总是带 `--bin`（不带的话，cargo 会报错 "could not determine which binary to run"，并让你用 `--bin` 指定，我试过）。
 
 ```bash
 mkdir -p src/bin
@@ -984,22 +984,27 @@ diff <(git -C ~/pebble-tag show tutorial-v1:crates/pebble-span/Cargo.toml) crate
 
 ### 实验清单
 
-这一篇用到的所有实验文件，都在 `~/rust-lab/src/bin/` 下：
+这一篇的所有实验文件都在仓库的 [`lab/` 目录](https://github.com/bfmhno3/pebble/tree/tutorial-v1/lab/rust-lab)里。按第 1 篇克隆的 `~/pebble-tag`，它们在 `~/pebble-tag/lab/rust-lab`，先 `cd ~/pebble-tag/lab/rust-lab`（或者把这个目录复制成 `~/rust-lab`）再运行下面的命令。结果列是我用 `rustc 1.95.0` 在调试构建下重新跑出来的。
 
 | 文件 | 命令 | 结果 |
 | --- | --- | --- |
-| `ch01_bindings.rs` | `cargo run --quiet --bin ch01_bindings` | 运行 |
-| `ch01_immutable.rs` | `cargo build --bin ch01_immutable` | E0384 |
-| `ch01_casts.rs` | `cargo build --bin ch01_casts` | E0308 + E0277 |
-| `ch01_casts_ok.rs` | `cargo run --quiet --bin ch01_casts_ok` | 运行 |
-| `ch01_overflow.rs` | `cargo run --quiet [--release] --bin ch01_overflow` | 调试 panic，发布回绕 |
-| `ch01_tail_expr.rs` | `cargo build --bin ch01_tail_expr` | E0308 |
-| `ch01_tail_expr_ok.rs` | `cargo run --quiet --bin ch01_tail_expr_ok` | 运行 |
-| `ch01_control_flow.rs` | `cargo run --quiet --bin ch01_control_flow` | 运行 |
-| `ch01_newtype.rs` | `cargo build --bin ch01_newtype` | E0308 |
-| `ch01_sizes.rs` | `cargo run --quiet --bin ch01_sizes` | 4、12、8 |
-| `ch01_const_fn.rs` | `cargo build --bin ch01_const_fn` | E0015 |
-| `ch01_must_use.rs` | `cargo build --bin ch01_must_use` | 警告 |
+| [`main.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/main.rs) | `cargo run --quiet --bin rust-lab` | 退出码 0，输出 `Hello, world!` |
+| [`ch01_bindings.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch01_bindings.rs) | `cargo run --quiet --bin ch01_bindings` | 退出码 0，第一行 `inner x = inner` |
+| [`ch01_immutable.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch01_immutable.rs) | `cargo build --bin ch01_immutable` | 编译失败：E0384 |
+| [`ch01_casts.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch01_casts.rs) | `cargo build --bin ch01_casts` | 编译失败：E0308、E0277 |
+| [`ch01_casts_ok.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch01_casts_ok.rs) | `cargo run --quiet --bin ch01_casts_ok` | 退出码 0，输出 `10` |
+| [`ch01_overflow.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch01_overflow.rs) | `cargo run --quiet --bin ch01_overflow` | 调试构建：退出码 101，已打印 `wrapping_add   = 0`，随后 panic 于 `src/bin/ch01_overflow.rs:11:17`（加 `--release` 则回绕，输出见上文） |
+| [`ch01_tail_expr.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch01_tail_expr.rs) | `cargo build --bin ch01_tail_expr` | 编译失败：E0308 |
+| [`ch01_tail_expr_ok.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch01_tail_expr_ok.rs) | `cargo run --quiet --bin ch01_tail_expr_ok` | 退出码 0，输出 `2`；编译时有警告 `unused arithmetic operation that must be used` |
+| [`ch01_control_flow.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch01_control_flow.rs) | `cargo run --quiet --bin ch01_control_flow` | 退出码 0，第一行 `7 is odd` |
+| [`ch01_newtype.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch01_newtype.rs) | `cargo build --bin ch01_newtype` | 编译失败：E0308 |
+| [`ch01_sizes.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch01_sizes.rs) | `cargo run --quiet --bin ch01_sizes` | 退出码 0，第一行 `size_of::<SourceId>() = 4` |
+| [`ch01_const_fn.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch01_const_fn.rs) | `cargo build --bin ch01_const_fn` | 编译失败：E0015 |
+| [`ch01_must_use.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch01_must_use.rs) | `cargo run --quiet --bin ch01_must_use` | 退出码 0，stdout 无输出；编译时有警告 ``unused return value of `Span::len` that must be used`` |
+| [`ch01_copy.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch01_copy.rs) | `cargo build --bin ch01_copy` | 编译失败：E0382（练习 2） |
+| [`ch01_copy_string.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch01_copy_string.rs) | `cargo build --bin ch01_copy_string` | 编译失败：E0204（练习 2） |
+| [`ch01_intersect.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch01_intersect.rs) | `cargo run --quiet --bin ch01_intersect` | 退出码 0，第一行 `Some(Span { source: SourceId(0), start: 5, end: 8 })`（练习 1） |
+| [`ch01_loop_value.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch01_loop_value.rs) | `cargo run --quiet --bin ch01_loop_value` | 退出码 0，输出 `128`（练习 3） |
 
 ## 练习
 

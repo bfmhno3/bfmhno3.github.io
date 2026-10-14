@@ -216,7 +216,7 @@ fn expand_opcodes(item: &ItemEnum) -> syn::Result<TokenStream2> {
 //! that uses it in `pebble-bytecode`.)
 ```
 
-用实验室验证它：新建 `/tmp/lab-ch10-opcode`（一个依赖 `pebble-macros` 的小 crate，路径依赖），写 `src/bin/ch10_opcode_set.rs`：
+用实验室验证它：新建一个依赖 `pebble-macros` 的小 crate（路径依赖），写 `src/bin/ch10_opcode_set.rs`。完整版在 [`lab/lab-ch10-opcode`](https://github.com/bfmhno3/pebble/tree/tutorial-v1/lab/lab-ch10-opcode)，在那个目录里运行即可：
 
 ```rust
 use pebble_macros::opcode_set;
@@ -2561,6 +2561,26 @@ exit: 0
 - `crates/pebble-macros/Cargo.toml` 和 `crates/pebble-macros/src/lib.rs`：现在有 `#[derive(Spanned)]` 和 `opcode_set!` 两个宏。tag 里的版本多了第 12 篇的 `#[differential]`，以及对应的文档、一个 `[dev-dependencies]`，`Cargo.toml` 的 `description` 也不同。`derive_spanned`、`expand_spanned`、`span_member`、`opcode_set`、`expand_opcodes` 与 tag 逐字相同。
 - `crates/pebble-cli/` 下的全部七个文件：第三版。这一版相对第二版的改动只有这些：`Cargo.toml` 多一个依赖，`cli.rs` 多一个 `--dump-bytecode`，`commands.rs` 的 `run` 和 `check`，`sources.rs` 一个词，`tests/cli.rs` 多两个测试。最终版多出来的东西：`Backend` trait、`--vm` 和 `bench`（第 12 篇）、并行的 `check`（第 14 篇）、可选的 `repl` 特性（第 15 篇）。
 - 根 `Cargo.toml` 的 `[workspace.dependencies]`：现在列了 9 个内部 crate 加 `anyhow`、`clap`、`proc-macro2`、`quote`、`rustyline`、`syn`。
+
+### 实验清单
+
+这一篇用到的实验文件都在仓库的 `lab/` 目录里（[`lab/rust-lab`](https://github.com/bfmhno3/pebble/tree/tutorial-v1/lab/rust-lab)）。`git clone` 到 `~/pebble-tag` 的话，它们就在 `~/pebble-tag/lab/rust-lab`，用 `cd ~/pebble-tag/lab/rust-lab` 运行（也可以把这个目录拷到 `~/rust-lab`）。表中 `lab-ch10-opcode` 的两行在侧 crate `lab/lab-ch10-opcode/` 里（依赖仓库里的 `pebble-macros`），命令已写出完整目录。
+
+| 文件 | 命令 | 结果 |
+| --- | --- | --- |
+| [`ch10_name_table.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch10_name_table.rs) | `cargo build --bin ch10_name_table` | 编译失败：E0004 |
+| [`ch10_opcode_set_struct.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch10-opcode/src/bin/ch10_opcode_set_struct.rs) | `cd ~/pebble-tag/lab/lab-ch10-opcode && cargo build --bin ch10_opcode_set_struct` | 编译失败：``error: expected `enum` `` |
+| [`ch10_opcode_set.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch10-opcode/src/bin/ch10_opcode_set.rs) | `cd ~/pebble-tag/lab/lab-ch10-opcode && cargo run --quiet --bin ch10_opcode_set` | 运行，首行 `Const(7) is called Const` |
+| [`ch10_sizes.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch10_sizes.rs) | `cargo run --quiet --bin ch10_sizes` | 运行，首行 `enum Op        = 8 bytes` |
+| [`ch10_float_bits.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch10_float_bits.rs) | `cargo run --quiet --bin ch10_float_bits` | 运行，首行 `0.0 == -0.0        -> true` |
+| [`ch10_capture.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch10_capture.rs) | `cargo build --bin ch10_capture` | 编译失败：E0500 |
+| [`ch10_capture_ok.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch10_capture_ok.rs) | `cargo run --quiet --bin ch10_capture_ok` | 运行，输出 `0 1 0` |
+| [`ch10_ref_binding.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch10_ref_binding.rs) | `cargo build --bin ch10_ref_binding` | 编译失败：E0507 |
+| [`ch10_ref_binding_ok.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch10_ref_binding_ok.rs) | `cargo run --quiet --bin ch10_ref_binding_ok` | 运行，输出 `[Jump(7), Name("x")]`（另有两条 ``field `0` is never read`` 警告） |
+| [`ch10_hygiene.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch10_hygiene.rs) | `cargo build --bin ch10_hygiene` | 编译失败：E0425 |
+| [`ch10_hygiene_ok.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch10_hygiene_ok.rs) | `cargo run --quiet --bin ch10_hygiene_ok` | 运行，输出 `22` |
+| [`ch10_trailing_comma.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch10_trailing_comma.rs) | `cargo build --bin ch10_trailing_comma` | 编译失败：`error: unexpected end of macro invocation` |
+| [`ch10_trailing_comma_ok.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch10_trailing_comma_ok.rs) | `cargo run --quiet --bin ch10_trailing_comma_ok` | 运行，输出 `[1, 2, 3] []` |
 
 ## 练习
 

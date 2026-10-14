@@ -75,7 +75,7 @@ error: could not compile `pebble-ast` (lib) due to 2 previous errors
 
 过程宏必须放在一个 `proc-macro = true` 的 crate 里。为什么不能直接写在 `pebble-ast` 里？因为编译 `pebble-ast` 的时候，编译器要**运行**宏：宏得先被编译成可以加载的库。同一个 crate 不可能先于自己编译完成，所以必须拆成两个 crate，先编译宏的那个。
 
-这种 crate 还有一条硬规则。我在 `/tmp/lab-ch06-export` 里建了一个 `proc-macro = true` 的 crate，里面放了一个普通的 `pub fn helper()`，再加一个 derive：
+这种 crate 还有一条硬规则。我建了一个 `proc-macro = true` 的 crate（仓库里是 [`lab/lab-ch06-export`](https://github.com/bfmhno3/pebble/tree/tutorial-v1/lab/lab-ch06-export)），里面放了一个普通的 `pub fn helper()`，再加一个 derive：
 
 ```rust
 use proc_macro::TokenStream;
@@ -132,7 +132,7 @@ help: there is a crate or module with a similar name
 
 ## 第一个 derive：Hello
 
-我们先不碰 Pebble，在实验室里写一个最小的 derive，只为看清机器怎么转。新建一个实验 crate（我的在 `/tmp/lab-ch06-derive`，你的可以放在 `~/lab-ch06-derive`），它自己的 `Cargo.toml`：
+我们先不碰 Pebble，在实验室里写一个最小的 derive，只为看清机器怎么转。新建一个实验 crate（你的可以放在 `~/lab-ch06-derive`；完整版在 [`lab/lab-ch06-derive`](https://github.com/bfmhno3/pebble/tree/tutorial-v1/lab/lab-ch06-derive)，不想手敲就 `cd ~/pebble-tag/lab/lab-ch06-derive` 直接用），它自己的 `Cargo.toml`：
 
 ```toml
 [package]
@@ -145,7 +145,7 @@ pebble-span = { path = "../pebble/crates/pebble-span" }
 lab-macros-step = { path = "lab-macros-step" }
 ```
 
-（`pebble-span` 那一行指向你在 `~/pebble` 里的 `pebble-span`。我机器上它是 `/tmp/pebble-rebuild-06/crates/pebble-span`，别的没区别。）再建 `lab-macros-step/Cargo.toml`：
+（`pebble-span` 那一行指向你在 `~/pebble` 里的 `pebble-span`；仓库里的版本写的是 `../../crates/pebble-span`，指向 tag 里的 `pebble-span`，别的没区别。）再建 `lab-macros-step/Cargo.toml`：
 
 ```toml
 [package]
@@ -381,7 +381,7 @@ let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl()
 impl #impl_generics ::pebble_span::Spanned for #name #ty_generics #where_clause {
 ```
 
-我把这个版本写成了 `lab-macros-v2`（只有一个 derive `Spanned`，其余同上），然后跑一个带约束和 `where` 的泛型结构体（`ch06_generic_v2.rs`）。顺带说明：本篇里这类 `lab-macros-*` 变体（`-rel`、`-debug`、`-attr`、`-panic` 等）都是可选的对照实验：把 `lab-macros-step` 复制成同名的新目录，改 `Cargo.toml` 里的包名，把 `lib.rs` 换成该处描述的版本，让实验文件依赖它就行；不照做也不影响后面的内容：
+我把这个版本写成了 `lab-macros-v2`（只有一个 derive `Spanned`，其余同上），然后跑一个带约束和 `where` 的泛型结构体（`ch06_generic_v2.rs`）。顺带说明：本篇里这类 `lab-macros-*` 变体（`-rel`、`-debug`、`-attr`、`-panic` 等）都是可选的对照实验：把 `lab-macros-step` 复制成同名的新目录，改 `Cargo.toml` 里的包名，把 `lib.rs` 换成该处描述的版本，让实验文件依赖它就行；不照做也不影响后面的内容。它们的完整版都在 [`lab/lab-ch06-derive/`](https://github.com/bfmhno3/pebble/tree/tutorial-v1/lab/lab-ch06-derive) 下（目录清单见检查点末尾的实验清单）：
 
 ```rust
 #[derive(Spanned)]
@@ -517,7 +517,7 @@ error[E0405]: cannot find trait `Spanned` in module `pebble_span`
 
 开头的 `::` 意思是"从 crate 根（外部 crate 列表）开始找"，不受用户本地名字影响。这是过程宏的基本礼仪：**生成的代码里，所有路径都写绝对路径。** 过程宏默认没有 `macro_rules!` 那种对局部变量的卫生保护（第 10 篇讲），名字全靠这条纪律保护。这不是 Pebble 的发明，标准库的 `#[derive(Debug)]` 展开出来的也是 `::core::fmt::Debug`。
 
-代价是：用 `#[derive(Spanned)]` 的 crate 必须自己依赖 `pebble-span`，宏没法替它引入。我在 `/tmp/lab-ch06-nodep` 里做了一个不依赖 `pebble-span` 的 crate：
+代价是：用 `#[derive(Spanned)]` 的 crate 必须自己依赖 `pebble-span`，宏没法替它引入。我做了一个不依赖 `pebble-span` 的 crate（[`lab/lab-ch06-nodep`](https://github.com/bfmhno3/pebble/tree/tutorial-v1/lab/lab-ch06-nodep)）：
 
 ```text
 error[E0433]: cannot find `pebble_span` in the crate root
@@ -1092,6 +1092,44 @@ cargo fmt --all --check
 - [`crates/pebble-macros/src/lib.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/crates/pebble-macros/src/lib.rs)：现在只有 `#[derive(Spanned)]` 这一个宏；头部文档说 "So far it has one flavour"，只有一个宏的描述。仓库版本里还有 `opcode_set!`（第 10 篇）和 `#[differential]`（第 12 篇）两个宏，以及相应的文档。**derive 的那部分（`derive_spanned`、`expand_spanned`、`span_member`）和仓库逐字相同。**
 - [`crates/pebble-macros/Cargo.toml`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/crates/pebble-macros/Cargo.toml)：`description` 是 "derive only, so far"，没有 `[dev-dependencies]`。
 - 根 `Cargo.toml`：`[workspace.dependencies]` 现在有 `pebble-span`、`pebble-diag`、`pebble-lexer`、`pebble-ast`、`pebble-macros`，以及 `proc-macro2`、`quote`、`syn` 三个外部依赖。tag 里的版本还有解析器、解释器等其他 crate 的条目、几个外部依赖和注释分隔线，随后续章节加入。
+
+### 实验清单
+
+这一篇的实验文件都在仓库的 `lab/` 目录里，宏实验都是侧边 crate，各自是一个独立的 Cargo 包，依赖 tag 里的最终版 `pebble-span`（主实验室 [`lab/rust-lab`](https://github.com/bfmhno3/pebble/tree/tutorial-v1/lab/rust-lab) 在这一篇没有新文件）。如果你把 tag 克隆在 `~/pebble-tag`，它们就在 `~/pebble-tag/lab/` 下，命令都从那里的对应目录运行。
+
+下表的 `ch06_*.rs` 全在 [`lab/lab-ch06-derive/src/bin/`](https://github.com/bfmhno3/pebble/tree/tutorial-v1/lab/lab-ch06-derive/src/bin)，命令都在 `lab/lab-ch06-derive` 里运行；结果列括号里是该实验依赖的 `lab-macros-*` 变体：
+
+| 文件 | 命令 | 结果 |
+| --- | --- | --- |
+| [`ch06_proc_macro_outside.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch06-derive/src/bin/ch06_proc_macro_outside.rs) | `cargo build --bin ch06_proc_macro_outside` | E0433 |
+| [`ch06_proc_macro2_outside.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch06-derive/src/bin/ch06_proc_macro2_outside.rs) | `cargo run --quiet --bin ch06_proc_macro2_outside` | 运行，输出 `empty = true` |
+| [`ch06_hello.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch06-derive/src/bin/ch06_hello.rs) | `cargo run --quiet --bin ch06_hello` | 运行，输出 `hello from Anything`（`lab-macros-step`） |
+| [`ch06_tokens.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch06-derive/src/bin/ch06_tokens.rs) | `cargo run --quiet --bin ch06_tokens` | 运行，标准输出为空，输入 token 在构建时的 stderr 里（`lab-macros-step`） |
+| [`ch06_step.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch06-derive/src/bin/ch06_step.rs) | `cargo run --quiet --bin ch06_step` | 运行，输出 `hello from Anything`（`lab-macros-step`） |
+| [`ch06_naive_generic.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch06-derive/src/bin/ch06_naive_generic.rs) | `cargo build --bin ch06_naive_generic` | E0107（`lab-macros-step`） |
+| [`ch06_generic_v2.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch06-derive/src/bin/ch06_generic_v2.rs) | `cargo run --quiet --bin ch06_generic_v2` | 运行，输出 `4..9 at 5 (inner = hello)`（`lab-macros-v2`） |
+| [`ch06_enum_v2.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch06-derive/src/bin/ch06_enum_v2.rs) | `cargo build --bin ch06_enum_v2` | E0615（`lab-macros-v2`） |
+| [`ch06_no_star.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch06-derive/src/bin/ch06_no_star.rs) | `cargo build --bin ch06_no_star` | E0308（`lab-macros-nostar`） |
+| [`ch06_no_comma.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch06-derive/src/bin/ch06_no_comma.rs) | `cargo build --bin ch06_no_comma` | 无 E 码：``error: expected `,` following `match` arm``（`lab-macros-nocomma`） |
+| [`ch06_relative.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch06-derive/src/bin/ch06_relative.rs) | `cargo build --bin ch06_relative` | E0405（`lab-macros-rel`） |
+| [`ch06_shadow.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch06-derive/src/bin/ch06_shadow.rs) | `cargo run --quiet --bin ch06_shadow` | 运行，输出 `1..4`（`lab-macros`） |
+| [`ch06_expand.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch06-derive/src/bin/ch06_expand.rs) | `cargo run --quiet --bin ch06_expand` | 运行，标准输出为空，展开结果在构建时的 stderr 里（`lab-macros-debug`） |
+| [`ch06_derive_error.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch06-derive/src/bin/ch06_derive_error.rs) | `cargo build --bin ch06_derive_error` | 无 E 码：``error: `#[derive(Spanned)]` requires named fields with a `span` field``（`lab-macros`） |
+| [`ch06_derive_error_variant.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch06-derive/src/bin/ch06_derive_error_variant.rs) | `cargo build --bin ch06_derive_error_variant` | 无 E 码：`` error: expected a field named `span` for `#[derive(Spanned)]` ``（`lab-macros`） |
+| [`ch06_derive_error_unit.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch06-derive/src/bin/ch06_derive_error_unit.rs) | `cargo build --bin ch06_derive_error_unit` | 无 E 码：``error: `#[derive(Spanned)]` requires named fields with a `span` field``（`lab-macros`） |
+| [`ch06_derive_union.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch06-derive/src/bin/ch06_derive_union.rs) | `cargo build --bin ch06_derive_union` | 无 E 码：``error: `Spanned` cannot be derived for unions``（`lab-macros`） |
+| [`ch06_wrong_type.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch06-derive/src/bin/ch06_wrong_type.rs) | `cargo build --bin ch06_wrong_type` | E0308（`lab-macros`） |
+| [`ch06_panic.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch06-derive/src/bin/ch06_panic.rs) | `cargo build --bin ch06_panic` | 无 E 码：`error: proc-macro derive panicked`（`lab-macros-panic`） |
+| [`ch06_attr.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch06-derive/src/bin/ch06_attr.rs) | `cargo run --quiet --bin ch06_attr` | 运行，输出 `let -> 0..3`（`lab-macros-attr`，练习 1 的答案） |
+
+另外两个独立的侧边 crate，各自在自己的目录里：
+
+| 文件 | 命令 | 结果 |
+| --- | --- | --- |
+| [`lab/lab-ch06-export/src/lib.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch06-export/src/lib.rs) | `cd lab/lab-ch06-export && cargo build` | 无 E 码：``error: `proc-macro` crate types currently cannot export any items other than functions tagged with ...`` |
+| [`lab/lab-ch06-nodep/src/main.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch06-nodep/src/main.rs) | `cd lab/lab-ch06-nodep && cargo build --bin lab-ch06-nodep` | E0433 |
+
+实验用到的宏 crate 都在 `lab/lab-ch06-derive/` 里，每个都是一个只含 `Cargo.toml` 和 `src/lib.rs` 的 `proc-macro = true` 包：[`lab-macros`](https://github.com/bfmhno3/pebble/tree/tutorial-v1/lab/lab-ch06-derive/lab-macros)（最终版 `Spanned`）、[`lab-macros-step`](https://github.com/bfmhno3/pebble/tree/tutorial-v1/lab/lab-ch06-derive/lab-macros-step)、[`lab-macros-v2`](https://github.com/bfmhno3/pebble/tree/tutorial-v1/lab/lab-ch06-derive/lab-macros-v2)、[`lab-macros-nostar`](https://github.com/bfmhno3/pebble/tree/tutorial-v1/lab/lab-ch06-derive/lab-macros-nostar)、[`lab-macros-nocomma`](https://github.com/bfmhno3/pebble/tree/tutorial-v1/lab/lab-ch06-derive/lab-macros-nocomma)、[`lab-macros-rel`](https://github.com/bfmhno3/pebble/tree/tutorial-v1/lab/lab-ch06-derive/lab-macros-rel)、[`lab-macros-debug`](https://github.com/bfmhno3/pebble/tree/tutorial-v1/lab/lab-ch06-derive/lab-macros-debug)、[`lab-macros-panic`](https://github.com/bfmhno3/pebble/tree/tutorial-v1/lab/lab-ch06-derive/lab-macros-panic)、[`lab-macros-attr`](https://github.com/bfmhno3/pebble/tree/tutorial-v1/lab/lab-ch06-derive/lab-macros-attr)。仓库里还有 [`ch06_generic.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch06-derive/src/bin/ch06_generic.rs)（对 `lab-macros` 跑一个泛型结构体，输出 `4..9 at 5 (inner = hello)`），文章没有用到。
 
 ## 练习
 

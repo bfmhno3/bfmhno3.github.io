@@ -2323,6 +2323,31 @@ diff <(git -C ~/pebble-tag show tutorial-v1:crates/pebble-value/src/lib.rs) crat
 
 没有需要列出的中间文件：这一篇的所有 crate 都是终稿，根 `Cargo.toml` 里新增的是 `pebble-value` 这一行（它要到第 15 篇才算最终版）。
 
+### 实验清单
+
+这一篇用到的实验文件都在仓库的 `lab/` 目录里（[`lab/rust-lab`](https://github.com/bfmhno3/pebble/tree/tutorial-v1/lab/rust-lab)）；如果你把仓库克隆到了 `~/pebble-tag`，它们就在 `~/pebble-tag/lab/rust-lab`，先 `cd ~/pebble-tag/lab/rust-lab` 再运行下表的命令（也可以把这个目录复制成 `~/rust-lab`）。
+
+| 文件 | 命令 | 结果 |
+| --- | --- | --- |
+| [`ch08_shared_list_move.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch08_shared_list_move.rs) | `cargo build --bin ch08_shared_list_move` | 编译失败：E0382 |
+| [`ch08_shared_list_mut.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch08_shared_list_mut.rs) | `cargo build --bin ch08_shared_list_mut` | 编译失败：E0499 |
+| [`ch08_shared_list_rc.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch08_shared_list_rc.rs) | `cargo build --bin ch08_shared_list_rc` | 编译失败：E0596 |
+| [`ch08_shared_list.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch08_shared_list.rs) | `cargo run --quiet --bin ch08_shared_list` | 运行，首行 `strong count: 2` |
+| [`ch08_refcell_panic.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch08_refcell_panic.rs) | `cargo run --quiet --bin ch08_refcell_panic` | 先打印 `try_borrow_mut while reading: true`，随后 `RefCell already borrowed` panic，退出码 101 |
+| [`ch08_rc_str.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch08_rc_str.rs) | `cargo run --quiet --bin ch08_rc_str` | 运行，首行 `size_of::<String>():   24` |
+| [`ch08_derive_hash.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch08_derive_hash.rs) | `cargo build --bin ch08_derive_hash` | 编译失败：E0277 |
+| [`ch08_mutable_key.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch08_mutable_key.rs) | `cargo run --quiet --bin ch08_mutable_key` | 运行，首行 `before push: Some("one")` |
+| [`ch08_fn_ptr.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch08_fn_ptr.rs) | `cargo run --quiet --bin ch08_fn_ptr` | 运行，首行 `double(21) = 42` |
+| [`ch08_fn_ptr_capture.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch08_fn_ptr_capture.rs) | `cargo build --bin ch08_fn_ptr_capture` | 编译失败：E0308 |
+| [`ch08_add_value.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch08_add_value.rs) | `cargo run --quiet --bin ch08_add_value` | 运行，首行 `Ok(Int(3))` |
+| [`ch08_add_value_moved.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch08_add_value_moved.rs) | `cargo build --bin ch08_add_value_moved` | 编译失败：E0382 |
+| [`ch08_partial_ord.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch08_partial_ord.rs) | `cargo run --quiet --bin ch08_partial_ord` | 运行，首行 `Int(2) < Float(0.5): true` |
+| [`ch08_borrow.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch08_borrow.rs) | `cargo run --quiet --bin ch08_borrow` | 运行，首行 `Some(1)` |
+| [`ch08_asref.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch08_asref.rs) | `cargo run --quiet --bin ch08_asref` | 运行，首行 `PEBBLE` |
+| [`ch08_dyn_output.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch08_dyn_output.rs) | `cargo run --quiet --bin ch08_dyn_output` | 运行，首行 `hello` |
+| [`ch08_hrtb.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch08_hrtb.rs) | `cargo run --quiet --bin ch08_hrtb` | 运行，首行 `3` |
+| [`ch08_try_from.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch08_try_from.rs) | `cargo run --quiet --bin ch08_try_from` | 运行，首行 `Ok(Index(7))` |
+
 ## 练习
 
 **1. 加一个 `min` 内建函数。** 它接受至少一个参数，返回最小的那个；类型不可比较时报错。

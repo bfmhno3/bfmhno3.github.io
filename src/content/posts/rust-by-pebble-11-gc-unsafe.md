@@ -232,7 +232,7 @@ fn main() {
 
 ### 下标句柄的代价
 
-句柄是安全的，不代表句柄永远指向对的东西。下标指向"第 k 个槽位"，槽位被释放后再被复用，旧句柄就悄悄指向了新对象，没有任何 UB，也没有任何 panic。我用真正的 `Heap`（等你写完这一章再跑）做了一个实验。它需要依赖你的 `pebble-gc`，所以不放在 `~/rust-lab` 里，而是单独建一个小 crate：`cargo new ~/lab-ch11-gc`，在它的 `Cargo.toml` 的 `[dependencies]` 下加一行 `pebble-gc = { path = "<你的 workspace>/crates/pebble-gc" }`，把下面的完整源码放进 `src/main.rs`：
+句柄是安全的，不代表句柄永远指向对的东西。下标指向"第 k 个槽位"，槽位被释放后再被复用，旧句柄就悄悄指向了新对象，没有任何 UB，也没有任何 panic。我用真正的 `Heap`（等你写完这一章再跑）做了一个实验。它需要依赖你的 `pebble-gc`，所以不放在 `rust-lab` 里，而是单独建一个小 crate：`cargo new ~/lab-ch11-gc`，在它的 `Cargo.toml` 的 `[dependencies]` 下加一行 `pebble-gc = { path = "<你的 workspace>/crates/pebble-gc" }`，把下面的完整源码放进 `src/main.rs`（完整版在 [`lab/lab-ch11-gc`](https://github.com/bfmhno3/pebble/tree/tutorial-v1/lab/lab-ch11-gc)，在那个目录里运行即可）：
 
 ```text
 $ cargo run --quiet --bin lab-ch11-gc
@@ -1796,6 +1796,29 @@ done
 
 没有中间状态文件：这一篇的 crate 是一次写完的。
 
+### 实验清单
+
+这一篇用到的实验文件都在仓库的 `lab/` 目录里（[`lab/rust-lab`](https://github.com/bfmhno3/pebble/tree/tutorial-v1/lab/rust-lab)）。`git clone` 到 `~/pebble-tag` 的话，它们就在 `~/pebble-tag/lab/rust-lab`，用 `cd ~/pebble-tag/lab/rust-lab` 运行（也可以把这个目录拷到 `~/rust-lab`）。`lab-ch11-gc` 是独立的小 crate，在 `lab/lab-ch11-gc/` 里，用路径依赖指向仓库里的 `crates/pebble-gc`，命令已写出完整目录。
+
+| 文件 | 命令 | 结果 |
+| --- | --- | --- |
+| [`ch11_sizes.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch11_sizes.rs) | `cargo run --quiet --bin ch11_sizes` | 运行，首行 `GcRef                 = 4 bytes` |
+| [`main.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch11-gc/src/main.rs) | `cd ~/pebble-tag/lab/lab-ch11-gc && cargo run --quiet --bin lab-ch11-gc` | 运行，首行 `alive after free: false`（后面是 `old == new: true`） |
+| [`ch11_cell_naive.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch11_cell_naive.rs) | `cargo build --bin ch11_cell_naive` | 编译失败：E0500 |
+| [`ch11_cell_roots.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch11_cell_roots.rs) | `cargo build --bin ch11_cell_roots` | 编译失败：E0502 |
+| [`ch11_cell.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch11_cell.rs) | `cargo run --quiet --bin ch11_cell` | 运行，输出 `[true, true, false]` |
+| [`ch11_deep_recursion.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch11_deep_recursion.rs) | `cargo run --quiet --bin ch11_deep_recursion` | 不带参数运行，输出 `marked 10001 objects at depth 10000`（文章里 20000 层、50000 层的栈溢出要传参数，见上文） |
+| [`ch11_collections.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch11_collections.rs) | `cargo run --quiet --bin ch11_collections` | 运行，首行 `insert 5: hash new? true  tree new? true` |
+| [`ch11_bump_safe.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch11_bump_safe.rs) | `cargo run --quiet --bin ch11_bump_safe` | 运行，首行 `PEB` |
+| [`ch11_arena_alias.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch11_arena_alias.rs) | `cargo build --bin ch11_arena_alias` | 编译失败：E0499 |
+| [`ch11_unsafe_five.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch11_unsafe_five.rs) | `cargo run --quiet --bin ch11_unsafe_five` | 运行，首行 `deref: 7` |
+| [`ch11_unsafe_basic.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch11_unsafe_basic.rs) | `cargo build --bin ch11_unsafe_basic` | 编译失败：E0133 |
+| [`ch11_unsafe_basic_ok.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch11_unsafe_basic_ok.rs) | `cargo run --quiet --bin ch11_unsafe_basic_ok` | 运行，输出 `42` |
+| [`ch11_maybeuninit.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch11_maybeuninit.rs) | `cargo run --quiet --bin ch11_maybeuninit` | 运行，首行 `size_of::<u8>()               = 1` |
+| [`ch11_raw_ptr.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch11_raw_ptr.rs) | `cargo run --quiet --bin ch11_raw_ptr` | 运行，首行 `null? false  null_mut? true` |
+| [`ch11_unsafe_fn_lint.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/rust-lab/src/bin/ch11_unsafe_fn_lint.rs) | `cargo run --quiet --bin ch11_unsafe_fn_lint` | 运行，输出 `7`，编译时有警告 `warning[E0133]: dereference of raw pointer is unsafe and requires unsafe block` |
+| [`generation.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch11-gc/src/bin/generation.rs) | `cd ~/pebble-tag/lab/lab-ch11-gc && cargo run --quiet --bin generation` | 运行（练习 1），首行 `old == new: false` |
+
 ## 练习
 
 **练习 1（讨论）**：给 `GcRef` 加一个代数计数，让上面实验里的"旧句柄读到新对象"变成可检测的。
@@ -1803,7 +1826,7 @@ done
 <details>
 <summary>参考答案</summary>
 
-把 `GcRef` 从 `u32` 改成两个字段 `index`、`generation`，每个槽位也记一个代数，`free` 时代数加一，`get` 时先比较代数。我在实验里写了一个最小版本（和上面的 `~/lab-ch11-gc` 同一个小 crate，放在 `src/bin/generation.rs`，不依赖 `pebble-gc`）：
+把 `GcRef` 从 `u32` 改成两个字段 `index`、`generation`，每个槽位也记一个代数，`free` 时代数加一，`get` 时先比较代数。我在实验里写了一个最小版本（和上面的 `lab-ch11-gc` 同一个小 crate，放在 [`src/bin/generation.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/lab/lab-ch11-gc/src/bin/generation.rs)，不依赖 `pebble-gc`）：
 
 ```rust
 // Exercise 1: a generation counter makes stale handles detectable.
