@@ -842,7 +842,7 @@ Time (mean ± σ):      2.102 s ±  0.015 s    [User: 1.821 s, System: 0.273 s]
 
 一个文件 260 ms；八个文件同一次调用并行：581 ms；八次顺序调用：2.102 s。快了 3.6 倍，在一台 16 个逻辑核的机器上，当时机器上还有别的编译任务在跑，所以这个数字不干净。更有意思的是 `User` 一栏：八份工作总共用了 3.9 s 的 CPU 时间，顺序跑只用 1.8 s。我没有去查原因，我怀疑是八个线程抢同一个内存分配器和缓存，但这是猜测。
 
-还有一件我顺手量到的事：同样的文件放大到 60000 行（4.8 MB），单个文件的 `pebble check` 要 34.9 s。行数多了 7.5 倍，时间多了 134 倍，明显是平方级的增长。我没有去追它在哪里（词法、解析、编译三段里的某一段），这不是这一篇的主题；如果你想练习性能分析，这是一个现成的靶子。
+还有一件我顺手量到的事：同样的文件放大到 60000 行（4.8 MB），单个文件的 `pebble check` 要 34.9 s。行数多了 7.5 倍，时间多了 134 倍，指数大约是 2.4，至少是平方级的增长。我没有去追它在哪里（词法、解析、编译三段里的某一段），这不是这一篇的主题；如果你想练习性能分析，这是一个现成的靶子。
 
 ## async：不开线程，也能同时等很多东西
 
@@ -920,7 +920,21 @@ pub enum Poll<T> {
 
 一个 `Future` 就是一个"可以被问 `poll`"的状态机：被问到的时候，要么说"完成了，结果是 `T`"（`Ready`），要么说"还没好"（`Pending`）。`Pending` 的同时，它必须保证在将来能继续推进的时候通知执行者，通知的渠道是 `Context` 里的 `Waker`。**`Future` 自己什么都不会做**，必须有人反复 `poll` 它：这是 Rust 的 `async` 和 JavaScript 的 `Promise` 最大的区别，`Promise` 创建就开始跑，`Future` 不被 `poll` 就一动不动。
 
-下面是实验 `ch14_manual_future.rs`，零依赖，从头写一个能跑起来的最小系统。先来第一个 `Future`，一个倒数：
+下面是实验 `ch14_manual_future.rs`，零依赖，从头写一个能跑起来的最小系统。文件开头是这些导入和一个计数器（`POLLS` 只用来数一共 `poll` 了几次，方便下面看输出）：
+
+```rust
+use std::future::Future;
+use std::pin::{Pin, pin};
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Arc, Mutex};
+use std::task::{Context, Poll, Wake, Waker};
+use std::thread::{self, Thread};
+use std::time::{Duration, Instant};
+
+static POLLS: AtomicUsize = AtomicUsize::new(0);
+```
+
+先来第一个 `Future`，一个倒数：
 
 ```rust
 struct CountDown {
@@ -998,7 +1012,30 @@ struct Delay {
 }
 ```
 
-`Delay::new(duration)` 起一个普通线程，睡 `duration`，然后设置 `done = true`，并且如果有人留下了 `Waker`，就调用它。`Delay` 的 `poll`：
+`Delay::new(duration)` 起一个普通线程，睡 `duration`，然后设置 `done = true`，并且如果有人留下了 `Waker`，就调用它：
+
+```rust
+impl Delay {
+    fn new(duration: Duration) -> Self {
+        let shared = Arc::new(Mutex::new(Shared {
+            done: false,
+            waker: None,
+        }));
+        let thread_shared = Arc::clone(&shared);
+        thread::spawn(move || {
+            thread::sleep(duration);
+            let mut state = thread_shared.lock().unwrap();
+            state.done = true;
+            if let Some(waker) = state.waker.take() {
+                waker.wake();
+            }
+        });
+        Delay { shared }
+    }
+}
+```
+
+`Delay` 的 `poll`（它同样 `impl Future for Delay`，`type Output = ();`）：
 
 ```rust
 fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<()> {
@@ -1027,7 +1064,26 @@ async fn two_delays() -> u32 {
 }
 ```
 
-`main` 里 `block_on(two_delays())`，再打印一共 `poll` 了几次，以及 `size_of_val` 一个没被运行过的 `two_delays()`：
+`main` 里先跑上面的 `CountDown`，再 `block_on(two_delays())`，打印一共 `poll` 了几次，以及 `size_of_val` 一个没被运行过的 `two_delays()`：
+
+```rust
+fn main() {
+    println!("countdown:");
+    let message = block_on(CountDown { remaining: 3 });
+    println!("{message} after {} polls", POLLS.swap(0, Ordering::Relaxed));
+
+    println!("two delays:");
+    let start = Instant::now();
+    let answer = block_on(two_delays());
+    let elapsed = start.elapsed();
+    println!("answer {answer} after {} polls", POLLS.swap(0, Ordering::Relaxed));
+    println!("took at least 100 ms: {}", elapsed >= Duration::from_millis(100));
+
+    println!("size of the async fn future: {} bytes", std::mem::size_of_val(&two_delays()));
+}
+```
+
+第二段的输出：
 
 ```text
 two delays:
@@ -1041,7 +1097,7 @@ size of the async fn future: 16 bytes
 
 三次 `poll`：第一次开始运行，打印 `two_delays starts`，创建第一个 `Delay`，`poll` 它，`Pending`，整个 `two_delays` 也 `Pending`，`block_on` 睡眠；50 毫秒后 `Delay` 的线程叫醒它，第二次 `poll` 从第一个 `.await` 之后继续，打印 `first delay done`，创建第二个 `Delay`，又 `Pending`；第三次 `poll` 跑完，返回 42。总共至少 100 毫秒，`true`。
 
-最后一行也有意思。`async fn` 的返回值是一个编译器生成的匿名类型，这里只有 16 字节，里面存的是"我停在第几个 `.await`"和跨 `.await` 活着的局部变量。这就是前面说的"编译器写的状态机"：没有被 `poll` 过的时候，它什么都没做（输出里 `size_of_val` 那一行之前没有打印任何 `two_delays starts`，因为调用 `two_delays()` 只是构造了状态机，没有运行）。
+最后一行也有意思。`async fn` 的返回值是一个编译器生成的匿名类型，这里只有 16 字节，里面存的是"我停在第几个 `.await`"和跨 `.await` 活着的局部变量。这就是前面说的"编译器写的状态机"：没有被 `poll` 过的时候，它什么都没做（那个只用来量大小的 `two_delays()` 从未被 `poll`，所以输出里没有第二行 `two_delays starts`：调用 `two_delays()` 只是构造了状态机，没有运行）。
 
 ### `Pin`：为什么 `poll` 的 self 那么奇怪
 
@@ -1621,7 +1677,7 @@ where
 几点：
 
 - `R: AsyncRead + Unpin`：`R` 是任何可异步读的东西（`TcpStream`、`OwnedReadHalf`、测试里的 `&[u8]`），`Unpin` 是上面讲的"可以被移动"；`read_exact` 需要 `&mut R` 能被重新借用，不需要钉住。这就是 `read_frame` 既能读 TCP 又能读字节切片的原因，测试里我们读的是 `&[u8]`。
-- `read_exact(&mut header).await`：读满 4 个字节，读不满就 `UnexpectedEof`。对头部来说，在 0 字节处遇到 EOF 是正常的（对方关了），所以第一个 `match` 把 `UnexpectedEof` 映射成 `Ok(None)`；其他 I/O 错误用 `error.into()` 转成 `FrameError::Io`，这里不能用 `?`，因为这个分支要先看 `error.kind()`。
+- `read_exact(&mut header).await`：读满 4 个字节，读不满就 `UnexpectedEof`。对头部来说，在 0 字节处遇到 EOF 是正常的（对方关了），所以第一个 `match` 把 `UnexpectedEof` 映射成 `Ok(None)`；其他 I/O 错误用 `error.into()` 转成 `FrameError::Io`，这里不能用 `?`，因为这个分支要先看 `error.kind()`。一个细节：代码分不出"0 字节"和"读了 1 到 3 字节"，`read_exact` 两种情况都报 `UnexpectedEof`，所以头部被截断在中间也会被当成干净关闭返回 `Ok(None)`，文档注释里"before any header byte was read"说得比实际更强。
 - 注意读 payload 的 `reader.read_exact(&mut payload).await?` **没有**对 `UnexpectedEof` 特殊处理：头部读完了而正文被截断，是真的出错，应该走 `FrameError::Io`。
 - 先检查 `length > max_frame` 再分配：否则一个恶意的客户端发 `0xFFFFFFFF` 就能让服务器分配 4 GiB。
 
@@ -1999,10 +2055,10 @@ cargo run --quiet -p pebble-cli -- check examples/fib.pebble examples/errors.peb
 
 应该只看到 `examples/errors.pebble` 的诊断和 `exit=1`，上面的"真实运行"一节里有完整输出。
 
-这些文件现在必须和 tag 逐字节一致。把 pebble 仓库克隆下来、切到 tag（`git clone https://github.com/bfmhno3/pebble && git -C pebble checkout tutorial-v1`），然后：
+这些文件现在必须和 tag 逐字节一致。把 tag 克隆到 `~/pebble-tag`（第 1 篇做过就跳过：`git clone --branch tutorial-v1 https://github.com/bfmhno3/pebble ~/pebble-tag`），然后在你的工作区根目录里：
 
 ```bash
-diff -r crates/pebble-net ../pebble/crates/pebble-net
+diff -r crates/pebble-net ~/pebble-tag/crates/pebble-net
 ```
 
 没有任何输出。这两个文件是"完成品"：

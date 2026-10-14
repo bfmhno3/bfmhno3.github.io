@@ -381,7 +381,7 @@ let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl()
 impl #impl_generics ::pebble_span::Spanned for #name #ty_generics #where_clause {
 ```
 
-我把这个版本写成了 `lab-macros-v2`（只有一个 derive `Spanned`，其余同上），然后跑一个带约束和 `where` 的泛型结构体（`ch06_generic_v2.rs`）：
+我把这个版本写成了 `lab-macros-v2`（只有一个 derive `Spanned`，其余同上），然后跑一个带约束和 `where` 的泛型结构体（`ch06_generic_v2.rs`）。顺带说明：本篇里这类 `lab-macros-*` 变体（`-rel`、`-debug`、`-attr`、`-panic` 等）都是可选的对照实验：把 `lab-macros-step` 复制成同名的新目录，改 `Cargo.toml` 里的包名，把 `lib.rs` 换成该处描述的版本，让实验文件依赖它就行；不照做也不影响后面的内容：
 
 ```rust
 #[derive(Spanned)]
@@ -1068,7 +1068,7 @@ error: expected a field named `span` for `#[derive(Spanned)]`
     |           ^^^^^^^^^^^^^^^^^^^
 ```
 
-我的判断是：对 Pebble 这个体量，宏是为了学它而加的，不是为了省事（计划里我也没打算掩饰这一点）。但同样的思路在 `serde` 的 derive 里省下的是几千行。想想成熟的项目：你手上有 40 个 AST 节点，每个都要 `Spanned`、`Visit`、`Clone`、`Debug`，derive 就是让这些**一行**搞定的东西。
+我的判断是：对 Pebble 这个体量，宏是为了学它而加的，不是为了省事。但同样的思路在 `serde` 的 derive 里省下的是几千行。想想成熟的项目：你手上有 40 个 AST 节点，每个都要 `Spanned`、`Visit`、`Clone`、`Debug`，derive 就是让这些**一行**搞定的东西。
 
 ## 检查点
 

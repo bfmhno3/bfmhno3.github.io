@@ -17,7 +17,7 @@ comment: true
 slug: rust-by-pebble-03-enums-traits-diagnostics
 ---
 
-Pebble 里最小的一个 bug 只有两个字符：把 `writeln!` 写成 `write!`，删掉 `ln`。编译器不抱怨，三个测试照样通过，但整份错误报告的第一行会变成 `error[E1001]: expected an expression, found `;` --> examples/errors.pebble:5:17`，标题和位置箭头粘在了一起。抓住它的是整个 crate 里唯一一条断言，我们在本篇末尾会真的把这个 bug 种进去再看它怎么死。在那之前，先把这个 crate 从零写出来：357 行，4 个测试，用到 `enum`、`Option`、builder、`Display`、`Error`、带默认方法的 trait，以及一次和孤儿规则的正面冲突。
+Pebble 里最小的一个 bug 只有两个字符：把 `writeln!` 写成 `write!`，删掉 `ln`。编译器不抱怨，三个测试照样通过，但整份错误报告的第一行会变成 `` error[E1001]: expected an expression, found `;` --> examples/errors.pebble:5:17 ``，标题和位置箭头粘在了一起。抓住它的是整个 crate 里唯一一条断言，我们在本篇末尾会真的把这个 bug 种进去再看它怎么死。在那之前，先把这个 crate 从零写出来：357 行，4 个测试，用到 `enum`、`Option`、builder、`Display`、`Error`、带默认方法的 trait，以及一次和孤儿规则的正面冲突。
 
 > [!NOTE] 本篇检查点
 > 我们将写完 `pebble-diag`：`Severity`、`Label`、`Diagnostic`、`DiagnosticSink` 以及把它们画成带 `^^^^` 下划线报告的 `render`。用到的 Rust 特性：带数据的 `enum` 与穷尽 `match`、`Option`、`if let` / `let ... else`、builder 模式与结构体更新语法、`Display` 与 `Debug`、`fmt::Write`、supertrait、默认方法、孤儿规则、类型别名、迭代器初体验。
@@ -67,7 +67,7 @@ cargo new --lib crates/pebble-diag
 note: see more `Cargo.toml` keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 ```
 
-因为目录在 workspace 里，`cargo new` 自己把 `version.workspace = true` 之类的继承行和 `[lints] workspace = true` 都写好了。我们只需要补上 `description` 和一个依赖。先在根 `Cargo.toml` 的 `[workspace.dependencies]` 里，`pebble-span` 那行下面加一行：
+因为目录在 workspace 里，`cargo new` 自己把 `version.workspace = true` 之类的继承行和 `[lints] workspace = true` 都写好了（其中也有 `description.workspace`、`keywords.workspace`、`categories.workspace` 三行）。我们要把 `description` 换成这个 crate 自己的一句话，删掉 `keywords` 和 `categories` 两行，再补一个依赖。先在根 `Cargo.toml` 的 `[workspace.dependencies]` 里，`pebble-span` 那行下面加一行：
 
 ```toml
 pebble-diag = { path = "crates/pebble-diag", version = "0.1.0" }
@@ -101,7 +101,7 @@ workspace = true
 git -C ~/pebble-tag show tutorial-v1:crates/pebble-diag/src/lib.rs | sed -n 3,9p
 ```
 
-（`~/pebble-tag` 是 tag 的本地克隆：`git clone --branch tutorial-v1 https://github.com/bfmhno3/pebble ~/pebble-tag`。第 1 篇已经建议过，没建的话现在建。）
+（`~/pebble-tag` 是 tag 的本地克隆：`git clone --branch tutorial-v1 https://github.com/bfmhno3/pebble ~/pebble-tag`。第 1 篇的检查点已经让你克隆过；没有的话现在建。）
 
 其余部分的文件头是：
 
@@ -141,7 +141,7 @@ sev.c:6:5: warning: enumeration value 'HELP' not handled in switch [-Wswitch]
 
 一条 warning，程序照常跑，打印出两个 `???`（后一个是我故意塞进去的 `(enum Severity)42`，C 的枚举不过是个 `int`，任何值都能强转进去）。
 
-Rust 的 `enum` 是另一种东西：它是一个**只能取列出的那几个值**的类型，值之间不能和整数互转，而且 `match` 必须穷尽。把同样的错误写给 Rust（实验文件 `src/bin/ch03_match.rs`，在第 1 篇建的 `~/rust-lab` 里）：
+Rust 的 `enum` 是另一种东西：它是一个**只能取列出的那几个值**的类型，不能把任意整数强转成它，而且 `match` 必须穷尽。把同样的错误写给 Rust（实验文件 `src/bin/ch03_match.rs`，在第 1 篇建的 `~/rust-lab` 里）：
 
 ```rust
 #[derive(Copy, Clone)]
@@ -231,7 +231,7 @@ size_of::<String>() = 24
 
 三种形状：没有数据的、元组式的 `Circle(f64)`、结构体式的 `Rect { w, h }`。`match` 的分支里直接把数据解构成局部变量 `r`、`w`、`h`，没有 `std::get<1>(v)` 或 `std::holds_alternative` 那一套；并且和 `std::visit` 要求访问者覆盖所有备选类型一样，漏一个变体就编译失败。区别是语法：`std::variant` 是库类型，`std::visit` 加 `overloaded` 的写法大家都懂的；Rust 的 `enum` 是语言内建，`match` 是语言内建，错误信息也因此能直接告诉你缺哪个变体。
 
-最后三行数字是个小彩蛋：`Option<String>` 和 `String` 一样大，都是 24 字节。`Option` 本质上就是一个带数据的 `enum`（`None` 和 `Some(T)`），而 `String` 内部有个永远不为空的指针，编译器把"没有"编码成"指针为空"，不需要额外的标签字节。我们很快就大量使用 `Option<String>`，这里记住：它不贵。
+最后三行数字是个小彩蛋：`Option<String>` 和 `String` 一样大，都是 24 字节。`Option` 本质上就是一个带数据的 `enum`（`None` 和 `Some(T)`），而 `String` 的容量字段永远不会超过 `isize::MAX`，编译器把 `None` 编码成容量字段里的一个非法值，不需要额外的标签字节。我们很快就大量使用 `Option<String>`，这里记住：它不贵。
 
 ### 写 `Severity`
 
@@ -785,7 +785,7 @@ fn digits_ilog(n: u32) -> usize {
 
 ### `caret_geometry`：字符，不是字节
 
-下划线要画在哪一列、画多长，在 UTF-8 里不能直接用字节偏移：`"中c"` 里 `c` 的字节偏移是 3，但它在第 2 列。第 2 篇已经遇到过这个问题。这个函数把 `Span` 的字节范围换算成字符列：
+下划线要画在哪一列、画多长，在 UTF-8 里不能直接用字节偏移：`"中c"` 里 `c` 的字节偏移是 3，但它在第 2 列。第 2 篇已经遇到过这个问题。这个函数把 `Span` 的字节范围换算成字符列，放在 `digits` 之后、`#[cfg(test)]` 之前（它是文件里最后一个非测试项）：
 
 ```rust
 /// Computes the caret start column and length, in characters, for a span.
@@ -1085,7 +1085,7 @@ Diagnostic { severity: Error, code: Some("E0100"), message: "undefined variable 
 
 ## `DiagnosticSink`：错误去哪
 
-最后一块：诊断被构造出来之后交给谁？解析器要么把它们收集起来（命令行），要么扔掉它们（"我只是想知道能不能解析"的测试和某些调用者）。这是个典型的"同一个接口，两种实现"。
+最后一块：诊断被构造出来之后交给谁？解析器要么把它们收集起来（命令行），要么扔掉它们（"我只是想知道能不能解析"的测试和某些调用者）。这是个典型的"同一个接口，两种实现"。本节的 `DiagnosticSink`、两个 `impl`、`SilentSink` 和 `DiagResult` 依次写在 `Display` 实现之后、`digits` 之前（这也是 tag 里的顺序，检查点的 `diff` 要求一致）。
 
 C++ 里你会写抽象基类加虚函数：`struct Sink { virtual void emit(Diagnostic) = 0; }`。Rust 里是 **trait**：
 
@@ -1105,7 +1105,7 @@ pub trait DiagnosticSink {
 }
 ```
 
-两个方法，性质不同。`emit` 只有签名，没有函数体：**实现者必须提供**。`error` 带了函数体：这是**默认方法**，实现者不写就用这个。默认方法里可以调用同一个 trait 的其他方法（`self.emit`），所以实现者只实现最小集合 `emit`，白得一个便利方法 `error`。这有点像 C++ 里 `std::ranges::view_interface` 或 `std::iterator` 靠几个核心操作派生出一堆方法，但不需要 CRTP。
+两个方法，性质不同。`emit` 只有签名，没有函数体：**实现者必须提供**。`error` 带了函数体：这是**默认方法**，实现者不写就用这个。默认方法里可以调用同一个 trait 的其他方法（`self.emit`），所以实现者只实现最小集合 `emit`，白得一个便利方法 `error`。这有点像 C++ 里 `std::ranges::view_interface`（或 `boost::iterator_facade`）靠几个核心操作派生出一堆方法，只是它们要借助 CRTP，而 trait 默认方法不需要。
 
 两个实现，是给两个具体类型的：
 

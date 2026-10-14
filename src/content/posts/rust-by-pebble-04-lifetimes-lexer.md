@@ -333,7 +333,9 @@ mod tests {
 
 **`'0'..='9'`。** 一个范围模式，匹配这个闭区间里的任何字符。后面细讲。
 
-写两个测试。第一个是这篇的核心证明：标识符 token 里的 `&str` 确实指向源码内部，而不是副本。`as_ptr()` 返回指向第一个字节的裸指针，`as usize` 把它当整数比较（这是一个纯整数运算，没有任何 `unsafe`）：
+`Option::is_some_and(f)` 是"`Some` 并且里面的值满足 `f` 才为真"，`char::is_whitespace` 这样的函数路径可以直接当参数传（和写成闭包等价）；`ch if ...` 是匹配守卫，`while let` 是"模式匹配成功就继续循环"，这两个也留到后面细讲。
+
+脚手架末尾已经带着下面两个测试，不用再抄一遍，这里只解释它们。第一个是这篇的核心证明：标识符 token 里的 `&str` 确实指向源码内部，而不是副本。`as_ptr()` 返回指向第一个字节的裸指针，`as usize` 把它当整数比较（这是一个纯整数运算，没有任何 `unsafe`）：
 
 ```rust
 #[cfg(test)]
@@ -826,7 +828,7 @@ size_of::<String>()     = 24
 size_of::<Cow<str>>()   = 24
 ```
 
-`unescape_newlines` 的返回类型 `Cow<'_, str>` 说：这是一段文本，可能借自输入（没有转义的时候，一个字节都不复制），也可能是新分配的 `String`（有转义，需要把 `\n` 两个字符换成一个换行符）。调用者用 `match` 区分，或者干脆当 `&str` 用（`Cow` 能自动当 `&str` 用，这背后的 deref 强制转换第 7 篇讲）。这对字符串字面量正合适：绝大多数 Pebble 字符串没有转义，借；偶尔有 `\n`，拥有。
+`unescape_newlines` 的返回类型 `Cow<'_, str>` 说：这是一段文本，可能借自输入（没有转义的时候，一个字节都不复制），也可能是新分配的 `String`（有转义，需要把 `\n` 两个字符换成一个换行符）。调用者用 `match` 区分，或者干脆当 `&str` 用（`Cow` 能自动当 `&str` 用，这背后的 deref 强制转换第 5 篇讲）。这对字符串字面量正合适：绝大多数 Pebble 字符串没有转义，借；偶尔有 `\n`，拥有。
 
 最后一行输出里有个有意思的细节：`size_of::<Cow<str>>()` 是 24，和 `String` 一样大，比 `&str` 大 8 个字节。一个本该多出判别标签的枚举居然没有变大。我猜这是编译器利用了 `String` 内部某个不会出现的位模式来表示"借用"（Rust 里叫 niche 优化），但我没有去看布局，所以只算猜测。同样地，我们的 `TokenKind` 整体：
 
@@ -1355,7 +1357,7 @@ if ch.is_ascii_digit() || ch == '_' {
 
 `Cow<'src, str>` 的生命周期 `'src` 在两种情况下含义不同：`Borrowed` 时它是真正的借用；`Owned` 时没有借用，但类型一样，所以放进同一个 `TokenKind<'src>` 里互不干扰。这是"借用或拥有"类型的价值：调用者不必关心。
 
-`unescape` 和 `read_unicode_escape` 是两个 45 行的纯字符串函数，处理 `\n`、`\t`、`\u{1F980}` 等转义，没有新概念，直接复制（文件的第 532 到 576 行）：
+`unescape` 和 `read_unicode_escape` 是两个纯字符串函数，合起来 45 行，处理 `\n`、`\t`、`\u{1F980}` 等转义，没有新概念，直接复制（文件的第 532 到 576 行）：
 
 ```bash
 git -C ~/pebble-tag show tutorial-v1:crates/pebble-lexer/src/lib.rs | sed -n 532,576p
@@ -1407,7 +1409,18 @@ rest      = [3, 2, 1]
 left over = Some(3)
 ```
 
-输出最后一行的 `left over = Some(3)` 是第二段代码的结果：`(&mut by_value).take(2).count()` 吃掉两个元素，`by_value` 还剩 3。这就引出 `countdown.by_ref().take(2).collect()` 里的 `by_ref()`。`take` 会**拿走** `self`（它的签名是 `fn take(self, n: usize) -> Take<Self>`），所以直接写 `countdown.take(2)` 之后 `countdown` 就没了。实验文件 `src/bin/ch04_by_ref_moved.rs` 把这个错误做了出来：
+输出最后一行的 `left over = Some(3)` 是第二段代码的结果：`(&mut by_value).take(2).count()` 吃掉两个元素，`by_value` 还剩 3。这就引出 `countdown.by_ref().take(2).collect()` 里的 `by_ref()`。`take` 会**拿走** `self`（它的签名是 `fn take(self, n: usize) -> Take<Self>`），所以直接写 `countdown.take(2)` 之后 `countdown` 就没了。实验文件 `src/bin/ch04_by_ref_moved.rs` 是同一个 `Countdown`，`main` 改成下面这样（可选），把这个错误做了出来：
+
+```rust
+fn main() {
+    let countdown = Countdown { n: 5 };
+    let first_two: Vec<u32> = countdown.take(2).collect();
+    let rest: Vec<u32> = countdown.collect();
+    println!("{first_two:?} {rest:?}");
+}
+```
+
+报错如下：
 
 ```text
 error[E0382]: use of moved value: `countdown`
@@ -1545,7 +1558,7 @@ error[E0003]: unterminated string literal
   |
 ```
 
-对照着读。第二行是 `let total = 1_000 + 2.5;`：`1_000` 变成 `Int(1000)`，`2.5` 变成 `Float(2.5)`，范围 `12..17` 是它在源码里的字节区间。第三行 `"a\n🦀"` 有转义，变成 `Str("a\n🦀")`，是 `Cow::Owned`。
+对照着读。第一行是 `let total = 1_000 + 2.5;`：`1_000` 变成 `Int(1000)`，`2.5` 变成 `Float(2.5)`，范围 `12..17` 是它在源码里的字节区间。第二行 `"a\n🦀"` 有转义，变成 `Str("a\n🦀")`，是 `Cow::Owned`。
 
 注意第三行的 `let bad = @;`：`@` 产出一个 `E0001`，但 token 序列里 `Assign`（57..58）之后直接是 `Semicolon`（60..61），中间没有 `@` 的 token，其他 token 都在。第四行的 `"oops` 没有闭合，`E0003`，下面的 `print(total);` 完整地被词法分析了：`Ident("print")`、`LParen`、`Ident("total")`、`RParen`、`Semicolon`。一次运行，两个错误，一个也没漏掉，后面的代码一个也没丢。这是第 7 篇解析器恢复机制的基础：如果词法分析器遇到第一个错误就停下，解析器连"后面还有什么"都不知道。
 
@@ -1626,7 +1639,7 @@ fn reports_unterminated_string_but_keeps_going() {
 }
 ```
 
-输入是 `"oops` 换行 `42`。断言三件事：恰好一个诊断；它的错误码是 `E0003`；`42` 那个 token 还在。`.code.as_deref()` 把 `Option<String>` 借成 `Option<&str>`，这样才能和 `Some("E0003")` 比较。`iter().any(|t| ...)` 是"有任何一个元素满足条件"，也是第 1 篇的闭包语法。
+输入是 `"oops` 换行 `42`。断言三件事：恰好一个诊断；它的错误码是 `E0003`；`42` 那个 token 还在。`.code.as_deref()` 把 `Option<String>` 借成 `Option<&str>`，这样才能和 `Some("E0003")` 比较。`iter().any(|t| ...)` 是"有任何一个元素满足条件"，也是第 2 篇见过的闭包语法。
 
 整个 `tests` 模块（文件第 578 到 711 行）的组装方法是：写模块头、辅助函数 `kinds` 和前两个测试；复制第 3 到 8 个测试；写 `reports_unterminated_string_but_keeps_going`；再复制最后三个。模块头、辅助函数和前两个测试：
 
@@ -1846,7 +1859,22 @@ error: could not compile `rust-lab` (bin "ch04_longest") due to 1 previous error
 
 规则 1 给两个参数各一个独立的生命周期；规则 2 要求"恰好一个"输入生命周期，现在有两个，不适用；规则 3 要求有 `&self`，没有。三条都落空，所以返回值借自谁没有答案。编译器的提示一语中的："不知道是借自 `a` 还是 `b`"。
 
-修法是显式地写：`fn longest<'a>(a: &'a str, b: &'a str) -> &'a str`，意思是"返回值借自两个参数里**较短**的那个区域"（`'a` 会被取成两者的交集）。`src/bin/ch04_longest_ok.rs` 就是修好后的版本，打印 `abc`。让它再次报错的调用是把结果用到某个参数已经死去的地方，`src/bin/ch04_longest_scope.rs`：
+修法是显式地写：`fn longest<'a>(a: &'a str, b: &'a str) -> &'a str`，意思是"返回值借自两个参数里**较短**的那个区域"（`'a` 会被取成两者的交集）。把 `ch04_longest.rs` 里的签名换成这一行，`main` 不变，就是修好后的版本，打印 `abc`（文件名 `ch04_longest_ok.rs`，可选）。让它再次报错的调用是把结果用到某个参数已经死去的地方，`src/bin/ch04_longest_scope.rs` 的 `main`（`longest` 用修好后的签名）：
+
+```rust
+fn main() {
+    let outer = String::from("abc");
+    let result;
+    {
+        let inner = String::from("ab");
+        result = longest(&outer, &inner);
+        println!("inside:  {result}");
+    }
+    println!("outside: {result}");
+}
+```
+
+报错如下：
 
 ```text
 error[E0597]: `inner` does not live long enough

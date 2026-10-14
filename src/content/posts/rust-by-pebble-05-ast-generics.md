@@ -405,7 +405,7 @@ Vec<Expr>    = 24 bytes
 (Expr, Expr) = 128 bytes
 ```
 
-...`Ident` 40 + `Expr` 64 + `Vec` 24 + `Span` 12 = 140，对齐到 144）；这两个结论是我拿字段大小加出来的，没有去让编译器报告布局。重点是：**枚举的大小等于最大变体加标签**，写 `Nil` 也要付 64 字节。如果你在乎，可以把大变体里的东西装箱，clippy 有一个 `large_enum_variant` 的 lint 专门提醒这件事。Pebble 没有做，因为程序的 AST 不大，没必要为它牺牲可读性。
+`Expr` 的 64 字节来自最大的变体 `Fn`（两个 `Vec` 加一个 `Span`，60 字节，补齐到 64）；`Stmt` 的 144 字节来自 `For`（`Ident` 40 + `Expr` 64 + `Vec` 24 + `Span` 12 = 140，对齐到 144）。这两个结论是我拿字段大小加出来的，没有去让编译器报告布局。重点是：**枚举的大小等于最大变体加标签**，写 `Nil` 也要付 64 字节。如果你在乎，可以把大变体里的东西装箱，clippy 有一个 `large_enum_variant` 的 lint 专门提醒这件事。Pebble 没有做，因为程序的 AST 不大，没必要为它牺牲可读性。
 
 ### 运算符
 
@@ -559,7 +559,7 @@ error[E0004]: non-exhaustive patterns: `&Stmt::Block { .. }` not covered
 error: could not compile `pebble-ast` (lib) due to 3 previous errors
 ```
 
-好消息是编译器一处不漏地指出所有要改的地方（C++ 里往 `std::variant` 加一个类型，漏掉一个 `std::visit` 分支，要等到运行时才知道）。坏消息是三处里有一处纯粹是机械劳动：`Spanned` 那个 `match` 里的每个分支都在做完全相同的事，"把叫 `span` 的字段取出来"。其余两处（`walk_stmt` 和打印器）是真有信息量的工作，每个变体怎样遍历、怎样显示，只有人知道。
+好消息是编译器一处不漏地指出所有要改的地方（C++ 的 `std::visit` 漏掉一个类型的分支，在编译期也会被拒绝，只不过报的是一大段模板错误，不太好读；真正要等到运行时才发现的，是带 `default:` 的 `switch` 或者带通用兜底分支的访问者）。坏消息是三处里有一处纯粹是机械劳动：`Spanned` 那个 `match` 里的每个分支都在做完全相同的事，"把叫 `span` 的字段取出来"。其余两处（`walk_stmt` 和打印器）是真有信息量的工作，每个变体怎样遍历、怎样显示，只有人知道。
 
 这就是第 6 篇的动机：让编译器自己去生成那个机械的 `match`。现在先把实验撤回，继续往下。
 
@@ -725,7 +725,7 @@ $ nm -C target/debug/ch05_mono | grep largest
 
 三种类型，三份机器码，同一个名字（符号里编码的类型参数没有被 `-C` 显示出来，但地址是三个）。这和 C++ 模板实例化是一回事，也是 Rust 泛型"零成本"的来源：运行时没有任何泛型的痕迹。代价同样一样：二进制体积变大、编译变慢。
 
-当约束多起来，签名会变得很挤，这时可以把约束挪到 `where` 子句里：`fn f<T, U>(t: T, u: U) where T: Display + Clone, U: Into<T> { ... }`。两种写法完全等价，`where` 只是排版工具；Pebble 的代码里目前用的都是行内约束，所以我不为它单独做实验。
+当约束多起来，签名会变得很挤，这时可以把约束挪到 `where` 子句里：`fn f<T, U>(t: T, u: U) where T: Display + Clone, U: Into<T> { ... }`。两种写法完全等价，`where` 只是排版工具；Pebble 里目前只有第 14 篇的 `pebble-net` 用到它，所以我不为它单独做实验。
 
 ### 第二面墙：默认方法里的 `?Sized`
 
@@ -952,7 +952,7 @@ pub fn walk_expr<V: Visit + ?Sized>(visitor: &mut V, expr: &Expr) {
 两个值得细看的 Rust 点：
 
 - **或模式里绑定同一个名字**：`Expr::Binary { lhs, rhs, .. } | Expr::Logical { lhs, rhs, .. }`。两个变体都有 `lhs` 和 `rhs`，类型都是 `Box<Expr>`，所以一个分支体处理两者。
-- **`visitor.visit_expr(operand)`：`operand` 是 `&Box<Expr>`，参数要的是 `&Expr`。** 这能编译是因为**解引用强制转换**（deref coercion）：`Box<T>` 实现了 `Deref<Target = T>`，编译器在需要 `&Expr` 的地方看到 `&Box<Expr>`，自动插入 `&**operand`。这相当于 C++ `unique_ptr::operator*` 隐式地被调用；你不必手写解引用。第 7 篇的 `&PathBuf` 变 `&Path` 是同一个机制。
+- **`visitor.visit_expr(operand)`：`operand` 是 `&Box<Expr>`，参数要的是 `&Expr`。** 这能编译是因为**解引用强制转换**（deref coercion）：`Box<T>` 实现了 `Deref<Target = T>`，编译器在需要 `&Expr` 的地方看到 `&Box<Expr>`，自动插入 `&**operand`。编译器替你写了 `&**operand`；C++ 里这一步要自己写 `*operand`。第 7 篇的 `&PathBuf` 变 `&Path` 是同一个机制。
 
 ## `for stmt in program`：`IntoIterator` 和 `for` 的真面目
 

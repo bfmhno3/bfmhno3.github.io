@@ -882,7 +882,7 @@ bits equal 0/-0    -> false
 bits equal NaN/NaN -> true
 ```
 
-`f64` 的 `==` 遵循 IEEE 754：`0.0 == -0.0` 是真，`NaN == NaN` 是假。作为数学相等这没问题，作为"这两个常量能不能共用一格"就错了：把 `-0.0` 折叠进 `0.0` 会让 `1.0 / -0.0` 悄悄变成 `+inf`；而 `NaN` 永远不等于自己，意味着永远不去重，白占位置。我们要的是**逐比特相同**，所以手写一个自己的比较，不叫 `==`，叫 `same`：
+`f64` 的 `==` 遵循 IEEE 754：`0.0 == -0.0` 是真，`NaN == NaN` 是假。作为数学相等这没问题，作为"这两个常量能不能共用一格"就错了：把 `-0.0` 折叠进 `0.0` 会让 `1.0 / -0.0` 悄悄变成 `+inf`；而 `NaN` 永远不等于自己，意味着永远不去重，白占位置（现在的解析器不会产生这样的字面量，这是为以后常量折叠留的保险）。我们要的是**逐比特相同**，所以手写一个自己的比较，不叫 `==`，叫 `same`：
 
 ```rust
 impl Constant {
@@ -1041,7 +1041,7 @@ error[E0500]: closure requires unique access to `*self` but it is already borrow
 ...
 ```
 
-读法是：`self.names.entry(..)` 对 `self.names` 做了一次可变借用，这个借用在 `or_insert_with` 返回之前一直活着。而闭包 `|| self.intern(..)` 要对整个 `*self` 做可变借用，因为 `intern` 是个 `&mut self` 方法，它**可能**改任何字段，包括正被借用的 `names`。两个可变借用重叠，第 2 篇的"别名和可变不能同时存在"。换成 C++，没有任何东西拦你写出结构相同的代码，要是 `intern` 恰好动了 `names`，手里那个指向槽位的引用就悬空了，未定义行为；Rust 在编译期就说不。
+读法是：`self.names.entry(..)` 对 `self.names` 做了一次可变借用，这个借用在 `or_insert_with` 返回之前一直活着。而闭包 `|| self.intern(..)` 要对整个 `*self` 做可变借用，因为 `intern` 是个 `&mut self` 方法，它**可能**改任何字段，包括正被借用的 `names`。两个可变借用重叠，第 2 篇的"别名和可变不能同时存在"。换成 C++，没有任何东西拦你写出结构相同的代码，要是换成 `vector` 或开放寻址的哈希表，`intern` 恰好触发了扩容，手里那个指向槽位的引用就悬空了，未定义行为；Rust 在编译期就说不。
 
 实验室里 `ch10_capture.rs` 把这个问题缩到最小（一个 `Vec<String>` 做池子，一个 `HashMap` 做名字表），编译器给出同样的 E0500：
 
@@ -1105,6 +1105,19 @@ pool = ["x", "y"]
                 let index = self.name_const(&name.name);
                 self.emit(Opcode::GetName(index), span);
             }
+```
+
+赋值是 `Expr::Assign`，目标是个变量时的分支如下。下标赋值和非法目标先留一个 `todo!()`，第九步再补：
+
+```rust
+            Expr::Assign { target, value, .. } => match target.as_ref() {
+                Expr::Var { name, .. } => {
+                    self.compile_expr(value);
+                    let index = self.name_const(&name.name);
+                    self.emit(Opcode::SetName(index), span);
+                }
+                _ => todo!("assignment target"),
+            },
 ```
 
 赋值 `x = value` 也是先编译右边，然后 `SetName`。注意注释里的细节：`SetName` **把值留在栈上**，因为赋值在 Pebble 里是个表达式（`a = b = 3` 合法）。表达式语句会跟一条 `Pop` 把它扔掉。看 `names.pebble`（`let x = 1; x = x + 2; x;`）：
@@ -1259,7 +1272,7 @@ END:
 
 `placeholder` 只是 `emit` 的别名，让调用处的意图更清楚（"这条的目标是空的，后面要补"）。典型的用法：`let at = chunk.placeholder(Opcode::Jump(0), span);`，操作数 `0` 是占位符，没有意义；返回的 `at` 是这条指令的下标，之后交给 `patch_jump(at, target)`。
 
-`patch_jump` 里有两个值得停下来的东西。第一，`match self.code[at]` 匹配的是一个**位置**（`Vec` 的一个槽位）而不是一个值。第二，最后一个分支里的 `ref other`：这是第 4 篇之后没见过的**绑定模式**。通常 `other => ...` 会把被匹配的值**移动**进 `other`；加了 `ref` 就改成**借用**。看实验室 `ch10_ref_binding.rs`，它用一个不是 `Copy` 的枚举：
+`patch_jump` 里有两个值得停下来的东西。第一，`match self.code[at]` 匹配的是一个**位置**（`Vec` 的一个槽位）而不是一个值。第二，最后一个分支里的 `ref other`：第 9 篇只提过一句"默认绑定模式让你不用写 `ref`"，现在第一次真的写出来。通常 `other => ...` 会把被匹配的值**移动**进 `other`；加了 `ref` 就改成**借用**。看实验室 `ch10_ref_binding.rs`，它用一个不是 `Copy` 的枚举：
 
 ```text
 error[E0507]: cannot move out of index of `Vec<Token>`
@@ -1650,7 +1663,7 @@ test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
     }
 ```
 
-`disassemble_into` 就是之前的循环，加上缩进，加上三组新的操作数格式（`MakeClosure` 和 `Const` 一样是常量下标；`Call`、`BuildList`、`BuildMap` 的操作数是个数），以及遇到 `MakeClosure` 时递归：
+`disassemble_into` 就是之前的循环，加上缩进，加上三组新的操作数格式（`MakeClosure` 和 `Const` 一样是常量下标；`Call` 的操作数是个数，`BuildList`、`BuildMap` 要到第九步才有，到时再把它们并进这一支），以及遇到 `MakeClosure` 时递归：
 
 ```rust
     fn disassemble_into(&self, out: &mut String, indent: usize) {
@@ -1671,7 +1684,7 @@ test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
                 | Opcode::JumpIfFalse(target)
                 | Opcode::JumpIfFalseKeep(target)
                 | Opcode::JumpIfTrueKeep(target) => format!(" -> {target}"),
-                Opcode::Call(count) | Opcode::BuildList(count) | Opcode::BuildMap(count) => {
+                Opcode::Call(count) => {
                     format!(" {count}")
                 }
                 _ => String::new(),
@@ -1768,6 +1781,12 @@ $ pebble run --quiet --dump-bytecode examples/fib.pebble
         SetIndex,
 ```
 
+把它们加进 `opcode_set!` 之后，回到第八步的 `disassemble_into`，把 `Opcode::Call(count) => {` 一行改成三路或模式（`BuildList` 和 `BuildMap` 的操作数也是个数）：
+
+```rust
+                Opcode::Call(count) | Opcode::BuildList(count) | Opcode::BuildMap(count) => {
+```
+
 编译：
 
 ```rust
@@ -1791,7 +1810,7 @@ $ pebble run --quiet --dump-bytecode examples/fib.pebble
             }
 ```
 
-和 `Call` 一个套路：先把所有元素压栈，最后一条指令说"栈顶这 n 个东西做成一个列表"。赋值分支现在完整了，对下标赋值多出一路，目标既不是变量也不是下标时给出一个诊断（`E3003`），把右边照样编译出来，让栈保持平衡：
+和 `Call` 一个套路：先把所有元素压栈，最后一条指令说"栈顶这 n 个东西做成一个列表"。赋值分支现在可以补完整了：把第五步那个带 `todo!("assignment target")` 的 `Expr::Assign` 分支整个换成下面的版本。对下标赋值多出一路，目标既不是变量也不是下标时给出一个诊断（`E3003`），把右边照样编译出来，让栈保持平衡：
 
 ```rust
             Expr::Assign { target, value, .. } => {
@@ -1939,6 +1958,8 @@ while #idx < len(#iter) {
             } => self.compile_for(var, iter, body, span),
 ```
 
+现在 `compile_stmt` 和 `compile_expr` 的两个 `match` 都穷尽了 `Stmt` 和 `Expr` 的每个变体，把 `_ => todo!("statement")` 和 `_ => todo!("expression")` 两个兜底分支删掉（留着它们是不可达分支，会有警告，也和 tag 对不上）。
+
 `range(3)` 上的真实清单（`for i in range(3) { print(i); }`）：
 
 ```text
@@ -2062,7 +2083,7 @@ $ pebble run nested.pebble
 40
 ```
 
-VM（吃的是我们这一篇的字节码）只打印了两行。里层循环跑完时，`" #iter"` 已经是里层的 `[10, 20]`，`" #idx"` 是 `2`，外层回到循环头检查 `2 < len([10, 20])`，不成立，退出。树遍历解释器每个 `for` 有自己的作用域，没这个问题。
+VM（吃的是我们这一篇的字节码）只打印了两行。里层循环跑完时，`" #iter"` 已经是里层的 `[10, 20]`，`" #idx"` 是 `2`，外层先自增（2 变成 3），回到循环头检查 `3 < len([10, 20])`，不成立，退出。树遍历解释器每个 `for` 有自己的作用域，没这个问题。
 
 第二个：
 
@@ -2112,9 +2133,9 @@ $ pebble run shadow.pebble
 
 `for_loop_desugars_to_indexing` 前面讲过它只查三个子串，从 tag 里照抄。
 
-`FunctionProto` 和 `Chunk` 的手写 `Debug` 也从 [tag 里](https://github.com/bfmhno3/pebble/blob/tutorial-v1/crates/pebble-bytecode/src/lib.rs) 抄（`impl fmt::Debug for FunctionProto` 和 `impl fmt::Debug for Chunk`）。它们都用 `f.debug_struct("Name").field(..).finish()`，只打印"有几条指令、几个常量"，不把整个指令序列倒出来。派生版本会把每条指令和每个 `Span` 都打印出来，一个 `assert_eq!` 失败就是几屏输出。可以安全跳过它们：它们只在你打印调试输出时才起作用。
+`FunctionProto` 和 `Chunk` 的手写 `Debug` 也从 [tag 里](https://github.com/bfmhno3/pebble/blob/tutorial-v1/crates/pebble-bytecode/src/lib.rs) 抄（`impl fmt::Debug for FunctionProto` 和 `impl fmt::Debug for Chunk`）。它们都用 `f.debug_struct("Name").field(..).finish()`，只打印"有几条指令、几个常量"，不把整个指令序列倒出来。派生版本会把每条指令和每个 `Span` 都打印出来，一个 `assert_eq!` 失败就是几屏输出。这两个也照抄，不然最后的 `diff` 不干净（没有它们代码照样能编译，它们只在你打印调试输出时才起作用）。
 
-同样安全跳过的还有 `Chunk::push`：
+`Chunk::push` 也要抄，下面的 `chunk!` 要用它：
 
 ```rust
     /// Appends an instruction with no source span.
@@ -2257,7 +2278,7 @@ $ cargo run --quiet --bin ch10_hygiene_ok
 10
 ```
 
-`double!(x + 1)` 里调用者的 `x` 是 10，宏里的 `x` 是 11，结果 22；调用者的 `x` 还是 10。C 的 `#define` 做不到这点：展开后两个 `x` 就是同一个变量。第 6 篇的过程宏里你已经见过卫生性的另一面：`quote!` 里要写绝对路径 `::pebble_span::Spanned`，不依赖调用处有没有 `use`，也不怕调用处恰好有同名的东西。
+`double!(x + 1)` 里调用者的 `x` 是 10，宏里的 `x` 是 11，结果 22；调用者的 `x` 还是 10。C 的 `#define` 做不到这点：展开后两个 `x` 就是同一个变量。过程宏没有这种卫生性：`quote!` 生成的 token 会原样落在调用处。所以第 6 篇里要写绝对路径 `::pebble_span::Spanned`，不依赖调用处有没有 `use`，也不怕调用处恰好有同名的东西，这是过程宏里避免名字冲突的办法。
 
 ### 尾逗号
 
@@ -2364,7 +2385,7 @@ Call, Return, BuildList, BuildMap, Index, SetIndex
 
 ```bash
 for f in crates/pebble-bytecode/Cargo.toml crates/pebble-bytecode/src/lib.rs; do
-  diff <(git -C /path/to/pebble show tutorial-v1:$f) $f && echo "same  $f"
+  diff <(git -C ~/pebble-tag show tutorial-v1:$f) $f && echo "same  $f"
 done
 ```
 
@@ -2533,7 +2554,7 @@ exit: 0
 - [`crates/pebble-bytecode/Cargo.toml`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/crates/pebble-bytecode/Cargo.toml)
 - [`crates/pebble-bytecode/src/lib.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/crates/pebble-bytecode/src/lib.rs)
 
-`crates/pebble-cli/src/sources.rs` 和 `crates/pebble-cli/src/repl.rs` 也已经和 tag 相同，`examples/` 下的五个文件、更早的 `pebble-span`、`pebble-diag`、`pebble-lexer`、`pebble-ast`、`pebble-parser`、`pebble-value`、`pebble-interp` 也都是（我对着 tag 逐个 `diff` 过）。
+`crates/pebble-cli/src/sources.rs` 也已经和 tag 相同（`repl.rs` 还有两处文档注释和 tag 不同，第 9 篇说过，行为一样），`examples/` 下的五个文件、更早的 `pebble-span`、`pebble-diag`、`pebble-lexer`、`pebble-ast`、`pebble-parser`、`pebble-value`、`pebble-interp` 也都是（我对着 tag 逐个 `diff` 过）。
 
 **中间文件**（还不是最终版，后面的篇章会继续改）：
 
@@ -2567,7 +2588,7 @@ exit: 0
     }
 ```
 
-`cargo test -p pebble-bytecode` 是 15 个测试全部通过。但编译器的提醒在**别处**：这个 crate 里没有任何地方对 `Opcode` 做穷尽匹配，所以它不叫；第 12 篇的 VM 有，`cargo build -p pebble-vm`：
+`cargo test -p pebble-bytecode` 是 14 个测试加 1 个 doc test 全部通过。但编译器的提醒在**别处**：这个 crate 里没有任何地方对 `Opcode` 做穷尽匹配，所以它不叫；第 12 篇的 VM 有，`cargo build -p pebble-vm`：
 
 ```text
 error[E0004]: non-exhaustive patterns: `Opcode::Dup` not covered

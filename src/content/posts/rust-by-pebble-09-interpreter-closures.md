@@ -31,7 +31,7 @@ slug: rust-by-pebble-09-interpreter-closures
 - **表达式**（`Expr`）：求值，得到一个 `Value`。`1 + 2` 得到 `Int(3)`。
 - **语句**（`Stmt`）：执行。`let` 往环境里加一个名字，`if` 选一个分支，`while` 反复执行一个块。语句本身不产生值（`Expr` 语句除外），但它们有"怎么结束的"这件事。
 
-"怎么结束的"是整个解释器最有意思的地方。看这个 Pebble 程序，真实运行一遍：
+"怎么结束的"是整个解释器最有意思的地方。看这个 Pebble 程序，真实运行一遍（本篇前面出现的 `pebble run` 输出，要等最后的第二版命令行写好才能自己复现）：
 
 ```pebble
 fn find_first_even(xs) {
@@ -970,7 +970,7 @@ impl Interpreter {
 `match callee` 直接按值匹配，`callee` 在这里被消耗。两条主要路径：
 
 - `Value::Native(function)`：内建函数。`&mut *self.out` 先解引用 `Box<dyn Output>` 得到 `dyn Output`，再取可变借用，变成 `&mut dyn Output`，交给 `call_native`（第 8 篇）。
-- `Value::Function(function)`：用户函数。先检查参数个数（报错信息里 `display_name()` 对匿名函数给 `<anonymous>`），然后把真正的调用交给 `with_call_depth`，出错时用 `map_err` 追加一层调用栈（`with_frame`），所以报错信息能列出整条 `in outer ... in inner ...`。
+- `Value::Function(function)`：用户函数。先检查参数个数（报错信息里 `display_name()` 对匿名函数给 `<anonymous>`），然后把真正的调用交给 `with_call_depth`，出错时用 `map_err` 追加一层调用栈（`with_frame`），所以报错信息能列出整条 `in inner ... in outer ...`。
 
 最后一个分支 `other => Err(...)` 处理"调用一个不是函数的东西"，比如 `let x = 1; x();`。
 
@@ -1208,7 +1208,7 @@ mod tests {
     }
 ```
 
-你手里现在有 5 个测试。tag 的测试模块里还有 7 个同一类的测试：`control_flow_loops`、`print_reaches_the_output_sink`、`runtime_errors_are_reported_with_a_trace`、`recursive_overflow_is_caught`、`arity_errors_are_reported`、`calling_a_non_function_is_an_error`、`type_errors_propagate_from_operators`。它们没有新的 Rust 概念（`recursive_overflow_is_caught` 下一节单独讲），你可以现在就从 [tag](https://github.com/bfmhno3/pebble/blob/tutorial-v1/crates/pebble-interp/src/lib.rs#L533-L726) 复制进来，也可以留到最后一次性换成 tag 的版本。我是现在就复制了，得到的是：
+你手里现在有 5 个测试。tag 的测试模块里还有 7 个同一类的测试（下面按名字列出，不是整段的行范围，因为那个范围里还有后面几步才写的测试）：`control_flow_loops`、`print_reaches_the_output_sink`、`runtime_errors_are_reported_with_a_trace`、`recursive_overflow_is_caught`、`arity_errors_are_reported`、`calling_a_non_function_is_an_error`、`type_errors_propagate_from_operators`。它们没有新的 Rust 概念（`recursive_overflow_is_caught` 下一节单独讲），你可以现在就从 [tag](https://github.com/bfmhno3/pebble/blob/tutorial-v1/crates/pebble-interp/src/lib.rs#L533-L726) 复制进来，也可以留到最后一次性换成 tag 的版本。我是现在就复制了，得到的是：
 
 ```bash
 cargo test -p pebble-interp
@@ -1253,7 +1253,7 @@ test tests::overflow_on_the_default_test_stack ... ok
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 16 filtered out; finished in 0.00s
 ```
 
-我又试了 192、256、320、384、448，全部栈溢出。所以在这台机器上、debug 构建下，测试线程默认的 2 MiB 栈能撑过 128 层、撑不过 192 层，换算下来每层 Pebble 调用大约吃 11 到 16 KiB 栈（这是我用两端界限估的，不是测出来的精确值）。命令行的主线程是 8 MiB，所以同样的 512 在 `pebble run` 里没问题，这也是限制值可以按平台调整的原因，`set_max_depth` 就是给它留的。
+我又试了 192、256、320、384、448，全部栈溢出。所以在这台机器上、debug 构建下，测试线程默认的 2 MiB 栈能撑过 128 层、撑不过 192 层，换算下来每层 Pebble 调用大约吃 11 到 16 KiB 栈（这是我用两端界限估的，不是测出来的精确值）。命令行的主线程是 8 MiB，所以同样的 512 在 `pebble run` 里没问题（1024 就不行了，主线程也会栈溢出），这也是限制值可以按平台调整的原因，`set_max_depth` 就是给它留的。
 
 仓库里的测试 `recursive_overflow_is_caught` 没有用默认线程，而是自己开了一个 64 MiB 的线程：
 
@@ -1455,6 +1455,12 @@ fn resolve_index<T>(items: &[T], key: &Value, span: Span) -> Result<usize, Runti
             Value::Int(5)
         );
     }
+
+    #[test]
+    fn string_concatenation_and_indexing() {
+        assert_eq!(run("\"foo\" + \"bar\";").unwrap().to_string(), "foobar");
+        assert_eq!(run("\"abc\"[2];").unwrap().to_string(), "c");
+    }
 ```
 
 ```text
@@ -1528,7 +1534,7 @@ RefCell already borrowed
 note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 ```
 
-第一部分是快照：克隆一份 `Vec`，在副本上遍历，原件随便改。第二部分是"活借用"：编译通过，运行时 panic，位置在 `borrow_mut()`。C++ 里这就是"一边遍历 `std::vector` 一边 `push_back`"，迭代器失效，是未定义行为，可能崩溃，也可能悄悄给你错误的数据。Rust + `RefCell` 把它变成一个确定的、可复现的 panic；而我们的解释器再往前走一步，用快照让这类程序**有定义**。克隆一个 `Vec<Value>` 每个元素只是把 `Rc` 的计数加一，不是深拷贝，所以快照的代价是一次 `Vec` 分配加 N 次计数递增。
+第一部分是快照：克隆一份 `Vec`，在副本上遍历，原件随便改。第二部分是"活借用"：编译通过，运行时 panic，位置在 `borrow_mut()`。C++ 里这就是"一边遍历 `std::vector` 一边 `push_back`"，迭代器失效，是未定义行为，可能崩溃，也可能悄悄给你错误的数据。Rust + `RefCell` 把它变成一个确定的、可复现的 panic；而我们的解释器再往前走一步，用快照让这类程序**有定义**。克隆一个 `Vec<Value>` 每个元素各 `clone` 一次（`Rc` 变体只是计数加一，整数、浮点这些直接复制），不是深拷贝，所以快照的代价是一次 `Vec` 分配加 N 次廉价的 `clone`。
 
 ## 那个泄漏
 
@@ -1614,7 +1620,7 @@ cargo run --quiet --bin ch09_cycle
 
 对比一目了然：没有函数的作用域在 `drop(plain)` 后马上执行了 `Drop`（打印了 `dropping scope plain`），`Weak::upgrade` 得到 `None`；存了一个捕获自己的函数的作用域，`strong count` 是 2，`drop(globals)` 之后，`Weak::upgrade` 还是 `Some`，而且 `Drop` 根本没被调用，没有那行 `dropping scope globals`。
 
-我们要把这个事实写进测试。Pebble 的测试用 `Weak` 作"看门狗"：
+我们要把这个事实写进测试。两个测试都放在 `tests` 模块末尾，并在模块开头的 `use` 里加一行 `use std::rc::Weak;`（`use pebble_span::SourceId;` 和 `use pebble_value::Buffer;` 你在前几步已经有了）。Pebble 的测试用 `Weak` 作"看门狗"：
 
 ```rust
     /// Any function value stored in the environment it captured forms an `Rc`
@@ -1706,13 +1712,13 @@ second call: None
 
 所以问题没有局部解法：环是**真的**有，因为全局函数确实需要全局环境，全局环境确实需要找到全局函数。引用计数天生无法回收环；`Weak` 只适合"那条边本来就是反向的"的场合，比如父指针（子拥有，父不拥有）。Pebble 的另一个后端不再借用 `Rc`，而是自己写一个**追踪式垃圾回收器**，从根出发标记可达对象，剩下的清扫，环不再是问题。那是[第 11 篇](/posts/rust-by-pebble-11-gc-unsafe/)和[第 12 篇](/posts/rust-by-pebble-12-vm-backends/)。第 12 篇里有个测试会真的造出一个不可达的闭包环，再证明回收器把它释放。
 
-在这之前我选择接受。短命的 CLI 进程退出时操作系统收回所有内存；真正持续运行的使用场景是 REPL，那里每个函数定义泄漏一点点，对一个学习项目来说可以容忍。**把限制写成一个会失败的测试**，比把它写进注释好：哪天有人修好了它，这个测试会红，提醒他更新断言和文档。
+在这之前我选择接受。短命的 CLI 进程退出时操作系统收回所有内存；真正持续运行的使用场景是 REPL，那里每次调用里声明的内层函数（`Env` 和函数互相引用）会泄漏一点点，对一个学习项目来说可以容忍。**把限制写成一个会失败的测试**，比把它写进注释好：哪天有人修好了它，这个测试会红，提醒他更新断言和文档。
 
 ## 补全文件
 
 四步都写完了。现在做最后一件事：让文件和 tag 逐字节一致。需要补的东西有三块。
 
-**文件头**：把文件开头到第一行 `use` 之前的部分换成 tag 里的 [第 1 到 15 行](https://github.com/bfmhno3/pebble/blob/tutorial-v1/crates/pebble-interp/src/lib.rs#L1-L15)：`#![forbid(unsafe_code)]`，那行 `#![allow(clippy::mutable_key_type)]` 加上两行说明理由的注释，以及 crate 级文档注释。这段文档里有一个英文破折号，我的博客不用这个符号，所以不在文章里贴它，请直接从链接复制。`use` 列表就是上一步写的那个，不用动。
+**文件头**：把文件开头到第一行 `use` 之前的部分换成 tag 里的 [第 1 到 15 行](https://github.com/bfmhno3/pebble/blob/tutorial-v1/crates/pebble-interp/src/lib.rs#L1-L15)：`#![forbid(unsafe_code)]`，那行 `#![allow(clippy::mutable_key_type)]` 加上两行说明理由的注释，以及 crate 级文档注释。这段文档里有一个英文破折号，我的博客不用这个符号，所以不在文章里贴它，请直接从链接复制。`use pebble_value::{...}` 那一行要补上 `builtin`（放在 `Value` 之后，`call_native` 之前），因为下面的 `builtin_value` 要用它，其余的 `use` 不用动。
 
 **`builtin_value`**：一个给嵌入使用者的小函数，放在 `iterable_span` 之后、`mod tests` 之前：
 
@@ -2527,7 +2533,7 @@ pebble>
 
 ## 检查点
 
-在 `/tmp/pebble-rebuild-09`（你的是 `~/pebble`）里运行：
+在工作区根目录里运行：
 
 ```bash
 cargo test -p pebble-interp
@@ -2538,13 +2544,16 @@ cargo fmt --all --check
 
 ```text
 $ cargo test -p pebble-interp
+...
 test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 $ cargo test -p pebble-cli
+...
 running 3 tests
 test repl::tests::arguments_are_kept_whole ... ok
 test repl::tests::quit_has_a_short_form ... ok
 test repl::tests::unknown_commands_are_rejected ... ok
 test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+...
 running 7 tests
 test unknown_subcommands_are_usage_errors ... ok
 test run_reports_parse_errors_on_stderr ... ok
@@ -2555,6 +2564,7 @@ test tokens_prints_one_line_per_token ... ok
 test run_evaluates_fibonacci ... ok
 test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
 $ cargo clippy --workspace --all-targets -- -D warnings
+...
     Checking pebble-cli v0.1.0 (/tmp/pebble-rebuild-09/crates/pebble-cli)
     Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.41s
 $ cargo fmt --all --check; echo "exit: $?"
@@ -2570,7 +2580,7 @@ exit: 0
 
 ```bash
 for f in crates/pebble-interp/Cargo.toml crates/pebble-interp/src/lib.rs; do
-  diff <(git -C /path/to/pebble show tutorial-v1:$f) $f && echo "same  $f"
+  diff <(git -C ~/pebble-tag show tutorial-v1:$f) $f && echo "same  $f"
 done
 ```
 
@@ -2597,7 +2607,16 @@ same  crates/pebble-interp/src/lib.rs
 
 </details>
 
-**2. `fn f() {}` 单独一行会泄漏吗？** 先预测，再解释。顺便猜一下下面几个程序里哪些让全局环境泄漏。
+**2. `fn f() {}` 单独一行会泄漏吗？** 先预测，再解释。顺便猜一下下面六个程序里哪些让全局环境泄漏（每个程序跑完、丢掉解释器之后，检查全局环境是否还活着）：
+
+```pebble
+fn f() {}
+let f = fn() { return 1; }; f();
+(fn() { return 1; })();
+let x = [1, 2]; for i in x { print(i); }
+fn make() { return fn() { return 1; }; } let g = make();
+let a = []; push(a, a);
+```
 
 <details>
 <summary>参考答案</summary>

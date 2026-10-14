@@ -244,18 +244,28 @@ $ cargo new --lib crates/pebble-span
 note: see more `Cargo.toml` keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 ```
 
-cargo 给我们的 `crates/pebble-span/Cargo.toml` 是最小的：
+因为目录在 workspace 里，cargo 已经替我们写好了继承行和 `[lints]`，`crates/pebble-span/Cargo.toml` 是这样的：
 
 ```toml
 [package]
 name = "pebble-span"
-version = "0.1.0"
-edition = "2024"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description.workspace = true
+keywords.workspace = true
+categories.workspace = true
 
 [dependencies]
+
+[lints]
+workspace = true
 ```
 
-把它整个替换成继承 workspace 配置的版本（文件 `crates/pebble-span/Cargo.toml`）：
+我们只改两处：`description` 换成这个 crate 自己的一句话，`keywords` 和 `categories` 两行删掉（它们继承的是整个项目的描述，不适合单个 crate），空的 `[dependencies]` 也不需要。整个文件变成（文件 `crates/pebble-span/Cargo.toml`）：
 
 ```toml
 [package]
@@ -272,7 +282,7 @@ repository.workspace = true
 workspace = true
 ```
 
-`version.workspace = true` 这种点号写法是 TOML 的普通语法，等价于 `[version]` 表里写 `workspace = true`。这个文件和仓库标签里的**完全一致**，以后不会再改。
+`version.workspace = true` 这种点号写法是 TOML 的普通语法，等价于 `[package.version]` 表里写 `workspace = true`。这个文件和仓库标签里的**完全一致**，以后不会再改。
 
 `cargo new` 还生成了一个 `lib.rs`，里面有一个 `add` 函数和一个叫 `it_works` 的测试。这是它的模板，我们要整个换掉。先把这个文件清空，下面开始写真正的内容。
 
@@ -296,7 +306,7 @@ pub struct SourceId(pub u32);
 
 - `pub struct SourceId(pub u32);`：`struct` 定义结构体；这种圆括号形式叫**元组结构体**，字段没有名字，按位置访问：`id.0`。里面的 `pub` 说明这个字段对外可见（默认私有）；`u32` 是 32 位无符号整数。
 - `///` 是文档注释，会进 `cargo doc` 生成的文档。仓库的规则是每个公开项都要有。
-- `#[derive(...)]` 让编译器按字段自动生成 trait 的实现。trait 是第 2 篇才正式讲的东西，现在把它理解成"接口"，对应 C++ 的 concept 或抽象基类就够了。这里一口气派生了六个：
+- `#[derive(...)]` 让编译器按字段自动生成 trait 的实现。trait 是第 2 篇才正式讲的东西，现在把它理解成"接口"，对应 C++ 的 concept 或抽象基类就够了。这里一口气派生了七个：
   - `Copy` 和 `Clone`：复制。`Copy` 的意思是"按位复制就是完整的复制"，和 C 里 struct 赋值一样（`memcpy`）。后面会看到，有些类型（比如拥有堆内存的 `String`）不能 `Copy`，第 2 篇解释为什么。
   - `PartialEq` 和 `Eq`：`==` 和 `!=`。
   - `PartialOrd` 和 `Ord`：`<`、`>` 和排序。
@@ -334,7 +344,7 @@ For more information about this error, try `rustc --explain E0308`.
 error: could not compile `rust-lab` (bin "ch01_newtype") due to 1 previous error
 ```
 
-（完整文件在 [lab 的实验清单](#实验清单) 里说明；你只需要把 `SourceId`、`Span` 和 `Span::new` 抄进去。）这条错误里最重要的是编码 `E0308`：以后你会无数次见到它。`rustc --explain E0308` 会打印一段详细解释。
+（完整文件在 [lab 的实验清单](#实验清单) 里说明；`Span` 的完整定义在下一节，先照抄下一节的 `struct Span` 与 `Span::new` 即可，外加上面的 `SourceId`。）这条错误里最重要的是编码 `E0308`：以后你会无数次见到它。`rustc --explain E0308` 会打印一段详细解释。
 
 那它有运行时代价吗？没有。实验 `ch01_sizes.rs`：
 
@@ -560,7 +570,7 @@ $ cargo run --quiet --bin ch01_casts_ok
 Err(TryFromIntError(()))
 ```
 
-读一下：前两行是我们要的；`300 as u8` 静默截断成 44（和 C 的 `(uint8_t)300` 一样）；`-1 as u32` 是 4294967295（和 C 一样）；`3.9 as i32` 截断成 3；`-1.0 as u8` 饱和成 0（C 里浮点数转整数越界是未定义行为，Rust 把它定义成了饱和）。`as` 永远不会失败，也永远不会警告，这既方便又危险：Pebble 的 `Span` 里 `u32` 和 `usize` 之间的转换点我都是刻意写的，第 2 篇你会在 `SourceFile` 里看到一堆 `as u32`，它们每一处都意味着"我断言这个文件小于 4 GiB"。需要检查的转换用 `TryFrom`，最后两行显示 300 能放进 `u32` 但放不进 `u8`，失败时返回 `Err`，我们在第 8 篇会自己实现一个。
+读一下：前两行是我们要的；`300 as u8` 静默截断成 44（和 C 的 `(uint8_t)300` 一样）；`-1 as u32` 是 4294967295（和 C 一样）；`3.9 as i32` 截断成 3；`-1.0 as u8` 饱和成 0（C 里浮点数转整数越界是未定义行为，Rust 把它定义成了饱和）。`as` 永远不会失败，也永远不会警告，这既方便又危险：Pebble 的 `Span` 里 `u32` 和 `usize` 之间的转换点我都是刻意写的，第 2 篇你会在 `SourceFile` 里看到一堆 `as u32`，它们每一处都意味着"我断言这个文件小于 4 GiB"。需要检查的转换用 `TryFrom`，最后两行显示 300 能放进 `u32` 但放不进 `u8`，失败时返回 `Err`，我们在第 8 篇会自己实现一个。（`.unwrap()` 先读作"取出结果，失败就 panic"，第 2 篇细讲。）
 
 溢出呢？实验 `ch01_overflow.rs`（里面的 `black_box` 只是让优化器看不出值，不然编译器会在编译期直接拒绝这个溢出）：
 
@@ -815,7 +825,7 @@ found 2 * 3 == 6
 }
 ```
 
-`merge` 不是 `const fn`：我试过把它改成 `pub const fn merge`，编译器回了 `error[E0015]: cannot call non-const operator in constant functions`，指向的正是 `debug_assert_eq!` 里对 `SourceId` 的 `==`（派生出来的 `PartialEq` 不是 `const` 的）。`contains` 只比较基本整数，所以可以是 `const fn`。
+`merge` 不是 `const fn`：我试过把它改成 `pub const fn merge`，编译器回了 `error[E0015]: cannot call non-const operator in constant functions`，指向的正是 `debug_assert_eq!` 里对 `SourceId` 的 `==`（派生出来的 `PartialEq` 不是 `const` 的）。即使去掉断言也不行：`u32::min`/`max` 目前还不是 const 的（编译器还会报 E0658）。`contains` 只比较基本整数，所以可以是 `const fn`。
 
 `debug_assert_eq!(a, b, "message")` 断言 `a == b`，失败则 panic。它和 C 的 `assert` + `NDEBUG` 是一个思路：只在调试构建里检查，发布构建里整行消失。我们的 `merge` 的契约是"两个 span 来自同一个文件"，违反它是编译器自己的 bug，不是用户的错，所以用 debug 断言，不污染发布版本。`self.start.min(other.start)` 里的 `.min` 是整数的方法，不是宏，不需要 `<algorithm>`。
 
@@ -952,12 +962,18 @@ cargo fmt --all --check
 
 `cargo fmt --all --check` 什么都不输出（退出码 0）就是格式正确。如果它打印了 diff，直接运行 `cargo fmt --all` 让 rustfmt 替你改。
 
+先拿到标签的本地克隆，以后每一篇的 `diff` 都用它（只需要做一次）：
+
+```bash
+git clone --branch tutorial-v1 https://github.com/bfmhno3/pebble ~/pebble-tag
+```
+
 **必须和标签一致的文件：**
 
 - [`crates/pebble-span/Cargo.toml`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/crates/pebble-span/Cargo.toml)：已经完成，以后不会再变。验证：
 
 ```bash
-diff <(git -C /path/to/pebble show tutorial-v1:crates/pebble-span/Cargo.toml) crates/pebble-span/Cargo.toml
+diff <(git -C ~/pebble-tag show tutorial-v1:crates/pebble-span/Cargo.toml) crates/pebble-span/Cargo.toml
 ```
 
 **中间版本（后面的章节会继续改）：**

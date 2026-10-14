@@ -118,10 +118,9 @@ enum Result<T, E> {
 }
 ```
 
-就是一个普通的泛型 `enum`（泛型下一篇细讲，这里先当成 "`T` 和 `E` 是占位的类型"）。函数返回 `Result<Stmt, Diagnostic>`，意思是 "要么给你一个 `Stmt`，要么给你一个 `Diagnostic`"。想用里面的 `Stmt`，你必须先 `match` 掉 `Err`（第 3 篇学过的穷尽匹配）。更狠的一点：`Result` 被标了 `#[must_use]`，忽略它编译器就警告。我在实验室里验证过：
+就是一个普通的泛型 `enum`（泛型第 5 篇讲过，这里只需要知道 `T` 和 `E` 是占位的类型）。函数返回 `Result<Stmt, Diagnostic>`，意思是 "要么给你一个 `Stmt`，要么给你一个 `Diagnostic`"。想用里面的 `Stmt`，你必须先 `match` 掉 `Err`（第 3 篇学过的穷尽匹配）。更狠的一点：`Result` 被标了 `#[must_use]`，忽略它编译器就警告。我在实验室里验证过（`~/rust-lab/src/bin/ch07_must_use.rs`）：
 
 ```rust
-// ~/rust-lab/src/bin/ch07_must_use.rs
 fn parse_digit(c: char) -> Result<u32, String> {
     c.to_digit(10).ok_or(format!("`{c}` is not a digit"))
 }
@@ -155,10 +154,9 @@ warning: `rust-lab` (bin "ch07_must_use") generated 1 warning
 
 ### `?`：错误向上传，一个字符的事
 
-纯用 `match` 处理每一个 `Result` 会把代码淹没在 `Err(e) => return Err(e)` 里。`?` 运算符就是这个模式的缩写：`Ok(v)` 就取出 `v` 继续，`Err(e)` 就立刻从当前函数 `return Err(e)`。实验室里把两种写法并排放：
+纯用 `match` 处理每一个 `Result` 会把代码淹没在 `Err(e) => return Err(e)` 里。`?` 运算符就是这个模式的缩写：`Ok(v)` 就取出 `v` 继续，`Err(e)` 就立刻从当前函数 `return Err(e)`。实验室里把两种写法并排放（`~/rust-lab/src/bin/ch07_question.rs`（节选））：
 
 ```rust
-// ~/rust-lab/src/bin/ch07_question.rs（节选）
 fn with_question(a: &str, b: &str) -> Result<i64, ParseIntError> {
     let x = a.parse::<i64>()?;
     let y = b.parse::<i64>()?;
@@ -188,7 +186,7 @@ Err(ParseIntError { kind: InvalidDigit })
 
 先写 `crates/pebble-parser/src/lib.rs` 的开头：crate 属性和文档，导入，结果类型，以及入口函数 `parse`。
 
-第 1 行是 crate 属性（和第 2 篇一样，禁止 `unsafe`）；第 2 到 13 行是一段 `//!` 的 crate 文档，说明这个解析器是递归下降加优先级爬升、错误都是值、出错会恢复。那段文字我不在文章里重复了（里面有两个我没改的破折号，要逐字节一致的话请从参考克隆里原样复制），然后是导入：
+第 1 行是 crate 属性（和第 2 篇一样，禁止 `unsafe`）；第 2 到 13 行是一段 `//!` 的 crate 文档，说明这个解析器是递归下降加优先级爬升、错误都是值、出错会恢复。那段文字我不在文章里重复了（里面有两个我没改的破折号，要逐字节一致的话请从 `~/pebble-tag` 里原样复制；这是 tag 的本地克隆，没建的话命令在下面复制那一节），然后是导入：
 
 ```rust
 #![forbid(unsafe_code)]
@@ -297,10 +295,9 @@ impl<'src> Parser<'src> {
 几个值得停一下的点：
 
 - `peek` 返回 `&Token<'src>`，一个借用，不是拷贝。`self.current.min(self.tokens.len() - 1)` 的注释说 "词法分析器保证末尾有 `Eof`，所以下标永远有效"。这是一个**不变量**：如果有人给 `Parser::new` 传了空的 `Vec`，这行代码会 panic。这是 bug，不是用户输入错误，所以用 panic 而不是 `Result`；本章后面会再谈这个界线。
-- `check` 比较的是 `mem::discriminant`，也就是 "这是 `TokenKind` 的哪个变体"，不看变体里的数据。为什么要这样？因为我们想问 "当前 token 是不是一个标识符"，却不关心它叫什么名字，而 `==` 会把 `Ident("total")` 和 `Ident("")` 判成不相等。实验室里验证：
+- `check` 比较的是 `mem::discriminant`，也就是 "这是 `TokenKind` 的哪个变体"，不看变体里的数据。为什么要这样？因为我们想问 "当前 token 是不是一个标识符"，却不关心它叫什么名字，而 `==` 会把 `Ident("total")` 和 `Ident("")` 判成不相等。实验室里验证（`~/rust-lab/src/bin/ch07_discriminant.rs`（节选））：
 
 ```rust
-// ~/rust-lab/src/bin/ch07_discriminant.rs（节选）
 let wanted = Tok::Ident("");
 let found = Tok::Ident("total");
 println!("== : {}", wanted == found);
@@ -476,7 +473,7 @@ error: test failed, to rerun pass `-p pebble-parser --lib`
 - **只有程序写错了才会发生的失败，才可以 panic。** 违反了自己的不变量，例如 "词法分析器保证最后一个 token 是 `Eof`"。
 - 测试里 `unwrap`/`expect` 随便用：测试失败本来就应该大声喊出来。
 
-下面是实验室里一个 "不该 unwrap" 的例子：10 行的命令行解析，用户给了一个不存在的文件，程序直接 panic：
+下面是实验室里一个 "不该 unwrap" 的例子：13 行的命令行解析，用户给了一个不存在的文件，程序直接 panic：
 
 ```text
 $ cargo run --quiet --bin ch07_args -- count nope.pebble; echo $?
@@ -571,7 +568,7 @@ enum Infix {
 }
 ```
 
-这个枚举是私有的，也不需要对外导出。`#[derive(Copy, Clone)]`：每个变体里装的 `BinaryOp`/`LogicalOp` 本身就是 `Copy`（第 5 篇的 AST 里就派生好了），所以这个标记也可以被按位复制，下面 `while let` 里会用到这一点。
+这个枚举是私有的，也不需要对外导出。`#[derive(Copy, Clone)]`：每个变体里装的 `BinaryOp`/`LogicalOp` 本身就是 `Copy`（第 5 篇的 AST 里就派生好了），所以这个标记也可以被按位复制。
 
 接着是 `infix_op`：把 token 类型映射成 `(优先级, 含义)`，不是中缀运算符就返回 `None`。放在 `impl` 块之后，作为独立函数：
 
@@ -636,7 +633,7 @@ fn infix_op(kind: &TokenKind<'_>) -> Option<(u8, Infix)> {
 
 有三件事值得慢一点看。
 
-**第一，`while let Some((prec, infix)) = infix_op(&self.peek().kind)`。** 这里把一个借用交给了 `infix_op`（`&self.peek().kind` 借用了 `self`），但是 `infix_op` 返回的 `(u8, Infix)` 里没有任何引用，所以借用在这条语句结束时就终止了。因此循环体里可以放心地调用 `self.advance()`（需要 `&mut self`）。如果 `infix_op` 返回的是一个指向 token 内部的引用，这段代码就过不了借用检查。这就是前面把 `Infix` 设计成 `Copy` 的价值。
+**第一，`while let Some((prec, infix)) = infix_op(&self.peek().kind)`。** 这里把一个借用交给了 `infix_op`（`&self.peek().kind` 借用了 `self`），但是 `infix_op` 返回的 `(u8, Infix)` 里没有任何引用，所以借用在这条语句结束时就终止了。因此循环体里可以放心地调用 `self.advance()`（需要 `&mut self`）。如果 `infix_op` 返回的是一个指向 token 内部的引用，这段代码就过不了借用检查。借用在这条语句结束时就终止，是因为返回值里没有引用。
 
 **第二，`left = match infix { ... Box::new(left) ... }`。** 在赋值语句的右边，我们把 `left` **移动**进了 `Box`，然后马上把新节点赋值回 `left`。移动之后的 `left` 是未初始化状态，但赋值给它就重新初始化了，编译器看得懂这件事。C++ 里同样的逻辑你会写 `left = std::make_unique<Binary>(std::move(left), std::move(right))`，Rust 里没有 `std::move` 这个动词，因为移动是默认行为。我在实验室里用一个玩具枚举验证过这个模式：
 
@@ -877,7 +874,7 @@ fn is_assignable(expr: &Expr) -> bool {
     }
 ```
 
-把占位的 `statement` 改成只调用它（`self.expression_statement()`），删掉占位的 `expression`（上面已经有真的了）。测试模块里先写四个测试：优先级、括号、减法左结合，加上 `rejects_assignment_to_literal`。测试里的 `parse_ok` 是一个小助手：解析一段源码，断言没有诊断，把 `Program` 还给调用者。
+把占位的 `statement` 改成只调用它（`self.expression_statement()`），删掉占位的 `expression`（上面已经有真的了）。把 `tests` 模块整个换成下面这份（`first_light` 已完成使命，删掉），先写四个测试：优先级、括号、减法左结合，加上 `rejects_assignment_to_literal`。测试里的 `parse_ok` 是一个小助手：解析一段源码，断言没有诊断，把 `Program` 还给调用者。
 
 ```rust
 #[cfg(test)]
@@ -1191,7 +1188,7 @@ error: could not compile `rust-lab` (bin "ch07_deferred_fail") due to 1 previous
     }
 ```
 
-最后一行的提示 ``this `{` is never closed`` 是我很喜欢的一个错误信息。用户忘了 `}` 时，解析器一路读到文件末尾才发现，所以主错误指向文件末尾，而 `context` 参数把真正的原因写进了 note。用一个只有 `fn f() {` 和一句 `print(1);` 的文件试一下：
+最后一行的提示 ``this `{` is never closed`` 是我很喜欢的一个错误信息。用户忘了 `}` 时，解析器一路读到文件末尾才发现，所以主错误指向文件末尾，而 `context` 参数把真正的原因写进了 note。用一个两行的文件试一下（第一行 `fn f() {`，第二行 `    print(1);`，以换行结尾；命令行在本篇后半才写好，现在先看输出，写完之后可以回来复现）：
 
 ```text
 $ cargo run --quiet -p pebble-cli -- check unclosed.pebble; echo $?
@@ -1241,7 +1238,7 @@ error[E1001]: expected `}`, found end of file
 
 ### 把剩下的复制进来
 
-到这里，我们写过的函数已经覆盖了这个解析器里每一种技巧。剩下的函数只是同一个模板的重复，没有新的 Rust 知识，所以我们**复制**它们。打开 `https://github.com/bfmhno3/pebble/blob/tutorial-v1/crates/pebble-parser/src/lib.rs`（或者你本地的参考克隆 `git clone --branch tutorial-v1 https://github.com/bfmhno3/pebble ~/pebble-ref`），把下面这些项复制到你的文件里，位置和 `tutorial-v1` 里一样：
+到这里，我们写过的函数已经覆盖了这个解析器里每一种技巧。剩下的函数只是同一个模板的重复，没有新的 Rust 知识，所以我们**复制**它们。打开 `https://github.com/bfmhno3/pebble/blob/tutorial-v1/crates/pebble-parser/src/lib.rs`（或者你本地的 `~/pebble-tag`，没建的话 `git clone --branch tutorial-v1 https://github.com/bfmhno3/pebble ~/pebble-tag`），把下面这些项复制到你的文件里，位置和 `tutorial-v1` 里一样：
 
 - `parse_expression`（紧跟在 `parse` 之后）：给以后的 REPL 用的入口，只解析一个表达式。
 - `Parser::errors`（`new` 之后）：对外暴露已收集的诊断。
@@ -1287,10 +1284,7 @@ error[E1001]: expected `}`, found end of file
 第一个测试验证了恢复：错误不止一个，而且后面的 `let z` 还在。第二个验证了错误码和位置信息真的被带出来了。还有一个叫 `skips_empty_statements_never_panics_on_garbage` 的测试，把一堆乱七八糟的输入（`")))"`、`"{{{"`、`"a["`……）扔给解析器，只要求不 panic：解析用户输入的函数不应该有 panic 路径，这个测试就是这条规则的一个小小守卫。
 
 ```text
-    Blocking waiting for file lock on package cache
-    Blocking waiting for file lock on package cache
-    Blocking waiting for file lock on package cache
-   Compiling pebble-parser v0.1.0 (/tmp/pebble-rebuild-07/crates/pebble-parser)
+...
     Finished `test` profile [unoptimized + debuginfo] target(s) in 4.92s
      Running unittests src/lib.rs (target/debug/deps/pebble_parser-d9282dee6a0168a0)
 
@@ -1438,7 +1432,7 @@ pub(crate) struct FileArgs {
 
 C/C++ 里 "一个源文件" 和 "一个翻译单元" 是由构建系统决定的，头文件是你手工维护的接口。Rust 的模块系统是语言的一部分：`main.rs` 里写 `mod cli;` 就告诉编译器，"有一个叫 `cli` 的模块，它的内容在同目录的 `cli.rs` 里"。**没有头文件**，一个模块的接口就是它标了 `pub` 的那些项。
 
-可见性默认是私有的，"私有" 的意思是 "只有这个模块和它的子模块能看见"（和 C 的 `static` 有点像，但粒度是模块）。`pub` 是 "所有人"，但在一个二进制 crate 里，**没有任何别的 crate 会依赖你**，所以 `pub` 其实是撒谎：没人能用它。`pub(crate)` 说的是真话："这个 crate 里的任何地方可见"。所以我把命令行 crate 的所有项都写成 `pub(crate)`。（`pebble-cli` 在 `tutorial-v1` 里已经是这样了，这是 Phase A 里的一次专门的小重构。）
+可见性默认是私有的，"私有" 的意思是 "只有这个模块和它的子模块能看见"（和 C 的 `static` 有点像，但粒度是模块）。`pub` 是 "所有人"，但在一个二进制 crate 里，**没有任何别的 crate 会依赖你**，所以 `pub` 其实是撒谎：没人能用它。`pub(crate)` 说的是真话："这个 crate 里的任何地方可见"。所以我把命令行 crate 的所有项都写成 `pub(crate)`。（`pebble-cli` 在 `tutorial-v1` 里已经是这样了。）
 
 在别的模块里引用它们用 `use crate::cli::{Cli, Command};`，`crate::` 从当前 crate 的根开始，不依赖当前文件在哪，这比 C 的 `#include "../../x.h"` 的相对路径健壮得多。
 
@@ -1513,9 +1507,9 @@ pub(crate) fn emit(diagnostics: &[Diagnostic], sources: &SourceMap) -> bool {
 }
 ```
 
-三个要说明的地方：
+几个要说明的地方：
 
-- `Source::load` 用到 `anyhow`（下面细讲）；`fs::read_to_string(path)` 返回 `io::Result<String>`，我们用 `.with_context(|| format!(...))` 给错误加上 "cannot read 文件名" 这层说明，再用 `?` 抛出去。`with_context` 接受的是一个**闭包**，只有出错时才会调用，所以成功路径上不会白白格式化一个字符串。
+- `Source::load(&args.file)` 传的是 `&PathBuf`，而函数要的是 `&Path`：这是第 5 篇讲过的解引用强制转换（deref coercion），编译器自动插入解引用，和 `&String` 变 `&str` 一样。`Source::load` 用到 `anyhow`（下面细讲）；`fs::read_to_string(path)` 返回 `io::Result<String>`，我们用 `.with_context(|| format!(...))` 给错误加上 "cannot read 文件名" 这层说明，再用 `?` 抛出去。`with_context` 接受的是一个**闭包**，只有出错时才会调用，所以成功路径上不会白白格式化一个字符串。
 - `Source::text(&self) -> &str`：返回的借用来自 `self.map`，所以只要 `Source` 还活着它就有效。这是第 2 篇的 "返回借用" 的又一次出场。`self.map[self.id]` 是第 2 篇给 `SourceMap` 写的 `Index<SourceId>`。
 - `emit` 把所有诊断 `eprint!` 到**标准错误**，返回有没有真正的错误。诊断是给人看的消息，输出到 stderr；程序真正的输出（token 列表、语法树）去 stdout。这样 `pebble parse x.pebble > tree.txt` 得到的是一棵干净的树，错误还在终端里。
 
@@ -1586,7 +1580,23 @@ pub(crate) fn check(args: &FileArgs) -> Result<u8> {
 
 ### `anyhow` 和 `ExitCode`
 
-`anyhow::Error` 是一个 "装得下任何错误" 的类型，外加一条 "上下文" 的链。`?` 作用在 `io::Error` 上时，借助上面提到的 `From` 转换，自动把它装进 `anyhow::Error`。实验室里看它的三种打印方式：
+`anyhow::Error` 是一个 "装得下任何错误" 的类型，外加一条 "上下文" 的链。`?` 作用在错误上时，会借助上面提到的 `From` 转换，把它装进 `anyhow::Error`（上面的 `Source::load` 里是 `with_context` 做的这一步，`?` 只是把它抛出去）。实验室里（新建一个依赖 `anyhow` 的 crate，`main.rs` 如下）看它的三种打印方式：
+
+```rust
+use anyhow::{Context, Result};
+use std::fs;
+
+fn load(path: &str) -> Result<String> {
+    fs::read_to_string(path).with_context(|| format!("cannot read {path}"))
+}
+
+fn main() {
+    let error = load("nope.pebble").unwrap_err();
+    println!("{{error}}   : {error}");
+    println!("{{error:#}}  : {error:#}");
+    println!("{{error:?}}  :\n{error:?}");
+}
+```
 
 ```text
 $ cargo run --quiet
@@ -1871,7 +1881,7 @@ Options:
 
 ### 集成测试
 
-最后一块：测试这个二进制本身。Rust 的测试有三种：单元测试（放在源文件里的 `#[cfg(test)] mod tests`，可以访问私有项）、**集成测试**（放在 `tests/` 目录下，每个文件被编译成一个独立的 crate，只能用公开的接口）、文档测试（下一篇会遇到）。对一个二进制 crate 来说，集成测试有一个更强的含义：它没法 `use` 你 `main.rs` 里的函数，所以只能把整个程序当作黑盒启动起来，看它的输出和退出码。这正是我们想要的：测试用户实际会碰到的东西。
+最后一块：测试这个二进制本身。Rust 的测试有三种：单元测试（放在源文件里的 `#[cfg(test)] mod tests`，可以访问私有项）、**集成测试**（放在 `tests/` 目录下，每个文件被编译成一个独立的 crate，只能用公开的接口）、文档测试（第 10 篇会写第一个）。对一个二进制 crate 来说，集成测试有一个更强的含义：它没法 `use` 你 `main.rs` 里的函数，所以只能把整个程序当作黑盒启动起来，看它的输出和退出码。这正是我们想要的：测试用户实际会碰到的东西。
 
 创建 `crates/pebble-cli/tests/cli.rs`：
 
@@ -1961,12 +1971,7 @@ cargo test -p pebble-parser -p pebble-cli
 
 ```text
 $ cargo test -p pebble-parser -p pebble-cli
-   Compiling pebble-span v0.1.0 (/tmp/pebble-rebuild-07/crates/pebble-span)
-   Compiling pebble-diag v0.1.0 (/tmp/pebble-rebuild-07/crates/pebble-diag)
-   Compiling pebble-ast v0.1.0 (/tmp/pebble-rebuild-07/crates/pebble-ast)
-   Compiling pebble-lexer v0.1.0 (/tmp/pebble-rebuild-07/crates/pebble-lexer)
-   Compiling pebble-parser v0.1.0 (/tmp/pebble-rebuild-07/crates/pebble-parser)
-   Compiling pebble-cli v0.1.0 (/tmp/pebble-rebuild-07/crates/pebble-cli)
+...
     Finished `test` profile [unoptimized + debuginfo] target(s) in 0.85s
      Running unittests src/main.rs (target/debug/deps/pebble-3cbe36229cfe436a)
 
@@ -2018,14 +2023,14 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 - [`crates/pebble-parser/Cargo.toml`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/crates/pebble-parser/Cargo.toml)
 - [`examples/hello.pebble`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/examples/hello.pebble)、[`fib.pebble`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/examples/fib.pebble)、[`errors.pebble`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/examples/errors.pebble)、[`closures.pebble`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/examples/closures.pebble)、[`collections.pebble`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/examples/collections.pebble)
 
-用参考克隆 `~/pebble-ref` 来验证：
+用本地克隆 `~/pebble-tag` 来验证：
 
 ```bash
 cd ~/pebble
 for f in crates/pebble-parser/src/lib.rs crates/pebble-parser/Cargo.toml \
          examples/hello.pebble examples/fib.pebble examples/closures.pebble \
          examples/collections.pebble examples/errors.pebble; do
-  diff -q ~/pebble-ref/$f ~/pebble/$f >/dev/null && echo "same  $f"
+  diff -q ~/pebble-tag/$f ~/pebble/$f >/dev/null && echo "same  $f"
 done
 ```
 
@@ -2108,7 +2113,7 @@ pub(crate) struct ParseArgs {
 }
 ```
 
-把 `Command::Parse(FileArgs)` 改成 `Parse(ParseArgs)`，在 `commands.rs` 里 `parse` 的参数类型换成 `&ParseArgs`，打印那一行变成：
+把 `Command::Parse(FileArgs)` 改成 `Parse(ParseArgs)`，在 `commands.rs` 里 `parse` 的参数类型换成 `&ParseArgs`（并把 `use crate::cli::FileArgs;` 改成 `use crate::cli::{FileArgs, ParseArgs};`），打印那一行变成：
 
 ```rust
 if !args.quiet {

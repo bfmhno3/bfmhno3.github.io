@@ -267,7 +267,7 @@ impl GcObject for VmObject {
 
 `trace` 的参数 `mark: &mut dyn FnMut(GcRef)` 是第 11 篇的 trait 对象闭包：回收器给我们一个回调，我们对每个子引用调用一次。这个 `match` 是**穷尽**的，所以将来给 `VmObject` 加第七个变体时，编译器会逼你来这里，想清楚新对象引用不引用别的对象。这是 `trace` 唯一不可以写错的地方：漏标一个子引用，那个子对象在下一次回收时就会被释放，而一个活着的对象里还留着指向它的句柄。
 
-`VmObject::Env` 这一支里 `if let Some(parent) = parent { mark(*parent); }`：`parent` 的类型是 `&Option<GcRef>`（因为 `match self` 里 `self` 是引用，默认绑定模式把字段变成引用），`if let Some(parent) = parent` 里的 `parent` 于是是 `&GcRef`，所以要 `*parent`。这是第 6 篇讲 `match self` 绑定模式时的同一个现象。
+`VmObject::Env` 这一支里 `if let Some(parent) = parent { mark(*parent); }`：`parent` 的类型是 `&Option<GcRef>`（因为 `match self` 里 `self` 是引用，默认绑定模式把字段变成引用），`if let Some(parent) = parent` 里的 `parent` 于是是 `&GcRef`，所以要 `*parent`。这是第 5 篇讲 `match self` 绑定模式时的同一个现象。
 
 ## 帧和 Vm 本体
 
@@ -958,7 +958,7 @@ error: could not compile `pebble-vm` (lib) due to 1 previous error
 
 ## 复制：运算符、下标、内建函数、显示
 
-这些方法的共同点是：它们都在用上面已经讲过的东西，没有新的 Rust 知识。我们**复制**它们。把 `https://github.com/bfmhno3/pebble/blob/tutorial-v1/crates/pebble-vm/src/lib.rs` 的[第 531 行到第 1101 行](https://github.com/bfmhno3/pebble/blob/tutorial-v1/crates/pebble-vm/src/lib.rs#L531-L1101)（或者在参考克隆里 `sed -n '531,1101p' ~/pebble-ref/crates/pebble-vm/src/lib.rs`）原样粘贴到 `call` 的后面，中间空一行。这一整块是：
+这些方法的共同点是：它们都在用上面已经讲过的东西，没有新的 Rust 知识。我们**复制**它们。把 `https://github.com/bfmhno3/pebble/blob/tutorial-v1/crates/pebble-vm/src/lib.rs` 的[第 531 行到第 1101 行](https://github.com/bfmhno3/pebble/blob/tutorial-v1/crates/pebble-vm/src/lib.rs#L531-L1101)（或者在 `~/pebble-tag` 里 `sed -n '531,1101p' ~/pebble-tag/crates/pebble-vm/src/lib.rs`）原样粘贴到 `call` 的后面，中间空一行。这一整块是：
 
 - `call_builtin`：按名字分派 11 个内建函数的大 `match`（`print`、`len`、`type`、`str`、`int`、`float`、`range`、`push`、`keys`、`clock`、`assert`）。
 - `expect_args`、`expect_int`、`allocate_string`：三个小辅助。
@@ -1623,7 +1623,7 @@ impl Backend for TreeWalker {
 
 `pub(crate) struct TreeWalker(Interpreter);` 是第 1 篇的元组结构体新类型。两个包装类型不是必须的：trait 在这个 crate 里是本地的，孤儿规则（第 3 篇）允许直接 `impl Backend for Interpreter`。我选择包装，是为了让"后端"这个概念在命令行这个 crate 里有自己的名字，而不是借用引擎类型的名字。我没有试过另一种，不确定哪种更好。
 
-`type Prepared<'p> = &'p Program;`：树遍历的"准备"什么也不做，直接借用。`fn prepare(program: &Program) -> Result<&Program, Vec<Diagnostic>> { Ok(program) }`：实现里的签名可以比 trait 里写得更具体，`Self::Prepared<'_>` 就是 `&Program`。`execute(&mut self, prepared: &&Program)`：`&Self::Prepared<'_>` 展开成 `&&Program`，一个指向指针的指针，C 程序员对 `**p` 不陌生。`self.0.interpret(prepared)?` 里的 `prepared` 是 `&&Program`，`interpret` 要 `&Program`：第 7 篇的**解引用强转**把外层引用自动剥掉。
+`type Prepared<'p> = &'p Program;`：树遍历的"准备"什么也不做，直接借用。`fn prepare(program: &Program) -> Result<&Program, Vec<Diagnostic>> { Ok(program) }`：实现里的签名可以比 trait 里写得更具体，`Self::Prepared<'_>` 就是 `&Program`。`execute(&mut self, prepared: &&Program)`：`&Self::Prepared<'_>` 展开成 `&&Program`，一个指向指针的指针，C 程序员对 `**p` 不陌生。`self.0.interpret(prepared)?` 里的 `prepared` 是 `&&Program`，`interpret` 要 `&Program`：第 5 篇的**解引用强制转换**把外层引用自动剥掉。
 
 最后一行：
 
@@ -2277,7 +2277,7 @@ pub fn differential(attr: TokenStream, item: TokenStream) -> TokenStream
 
 ### 写它
 
-在 `crates/pebble-macros/src/lib.rs` 里做三处改动。第一处是文件开头的 crate 文档：现在有三种宏了，把前 15 行换成：
+在 `crates/pebble-macros/src/lib.rs` 里做三处改动。第一处是文件开头的 crate 文档：现在有三种宏了。把文件开头那 13 行 `//!` 文档（第 10 篇的版本，以括号注释 "(A third, **declarative** kind ..." 的最后一行结尾；不含后面的空行和 `use proc_macro::TokenStream;`）换成下面这 15 行：
 
 ```rust
 //! Procedural macros for the Pebble toolchain.
@@ -2365,7 +2365,17 @@ fn expand_differential(attr: &TokenStream2, function: &ItemFn) -> syn::Result<To
 
 逐块看。入口函数 `differential` 和第 6 篇的 `derive_spanned` 完全同一个形状：把 `proc_macro::TokenStream` 转成 `proc_macro2::TokenStream`，用 `parse_macro_input!(item as ItemFn)` 把 `item` 解析成一个 `syn::ItemFn`（解析失败时这个宏会自己返回一个编译错误，我们不用管），然后把真正的活交给一个返回 `syn::Result<TokenStream2>` 的普通函数 `expand_differential`，出错就 `error.to_compile_error().into()`。这个两层结构我们在第 6 篇解释过：真正干活的函数不依赖 `proc_macro` 这个只能在宏里用的类型，将来可以单独测试。
 
-`expand_differential` 先做两个检查。`attr` 不空，说明用户写了 `#[differential(fast)]` 之类，这个宏不接受参数。`function.sig.inputs` 不空，说明函数带了参数，我们没法给它提供实参。两种情况都用 `syn::Error::new_spanned(..., "...")` 造一个错误，**错误指向用户写的那几个 token**。我试了一下两种错用（放进一个临时测试文件，跑完删掉）：
+`expand_differential` 先做两个检查。`attr` 不空，说明用户写了 `#[differential(fast)]` 之类，这个宏不接受参数。`function.sig.inputs` 不空，说明函数带了参数，我们没法给它提供实参。两种情况都用 `syn::Error::new_spanned(..., "...")` 造一个错误，**错误指向用户写的那几个 token**。
+
+我想试一下两种错用，这需要 `pebble-bench` 的测试能用到 `pebble-macros`。先给 `crates/pebble-bench/Cargo.toml` 补一段 `[dev-dependencies]`，放在 `[dependencies]` 和 `[lints]` 之间。`pebble-macros` 是后面这些实验和差分套件要用的；`criterion` 是再下一节的基准要用的，顺手一起写上：
+
+```toml
+[dev-dependencies]
+criterion.workspace = true
+pebble-macros.workspace = true
+```
+
+然后把下面的文件放进一个临时测试文件，跑完删掉：
 
 ```rust
 use pebble_macros::differential;
@@ -2419,7 +2429,7 @@ let label = name.to_string();
 @@ -1,5 +1,5 @@
  [package]
  name = "pebble-macros"
--description = "Procedural macros (derive and function-like) used across the Pebble crates."
+-description = "Procedural macros (derive only, so far) used across the Pebble crates."
 +description = "Procedural macros (derive + attribute) used across the Pebble crates."
  version.workspace = true
  edition.workspace = true
@@ -2479,13 +2489,7 @@ fn sums_backends_agree() {
 
 ### 差分测试套件
 
-现在给 `pebble-bench` 的 `Cargo.toml` 补一段 `[dev-dependencies]`，放在 `[dependencies]` 和 `[lints]` 之间。`pebble-macros` 是这一节要用的；`criterion` 是下一节的基准要用的，顺手一起写上：
-
-```toml
-[dev-dependencies]
-criterion.workspace = true
-pebble-macros.workspace = true
-```
+`pebble-bench` 的 `Cargo.toml` 里的 `[dev-dependencies]` 段，前面做错误实验时已经补过了（`pebble-macros` 在这一节用，`criterion` 是下一节的基准要用）。
 
 新建 `crates/pebble-bench/tests/differential.rs`。`tests/` 下的每个文件是一个独立的集成测试 crate，会自动把被测的库（`pebble_bench`）链接进来。这就是前面展开里 `::pebble_bench::run_interp` 能解析的原因：
 
@@ -2726,7 +2730,7 @@ $ pebble run --vm scratch/order.pebble
 
 树遍历解释器的四次运行里有一次是 `["b", "c", "a"]`，别的是 `["b", "a", "c"]`（这是 Rust 标准库 `HashMap` 默认的随机种子在起作用，它是为了防御哈希碰撞攻击；C++ 的 `unordered_map` 没有这个特性，但同样不承诺任何顺序）。VM 则始终是插入顺序。我最初还尝试过一个"构造映射再取 `keys`"的差分程序，**第一次跑它居然通过了**，因为随机顺序碰巧和插入顺序相同；再跑几次它就失败了，而且每次失败时解释器那一边的顺序都不一样（三个键有 6 种排列，碰巧通过的概率我估计是六分之一，没有统计过）。这是一类特别讨厌的测试：偶尔通过。
 
-五个不一致（引号、块作用域、嵌套 `for`、`len` 遮蔽、映射顺序）里，**没有一个是"VM 实现错了"或者"解释器实现错了"这种干净的结论**。块作用域和映射顺序是两个后端对语言规范的**不同选择**，而我们根本没有写过这份规范。嵌套 `for` 和 `len` 遮蔽才是明确的 bug。引号则是纯粹的呈现差异。差分测试做到了它该做的：把这些分歧逼了出来。它没法替你决定谁对。
+五个不一致（引号、块作用域、嵌套 `for`、`len` 遮蔽、映射顺序）里，块作用域和映射顺序是两个后端对语言规范的**不同选择**，而我们根本没有写过这份规范。嵌套 `for` 和 `len` 遮蔽才是明确的 bug。引号则是纯粹的呈现差异。差分测试做到了它该做的：把这些分歧逼了出来。它没法替你决定谁对。
 
 所以我不会说"两个后端行为一致"。它们已知一致的范围，恰好就是这五个差分程序、`pebble-bench` 里那三个基准程序，加上 `fib(20)` 这个命令行测试。
 
@@ -2839,7 +2843,7 @@ collections/vm          time:   [676.86 µs 680.29 µs 685.15 µs]
 | `loop_sum`（10 万次循环） | 33.273 ms | 17.903 ms | 1.86 |
 | `collections`（1000 次 `push` 加 1000 次下标） | 779.77 µs | 680.29 µs | 1.15 |
 
-**VM 更快，但是快 1.15 到 1.86 倍，不是传说中的"字节码 VM 比树遍历快一个数量级"。** 换算成每次函数调用：`fib(20)` 一共 21,891 次调用，树遍历每次约 355 ns，VM 约 229 ns。一次调用里发生的事情不多：一个比较、两次减法、一次加法、两次递归调用的准备。228 纳秒，按 4 GHz 粗估是大约 900 个周期（我没有测实际频率）。这个数字**慢得需要解释**。
+**VM 更快，但是快 1.15 到 1.86 倍，不是传说中的"字节码 VM 比树遍历快一个数量级"。** 换算成每次函数调用：`fib(20)` 一共 21,891 次调用，树遍历每次约 355 ns，VM 约 228 ns。一次调用里发生的事情不多：一个比较、两次减法、一次加法、两次递归调用的准备。228 纳秒，按 4 GHz 粗估是大约 900 个周期（我没有测实际频率）。这个数字**慢得需要解释**。
 
 ### 为什么不是 10 倍
 
@@ -2919,7 +2923,7 @@ collections: interp run     0.7617 ms
 collections: vm run         0.7698 ms
 ```
 
-`fib` 的解析是 0.0015 ms、编译是 0.0007 ms，加起来是运行时间的 0.04%。`collections` 最短，前端也只占 0.6%。所以前端不是答案：**那 5 毫秒确实花在 VM 执行上。** 顺带注意最后一行：`collections` 在这个手工计时里，VM（0.7698 ms）和树遍历（0.7617 ms）几乎一样快。
+`fib` 的解析是 0.0015 ms、编译是 0.0007 ms，加起来约是运行时间的 0.05%。`collections` 最短，前端也只占 0.6%。所以前端不是答案：**那 5 毫秒确实花在 VM 执行上。** 顺带注意最后一行：`collections` 在这个手工计时里，VM（0.7698 ms）和树遍历（0.7617 ms）几乎一样快。
 
 ### 四个嫌疑
 

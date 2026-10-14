@@ -28,7 +28,7 @@ Pebble 现在有 16 个 crate、10515 行 Rust、214 行 C，`Cargo.lock` 里锁
 
 第 9 篇我们给命令行加了 `pebble repl`，它靠 `rustyline` 这个第三方库提供行编辑、历史和方向键。这是命令行里唯一一个纯粹为交互而存在的依赖。如果有人只想要 `run` 和 `check`（比如在 CI 里、在容器里、在一个没有终端的地方），他仍然要下载和编译 `rustyline` 以及它的依赖。C 里的做法是 `#ifdef WITH_READLINE`，用 CMake 的 `option()` 开关。Cargo 的对应物叫 **feature**。
 
-我们从第 14 篇结束时的第五版出发。如果你一路跟下来，你的 `crates/pebble-cli` 就是它；如果你是跳着来的，第五版的文件在第 14 篇里有完整内容。
+我们从第 14 篇结束时的第五版出发。如果你一路跟下来，你的 `crates/pebble-cli` 就是它；如果你是跳着来的，第四版的完整文件在第 12 篇，第五版 = 第四版加上第 14 篇的那几处改动（`CheckArgs`、`check`、`check_file` 和两个测试）。
 
 ### 先问一句：现在有没有办法不要 `repl`？
 
@@ -471,7 +471,7 @@ error: public documentation for `pebble_parser` links to private item `Parser::s
    = note: `-D rustdoc::private-intra-doc-links` implied by `-D warnings`
 ```
 
-`synchronize` 是 `Parser` 的私有方法：公开文档里不该链接到一个读者点不进去的页面。三个都被我改成了普通反引号（`` `Parser::synchronize` ``）。这三处修改就是 tag 前一个提交 `docs: describe the tutorial additions` 里的三行改动，`CHANGELOG.md` 的 `Fixed` 一栏写着它："Intra-doc links that made `cargo doc` fail with `-D warnings`"。tag 上的结果：
+`synchronize` 是 `Parser` 的私有方法：公开文档里不该链接到一个读者点不进去的页面。三个都被我改成了普通反引号（`` `Parser::synchronize` ``）。这三处修改就是 tag 之前的提交 `ab20d9f`（`docs: describe the tutorial additions`）里的三行改动，`CHANGELOG.md` 的 `Fixed` 一栏写着它："Intra-doc links that made `cargo doc` fail with `-D warnings`"。tag 上的结果：
 
 ```text
 $ RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps --all-features
@@ -508,17 +508,18 @@ $ cargo clippy --workspace --all-targets --all-features -- -D warnings
 
 ### 什么时候可以说"我知道，闭嘴"
 
-`#[allow(...)]` 是对一条 lint 的豁免，它能放在三个粒度上，Pebble 三个都用了：
+`#[allow(...)]` 是对一条 lint 的豁免，它能放在不同的粒度上，Pebble 用了两个：
 
-- 整个 crate：`pebble-value` 和 `pebble-interp` 的开头都有 `#![allow(clippy::mutable_key_type)]`，旁边附四行注释解释为什么键的哈希是稳定的（第 8 篇里 clippy 抗议的故事：对着一个 `RefCell` 里有计数器的键类型，规则本身是对的，只是这里的哈希按指针地址算）。
+- 整个 crate：`pebble-value` 和 `pebble-interp` 的开头都有 `#![allow(clippy::mutable_key_type)]`。`pebble-value` 里附了五行注释解释为什么键的哈希是稳定的，`pebble-interp` 里两行注释指回它（第 8 篇里 clippy 抗议的故事：对着一个 `RefCell` 里有计数器的键类型，规则本身是对的，只是这里的哈希按指针地址算）。
 - 一个测试函数：`pebble-sys` 里的 `fold_empty_range_returns_init` 上有 `#[allow(clippy::reversed_empty_ranges)]`，因为 `5..=4` 在那里是故意写的空区间。
-- 没有放在更宽的地方：我在第 8 篇试过，把 `allow` 删掉后，库代码没有意见，只有 `--all-targets` 时测试里的 `HashMap::new()` 触发它，所以更窄的写法是把它只放在测试函数上；tag 选择的是 crate 级一次关掉，我觉得两种都说得过去。
+
+顺带一提：我在第 8 篇试过，把 crate 级的 `allow` 删掉后，库代码没有意见，只有 `--all-targets` 时测试里的 `HashMap::new()` 触发它，所以更窄的写法是把它只放在测试函数上；tag 选择的是 crate 级一次关掉，我觉得两种都说得过去。
 
 规矩只有一条：**每一个 `allow` 旁边必须有一句话说明为什么。** 没有注释的 `allow` 是在把噪音藏进地毯下面。
 
 ### 把"不安全"限制在能看见的地方
 
-`#![forbid(unsafe_code)]` 比 `deny` 更强：不能被内层的 `#[allow]` 覆盖。`grep -rn "forbid(unsafe_code)" crates` 在 tag 里命中 `pebble-span`、`diag`、`lexer`、`ast`、`parser`、`value`、`interp`、`bytecode`、`vm`、`bench`、`net` 和 `cli`；没有它的是 `pebble-gc`（有 `bump.rs` 里的 `unsafe`，第 11 篇）、`pebble-sys` 和 `pebble-nostd`（第 13 篇），还有 `pebble-macros`（它里面没有 `unsafe` 这个词，只是没写这一行）。也就是说，在 16 个 crate 里，需要人来为内存安全签字的代码只可能出现在三个 crate 里，而且 `grep unsafe` 就能把它们全部找出来。我觉得这是 Rust 里最被低估的一条工程性质：安全性的"审计范围"是机器可计算的。
+`#![forbid(unsafe_code)]` 比 `deny` 更强：不能被内层的 `#[allow]` 覆盖。`grep -rn "forbid(unsafe_code)" crates` 在 tag 里作为属性命中 `pebble-span`、`diag`、`lexer`、`ast`、`parser`、`value`、`interp`、`bytecode`、`vm`、`bench`、`net` 和 `cli`（`pebble-nostd` 的 `lib.rs` 里那一处命中是注释，说它不能用这条属性）；没有这个属性的是 `pebble-gc`（有 `bump.rs` 里的 `unsafe`，第 11 篇）、`pebble-sys` 和 `pebble-nostd`（第 13 篇），还有 `pebble-macros`（它里面没有 `unsafe` 这个词，只是没写这一行）。也就是说，在 16 个 crate 里，需要人来为内存安全签字的代码只可能出现在三个 crate 里，而且 `grep unsafe` 就能把它们全部找出来。我觉得这是 Rust 里最被低估的一条工程性质：安全性的"审计范围"是机器可计算的。
 
 ### `#[must_use]`
 
@@ -568,7 +569,7 @@ packages = with pkgs; [ rustc cargo rust-analyzer clippy rustfmt gdb hyperfine p
 
 `flake.lock` 把 `nixpkgs` 钉在一个具体的提交上，所以所有人的 `rustc` 是同一个。这就是上面说的"版本由别的东西钉"：`rust-toolchain.toml` 管通道，Nix 的锁文件管版本。`.envrc` 里只有一行 `use flake`，配合 `direnv` 进入目录自动进环境，目录里还有 `.editorconfig`（缩进、行尾，所有编辑器通用）。
 
-`Cargo.lock` 提交在仓库里，里面 143 个包的精确版本和校验和（`grep -c '^name = ' Cargo.lock` 是 143，包括我们自己的 16 个 crate）。Cargo 对"库"和"应用"的建议不同：库不提交锁文件，因为使用者会自己解析；有二进制的工作区应该提交，让每次构建拿到一样的依赖。Pebble 有一个二进制，所以提交。`dependabot.yml` 每周自己提一个 PR 来更新它。
+`Cargo.lock` 提交在仓库里，里面 143 个包的精确版本和校验和（`grep -c '^name = ' Cargo.lock` 是 143，包括我们自己的 16 个 crate）。老的建议是"库不提交锁文件，因为使用者会自己解析；应用提交"；新版 Cargo 文档的说法是没那么绝对（我没有逐条核对，细节以 Cargo Book 为准）。Pebble 有一个二进制，所以无论哪种说法都该提交：让每次构建拿到一样的依赖。`dependabot.yml` 每周自己提一个 PR 来更新它。
 
 ### 发布 profile
 
@@ -594,7 +595,7 @@ $ cargo run --quiet --bin ch15_inline
 
 `#[inline(always)]` 和 `#[inline(never)]` 是更强的版本。这一类属性我的原则是：不测量就不加。
 
-**解引用强制转换。** 第 7 篇里 `Source::load(&args.file)` 把一个 `&PathBuf` 传给了一个要 `&Path` 的参数，我当时只讲了"`PathBuf` 对应 `&Path`，像 `String` 对应 `&str`"，没有解释这个调用凭什么通过类型检查。答案是 **deref coercion**：当 `T: Deref<Target = U>`，编译器会在需要 `&U` 的地方自动把 `&T` 转成 `&U`，而且可以连续转几步。`src/bin/ch15_deref.rs`：
+**解引用强制转换。** 第 5 篇讲过它在 `Box` 和 `Vec` 上的样子（`&Box<Expr>` 变 `&Expr`，`&Vec<T>` 变 `&[T]`），第 2、7 篇里 `&String` 变 `&str`、`Source::load(&args.file)` 把一个 `&PathBuf` 传给要 `&Path` 的参数，也都用了它，我当时只讲了"`PathBuf` 对应 `&Path`，像 `String` 对应 `&str`"。这里把它补完整，答案是 **deref coercion**：当 `T: Deref<Target = U>`，编译器会在需要 `&U` 的地方自动把 `&T` 转成 `&U`，而且可以连续转几步。`src/bin/ch15_deref.rs`：
 
 ```rust
 fn load(path: &Path) -> usize { path.as_os_str().len() }
@@ -751,6 +752,8 @@ $ echo $?
 0
 ```
 
+如果你自己做这一步，把 tag 克隆到 `~/pebble-tag`（第 1 篇的命令），在你的工作区根目录跑 `diff -rq ~/pebble-tag . --exclude=target --exclude=.git`。我上面用的是 `git archive` 解开的两份临时目录，所以路径不同，比较的内容一样。
+
 没有任何输出，退出码 0：除了 `target/` 以外，没有一个文件有差别（包括 `Cargo.lock`：重新构建没有改它）。然后是行为：
 
 ```text
@@ -869,7 +872,7 @@ test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fin
 | 过程宏（derive）、`syn` / `quote`、卫生性 | [第 6 篇](/posts/rust-by-pebble-06-proc-macros/) | P/L |
 | `Result`、`?`、`panic!` / `unwrap` / `expect`、`todo!`、`matches!`、`mem::discriminant`、两阶段借用 | [第 7 篇](/posts/rust-by-pebble-07-parser-errors-cli/) | P/L |
 | `clap`、`anyhow`、`fs`、`ExitCode`、文件模块、`pub(crate)`、`use crate::`、集成测试 | [第 7 篇](/posts/rust-by-pebble-07-parser-errors-cli/) | P/T |
-| 解引用强制转换（`&PathBuf` 变 `&Path`） | [第 15 篇](/posts/rust-by-pebble-15-engineering/)（第 7 篇只是用了它） | L |
+| 解引用强制转换（`&Box<T>`、`&Vec<T>`、`&PathBuf` 变 `&Path`） | [第 5 篇](/posts/rust-by-pebble-05-ast-generics/)（`Box`/`Vec`）、[第 15 篇](/posts/rust-by-pebble-15-engineering/)（补完） | L |
 | `Rc`、`Rc<str>`、`RefCell`、`HashMap`、`Hash`/`Eq` 契约、手写 `PartialEq`、`PartialOrd` 契约、`From` | [第 8 篇](/posts/rust-by-pebble-08-rc-refcell-values/) | P/L |
 | 函数指针与闭包、trait 对象与 vtable、`static`、切片模式、`-> impl Trait`、`Borrow`/`AsRef`、`TryFrom`/`FromStr` | [第 8 篇](/posts/rust-by-pebble-08-rc-refcell-values/) | P/L/T |
 | `Fn`/`FnMut`/`FnOnce`、`move` 闭包、`Weak`、`thread::Builder`、把 `collect` 收进 `Result`、实现 `FromStr` | [第 9 篇](/posts/rust-by-pebble-09-interpreter-closures/) | P/L |

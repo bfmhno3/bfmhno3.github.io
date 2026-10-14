@@ -2,7 +2,7 @@
 title: "共享与可变：Rc、RefCell 和运行时的值"
 commentId: "post:rust-by-pebble-08-rc-refcell-values"
 published: "2026-10-13 15:00:00 +08:00"
-description: "let b = a; push(b, 1); a 必须显示 [1]。我们依次撞上移动、独占借用和 Rc 的墙，最后用 Rc<RefCell<..>> 搭出 pebble-value：值类型、可哈希的 Map 键、运行时错误、环境链和内建函数表，顺带学会 trait 对象、函数指针、Hash/Eq 契约和 TryFrom。"
+description: "let b = a; push(b, 1); a 必须显示 [1]。我们依次撞上移动、独占借用和 Rc 的墙，最后用 Rc<RefCell<..>> 搭出 pebble-value：值、可哈希的 Map 键、运行时错误、环境链和内建函数表，顺带学会 trait 对象、函数指针、Hash/Eq 契约。"
 category: Note
 tags:
   - Rust
@@ -33,10 +33,9 @@ a;
 
 ## 先撞三面墙
 
-我们把 Pebble 的列表先翻译成 Rust 里最自然的东西：`Vec<i64>`。第一次尝试，直接照字面写：
+我们把 Pebble 的列表先翻译成 Rust 里最自然的东西：`Vec<i64>`。第一次尝试，直接照字面写（`~/rust-lab/src/bin/ch08_shared_list_move.rs`）：
 
 ```rust
-// ~/rust-lab/src/bin/ch08_shared_list_move.rs
 fn main() {
     let a: Vec<i64> = Vec::new();
     let b = a;
@@ -71,10 +70,9 @@ For more information about this error, try `rustc --explain E0382`.
 error: could not compile `rust-lab` (bin "ch08_shared_list_move") due to 1 previous error
 ```
 
-C++ 程序员在这里的第一反应是"那我用引用"。好，第二次尝试，用两个可变引用：
+C++ 程序员在这里的第一反应是"那我用引用"。好，第二次尝试，用两个可变引用（`~/rust-lab/src/bin/ch08_shared_list_mut.rs`）：
 
 ```rust
-// ~/rust-lab/src/bin/ch08_shared_list_mut.rs
 fn main() {
     let mut a: Vec<i64> = Vec::new();
     let b = &mut a;
@@ -104,10 +102,9 @@ error: could not compile `rust-lab` (bin "ch08_shared_list_mut") due to 1 previo
 
 这是第 2 篇的"别名与可变不能同时存在"，原样撞上。借用解决不了问题，因为借用有生命周期：`b` 和 `c` 都得在某个作用域里结束。而 Pebble 的两个变量可以活得一样久，谁先死谁后死由程序决定。我们需要的是**共同所有权**：两个所有者，最后一个离开时才释放。
 
-C++ 里这个东西叫 `std::shared_ptr`。Rust 标准库里对应的是 `Rc<T>`（reference counted）。第三次尝试：
+C++ 里这个东西叫 `std::shared_ptr`。Rust 标准库里对应的是 `Rc<T>`（reference counted）。第三次尝试（`~/rust-lab/src/bin/ch08_shared_list_rc.rs`）：
 
 ```rust
-// ~/rust-lab/src/bin/ch08_shared_list_rc.rs
 use std::rc::Rc;
 
 fn main() {
@@ -137,8 +134,9 @@ error: could not compile `rust-lab` (bin "ch08_shared_list_rc") due to 1 previou
 
 `shared_ptr<vector<int>>` 在 C++ 里允许你随便写，迭代到一半被另一个别名 `push_back` 导致迭代器失效，那是你自己的事（UB）。Rust 的选择更保守：共享的所有权默认只读，要想写，你得显式地走一个"带检查的后门"。这个后门叫 `RefCell<T>`。
 
+`~/rust-lab/src/bin/ch08_shared_list.rs`：
+
 ```rust
-// ~/rust-lab/src/bin/ch08_shared_list.rs
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -173,8 +171,9 @@ strong count after drop(b): 1
 
 `RefCell` 的规则和第 2 篇的编译期规则完全一样：多个只读，或者一个独占，二选一。区别只是检查的时间。编译器没法知道运行时谁会来，所以它在"进门时"翻一下牌子（那个计数）：牌子显示有人在读，你想写，就当场 panic。
 
+`~/rust-lab/src/bin/ch08_refcell_panic.rs`：
+
 ```rust
-// ~/rust-lab/src/bin/ch08_refcell_panic.rs
 use std::cell::RefCell;
 
 fn main() {
@@ -244,16 +243,21 @@ workspace = true
 
 ## Value：第一版
 
-`Value` 是 Pebble 里每个变量、每个表达式结果的类型。我们按文件顺序写，但分五轮：先写能编译的最小版本，每一轮加一类东西，每一轮都跑测试。第一轮只有不需要哈希、不需要环境、不需要函数的六种值。
+`Value` 是 Pebble 里每个变量、每个表达式结果的类型。我们按文件顺序写，但分五轮（Value、Map、运算符、Env、内建函数，各占一节）：先写能编译的最小版本，每一轮加一类东西，每一轮都跑测试。第一轮只有不需要哈希、不需要环境、不需要函数的六种值。
 
-`crates/pebble-value/src/lib.rs` 的第一版开头如下。属性和 `use` 现在只写这几行，文件头的完整注释放到最后一步再补：
+`crates/pebble-value/src/lib.rs` 的第一版开头如下。先把 `cargo new --lib` 生成的 `src/lib.rs`（一个示例函数加一个测试）整个清空，再写属性和 `use`。文件头的完整注释放到最后一步再补；下面这组 `use` 是 tag 里的完整版本，一次写全，省得后面每一轮回来补。`HashMap`、`Hash`/`Hasher`、`Span`、`Diagnostic` 要到后面的轮次才会用到，那之前编译器会报 "unused import" 警告，不用管：
 
 ```rust
 #![forbid(unsafe_code)]
 
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::fmt;
+use std::hash::{Hash, Hasher};
 use std::rc::Rc;
+
+use pebble_diag::Diagnostic;
+use pebble_span::Span;
 ```
 
 然后是枚举本身：
@@ -287,10 +291,9 @@ pub enum Value {
 - `Rc<RefCell<Vec<Value>>>` 就是我们上面实验里的套娃，元素类型换成了 `Value` 自己。`Value` 里面有 `Vec<Value>`，没有无限大小问题，因为 `Vec` 把元素放在堆上，自身只占三个字（指针、容量、长度）。第 5 篇讲过，递归类型需要一层间接，`Vec` 和 `Rc` 都算。
 - `#[derive(Clone)]` 但没有 `Copy`。克隆一个 `Value::List` 只是把引用计数加一，不会复制列表。对 C++ 程序员来说，这等于 `shared_ptr` 的拷贝构造，而不是 `vector` 的。
 
-我在实验里量过这几个类型的大小：
+我在实验里量过这几个类型的大小（`~/rust-lab/src/bin/ch08_rc_str.rs`）：
 
 ```rust
-// ~/rust-lab/src/bin/ch08_rc_str.rs
 use std::mem::size_of;
 use std::rc::Rc;
 
@@ -582,10 +585,9 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 
 Pebble 有映射 `#{"a": 1}`，键可以是任何值。Rust 里对应的类型是 `HashMap<K, V>`，要求 `K: Eq + Hash`。C++ 的 `unordered_map` 同样需要 `operator==` 和 `std::hash`，只是 C++ 在你忘了的时候给你一屏模板错误，而且契约本身（相等的值必须有相同的哈希）从来不被检查。
 
-最省事的做法是在 `Value` 上 `#[derive(Hash, Eq)]`。我们先试一下，一个更小的例子：
+最省事的做法是在 `Value` 上 `#[derive(Hash, Eq)]`。我们先试一下，一个更小的例子（`~/rust-lab/src/bin/ch08_derive_hash.rs`）：
 
 ```rust
-// ~/rust-lab/src/bin/ch08_derive_hash.rs
 #[derive(Hash, PartialEq, Eq)]
 enum Key {
     Int(i64),
@@ -719,14 +721,13 @@ error[E0277]: the trait bound `f64: Eq` is not satisfied
     }
 ```
 
-几个值得停下来看的地方：
+几个值得停下来看的地方（有一处例外这里先不说，练习 2 会让你找到它）：
 
 - 浮点数按位比较、按位哈希：`a.to_bits() == b.to_bits()`。`NaN` 的位模式是确定的，所以 `NaN` 现在是个自反的键。`0.0` 和 `-0.0` 位模式不同，所以是两个不同的键，这和 `==` 不一致，但对键而言是可以接受的。
 - 每个变体先哈希一个小整数（`0u8`、`1u8`……）作为判别标记，再哈希内容。不加的话，`Int(1)` 和 `Bool(true)` 可能哈希相同。冲突不违反契约，但会让桶变得拥挤。
-- 列表、Map 用 `Rc::as_ptr(value).hash(state)`：哈希**地址**，不是内容。原因和 `equals` 一致：键相等是"同一个对象"，哈希必须和它对齐。如果哈希内容，那么往作为键的列表里 `push` 一个元素，它的哈希就变了，`HashMap` 再也找不到它。这不是推理，我写了一个实验验证：
+- 列表、Map 用 `Rc::as_ptr(value).hash(state)`：哈希**地址**，不是内容。原因和 `equals` 一致：键相等是"同一个对象"，哈希必须和它对齐。如果哈希内容，那么往作为键的列表里 `push` 一个元素，它的哈希就变了，`HashMap` 再也找不到它。这不是推理，我写了一个实验验证（`~/rust-lab/src/bin/ch08_mutable_key.rs`）：
 
 ```rust
-// ~/rust-lab/src/bin/ch08_mutable_key.rs
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
@@ -1068,7 +1069,20 @@ impl std::error::Error for RuntimeError {}
 
 `Result<Value, RuntimeError>` 是几乎每个运算函数的返回类型。Rust 会把 `Result` 的大小定为两个变体里较大者，也就是说每一次成功的 `Ok(Value)` 也得为最大的 `Err` 腾出空间。我在 tag 的 worktree 里做了这个实验：加一个临时测试量大小，然后把 `Box<Diagnostic>` 改成 `Diagnostic`（只改字段类型和三处构造点，没有别的变化），再跑 clippy。
 
-先是装盒子的真实版本，在最终代码上量出的大小：
+先是装盒子的真实版本，在最终代码上量出的大小。量大小的临时测试放在文件末尾，量完就删：
+
+```rust
+#[cfg(test)]
+mod scratch {
+    use super::*;
+
+    #[test]
+    fn sizes() {
+        println!("size_of::<Value>() = {}", std::mem::size_of::<Value>());
+        println!("size_of::<RuntimeError>() = {}", std::mem::size_of::<RuntimeError>());
+    }
+}
+```
 
 ```text
 $ cargo test -p pebble-value sizes -- --nocapture
@@ -1083,7 +1097,7 @@ test scratch::sizes ... ok
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 11 filtered out; finished in 0.00s
 ```
 
-`Diagnostic` 本身在我的 worktree 里量是 104 字节（消息、代码、标签、注记、帮助文本，一堆 `String` 和 `Vec`）；装进盒子后 `RuntimeError` 只有 32 字节：8 字节指针加 `Vec<TraceFrame>` 的 24 字节。去掉盒子以后：
+`Diagnostic` 本身在我的 worktree 里量是 104 字节（严重程度、错误码、消息、标签、注记，一堆 `String` 和 `Vec`）；装进盒子后 `RuntimeError` 只有 32 字节：8 字节指针加 `Vec<TraceFrame>` 的 24 字节。去掉盒子以后：
 
 ```text
 size_of::<Diagnostic>() = 104
@@ -1159,10 +1173,9 @@ fn numeric(
 }
 ```
 
-`int_op: fn(i64, i64) -> Option<i64>` 的 `fn` 是小写的，不是 `Fn`。它是**函数指针类型**，就是 C 的 `int (*)(int, int)`。`sub` 里传的 `i64::checked_sub` 是一个函数路径，`|a, b| a - b` 是一个不捕获任何变量的闭包，两者都能自动转成函数指针。这是个实验：
+`int_op: fn(i64, i64) -> Option<i64>` 的 `fn` 是小写的，不是 `Fn`。它是**函数指针类型**，就是 C 的 `int (*)(int, int)`。`sub` 里传的 `i64::checked_sub` 是一个函数路径，`|a, b| a - b` 是一个不捕获任何变量的闭包，两者都能自动转成函数指针。这是个实验（`~/rust-lab/src/bin/ch08_fn_ptr.rs`）：
 
 ```rust
-// ~/rust-lab/src/bin/ch08_fn_ptr.rs
 fn double(x: i64) -> i64 {
     x * 2
 }
@@ -1189,10 +1202,9 @@ size_of capturing closure: 8
 add_offset(1) = 11
 ```
 
-函数指针是 8 字节，只存地址。那个捕获了 `offset` 的闭包也是 8 字节，但原因完全不同：闭包是一个匿名结构体，里面装着它捕获的值（这里一个 `i64`），它没有"地址"这个概念，调用路径由类型决定（静态分派）。如果我们想把它当函数指针用：
+函数指针是 8 字节，只存地址。那个捕获了 `offset` 的闭包也是 8 字节，但原因完全不同：闭包是一个匿名结构体，里面装着它捕获的值（这里一个 `i64`），它没有"地址"这个概念，调用路径由类型决定（静态分派）。如果我们想把它当函数指针用（`~/rust-lab/src/bin/ch08_fn_ptr_capture.rs`）：
 
 ```rust
-// ~/rust-lab/src/bin/ch08_fn_ptr_capture.rs
 fn main() {
     let offset = 10;
     let add_offset = move |x: i64| x + offset;
@@ -1230,10 +1242,9 @@ error: could not compile `rust-lab` (bin "ch08_fn_ptr_capture") due to 1 previou
 
 ### 为什么不实现 Add 和 PartialOrd
 
-你一定想问：标准库有 `std::ops::Add`，为什么 `add` 是个普通函数，而不是 `impl Add for Value`？第 2 篇我们用 `Index` 重载了 `map[id]`，这里为什么不同？我把它写出来试了一遍：
+你一定想问：标准库有 `std::ops::Add`，为什么 `add` 是个普通函数，而不是 `impl Add for Value`？第 2 篇我们用 `Index` 重载了 `map[id]`，这里为什么不同？我把它写出来试了一遍（`~/rust-lab/src/bin/ch08_add_value.rs`）：
 
 ```rust
-// ~/rust-lab/src/bin/ch08_add_value.rs
 use std::ops::Add;
 use std::rc::Rc;
 
@@ -1275,10 +1286,9 @@ Ok(Int(3))
 能跑，`Output = Result<Value, String>` 也合法（`Add` 的返回类型是一个关联类型，你想返回什么都行）。但有三个问题：
 
 1. 错误里没有位置。`Add::add(self, rhs)` 的签名固定，没法多传一个 `Span`。我们的诊断（第 3 篇）靠它画出插入符。
-2. `add` 按值取走两个操作数，`a + b` 之后 `a` 就没了。看这个最小例子的报错：
+2. `add` 按值取走两个操作数，`a + b` 之后 `a` 就没了。看这个最小例子的报错（`~/rust-lab/src/bin/ch08_add_value_moved.rs`）：
 
 ```rust
-// ~/rust-lab/src/bin/ch08_add_value_moved.rs
 use std::ops::Add;
 
 #[derive(Debug)]
@@ -1337,8 +1347,9 @@ error: could not compile `rust-lab` (bin "ch08_add_value_moved") due to 1 previo
 
 `PartialOrd` 同理，而且它的问题更微妙。`compare` 为什么不是 `impl PartialOrd for Value`？
 
+`~/rust-lab/src/bin/ch08_partial_ord.rs`：
+
 ```rust
-// ~/rust-lab/src/bin/ch08_partial_ord.rs
 use std::rc::Rc;
 
 #[derive(PartialEq, PartialOrd, Debug)]
@@ -1594,10 +1605,9 @@ impl Env {
 
 读这段代码，你至少要注意下面这些点：
 
-- `values: HashMap<String, Value>` 的键是 `String`，但 `get(&self, name: &str)` 接受 `&str`。`HashMap<K, V>::get<Q>(&self, k: &Q)` 要求 `K: Borrow<Q>`：`String` 实现了 `Borrow<str>`，所以拿 `&str` 就能查。这不是魔法，只是标准库里的一个 trait。C++ 的异构查找（`unordered_map::find` 接受 `string_view`）花了很多年才在 C++20 里进来，还要你自己给容器配透明哈希。实验：
+- `values: HashMap<String, Value>` 的键是 `String`，但 `get(&self, name: &str)` 接受 `&str`。`HashMap<K, V>::get<Q>(&self, k: &Q)` 要求 `K: Borrow<Q>`：`String` 实现了 `Borrow<str>`，所以拿 `&str` 就能查。这不是魔法，只是标准库里的一个 trait。C++ 的异构查找（`unordered_map::find` 接受 `string_view`）花了很多年才在 C++20 里进来，还要你自己给容器配透明哈希。实验（`~/rust-lab/src/bin/ch08_borrow.rs`）：
 
 ```rust
-// ~/rust-lab/src/bin/ch08_borrow.rs
 use std::collections::HashMap;
 
 fn main() {
@@ -1615,10 +1625,9 @@ Some(1)
 None
 ```
 
-- 类似地，`define(&mut self, name: impl Into<String>, ..)` 里用 `Into`，是因为调用者有时给 `&str`，有时给 `String`。与它相对的另一个转换 trait 是 `AsRef`：`fn shout(text: impl AsRef<str>)` 表示"我只想借用它的字符串视图"，不需要拥有。`Into` 消耗，`AsRef` 借用：
+- 类似地，`define(&mut self, name: impl Into<String>, ..)` 里用 `Into`，是因为调用者有时给 `&str`，有时给 `String`。与它相对的另一个转换 trait 是 `AsRef`：`fn shout(text: impl AsRef<str>)` 表示"我只想借用它的字符串视图"，不需要拥有。`Into` 消耗，`AsRef` 借用（`~/rust-lab/src/bin/ch08_asref.rs`）：
 
 ```rust
-// ~/rust-lab/src/bin/ch08_asref.rs
 fn shout(text: impl AsRef<str>) -> String {
     text.as_ref().to_uppercase()
 }
@@ -1642,7 +1651,7 @@ PEBBLE
 - `assign` 里用 `borrow_mut()` 沿链往上改。每个作用域是一个**独立的** `RefCell`，所以子作用域持有 `&mut self` 的时候，再去 `borrow_mut` 父作用域不会冲突。如果有人把作用域链做成环，这里就是 `already borrowed` 的 panic 现场。
 - `child` 是关联函数，不是方法，参数 `parent` 是一个 `Rc`（所有权转入）；调用者想继续用，先 `Rc::clone`。
 
-`contains_local`、`local_len` 是两个只读小方法，`Default`（直接 `new()`）和手写的 `Debug`（理由和 `Function` 一样）一并写上，完整代码就是上面的 `T 554 617` 加这一段：
+`contains_local`、`local_len` 是两个只读小方法，`Default`（直接 `new()`）和手写的 `Debug`（理由和 `Function` 一样）一并写上，完整代码就是上面的 `impl Env` 加这一段：
 
 ```rust
 impl Default for Env {
@@ -1779,8 +1788,9 @@ impl Output for Buffer {
 - **泛型**：`fn print<O: Output>(out: &mut O, ..)`。每种 `O` 编译一份，静态分派，没有间接调用，和 C++ 模板一样。代价是 `print` 要放进一张表，而表里的每一项必须有相同的类型，泛型函数没法统一。
 - **trait 对象**：`&mut dyn Output`。一个运行时的"胖指针"：数据指针加一张函数表（vtable）指针，调用 `write_line` 是一次间接调用，和 C++ 的 virtual 函数调用是同样的机制，只是 vtable 指针不放在对象里，而是放在引用里。
 
+`~/rust-lab/src/bin/ch08_dyn_output.rs`：
+
 ```rust
-// ~/rust-lab/src/bin/ch08_dyn_output.rs
 trait Output {
     fn write_line(&mut self, line: &str);
 }
@@ -1824,7 +1834,7 @@ size_of &dyn Output: 16
 size_of Box<dyn Output>: 16
 ```
 
-`&Buffer` 是 8 字节（普通指针），`&dyn Output` 是 16 字节（数据指针加 vtable 指针）。`Box<dyn Output>` 也是 16 字节，所以 Rust 里不需要在每个对象里藏一个 vptr，代价是引用变成了胖指针。`dyn Trait` 只能用于"对象安全"的 trait（没有泛型方法、不返回 `Self` 之类），`Output` 满足，不满足的情形是第 12 篇的实验。
+`&Buffer` 是 8 字节（普通指针），`&dyn Output` 是 16 字节（数据指针加 vtable 指针）。`Box<dyn Output>` 也是 16 字节，所以 Rust 里不需要在每个对象里藏一个 vptr，代价是引用变成了胖指针。`dyn Trait` 只能用于"对象安全"的 trait（没有泛型方法、不返回 `Self` 之类），`Output` 满足，不满足的情形第 3 篇的 `DiagnosticSink` 已经撞过（E0038），第 12 篇会再撞一次。
 
 回到我们的目标：内建函数的签名统一成 `fn(&mut dyn Output, Span, &[Value]) -> Result<Value, RuntimeError>`，于是 `print` 可以和 `len` 放在同一张表里，而测试可以传 `&mut Buffer`。这也是为什么解释器从不直接调用 `println!`。
 
@@ -1888,10 +1898,9 @@ impl fmt::Debug for NativeFunction {
 }
 ```
 
-`type NativeImpl = fn(...)` 是一个类型别名。读它的参数：`&mut dyn Output`、`&[Value]` 都带着引用，但你没看到任何生命周期。第 4 篇讲过省略规则：在函数指针类型里，每个省略的生命周期都是**独立的、对所有生命周期成立**的参数，也就是说它其实是这个东西：
+`type NativeImpl = fn(...)` 是一个类型别名。读它的参数：`&mut dyn Output`、`&[Value]` 都带着引用，但你没看到任何生命周期。第 4 篇讲过省略规则：在函数指针类型里，每个省略的生命周期都是**独立的、对所有生命周期成立**的参数，也就是说它其实是这个东西（`~/rust-lab/src/bin/ch08_hrtb.rs`）：
 
 ```rust
-// ~/rust-lab/src/bin/ch08_hrtb.rs
 #[allow(dead_code)]
 struct Span(u32);
 
@@ -2008,7 +2017,7 @@ pub static BUILTINS: &[NativeFunction] = &[
     },
 ```
 
-剩下 9 项、`builtin`、`call_native`，以及 `builtin_print`、`builtin_len`、`builtin_type`、`builtin_str`、`builtin_int`、`builtin_float`、`builtin_push`、`builtin_keys`、`builtin_clock`、`builtin_assert`、`int_arg` 都从 tag 复制：[第 825 到 1039 行](https://github.com/bfmhno3/pebble/blob/tutorial-v1/crates/pebble-value/src/lib.rs#L825-L1039)（`builtin_range` 在第 895 行，你已经写好了，复制时跳过它或者先把整段粘贴再对照）。可以放心不细读的理由：它们就是 `match args[0]` 加一个错误分支，没有新的语言特性。值得扫一眼的有三个：`builtin_push` 里的 `let Value::List(items) = &args[0] else { .. }` 是第 3 篇的 `let else`；`builtin_assert` 把消息写进 `out`，所以失败信息出现在被捕获的输出里；`builtin_int` 里的 `text.trim().parse::<i64>()` 是标准库的 `FromStr`，下面会讲它。
+剩下 9 项，以及 `builtin_print`、`builtin_len`、`builtin_type`、`builtin_str`、`builtin_int`、`builtin_float`、`builtin_push`、`builtin_keys`、`builtin_clock`、`builtin_assert`、`int_arg` 都从 tag 复制：[第 825 到 1039 行](https://github.com/bfmhno3/pebble/blob/tutorial-v1/crates/pebble-value/src/lib.rs#L825-L1039)（这一段里有几项你已经写过：`builtin_range`、`builtin_names`、`builtin`、`call_native`，复制时跳过它们；`BUILTINS` 表你只写了前两项，用 tag 里完整的 11 项表替换它）。可以放心不细读的理由：它们就是 `match args[0]` 加一个错误分支，没有新的语言特性。值得扫一眼的有三个：`builtin_push` 里的 `let Value::List(items) = &args[0] else { .. }` 是第 3 篇的 `let else`；`builtin_assert` 把消息写进 `out`，所以失败信息出现在被捕获的输出里；`builtin_int` 里的 `text.trim().parse::<i64>()` 是标准库的 `FromStr`，下面会讲它。
 
 最后是 `builtin` 和 `call_native`：
 
@@ -2061,10 +2070,9 @@ pub fn call_native(
 - `TryFrom<T>`：类型到类型，失败时返回 `Self::Error`。`u32::try_from(-1i64)` 是 `Err`。
 - `FromStr`：字符串到类型，`str::parse::<T>()` 的实现基础，`"42".parse::<i64>()` 就是 `i64::from_str("42")`。
 
-两种我们都没有给自己的类型实现过，所以做个实验：
+两种我们都没有给自己的类型实现过，所以做个实验（`~/rust-lab/src/bin/ch08_try_from.rs`）：
 
 ```rust
-// ~/rust-lab/src/bin/ch08_try_from.rs
 use std::convert::TryFrom;
 
 #[allow(dead_code)]
@@ -2275,7 +2283,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 
 ## 检查点
 
-在 `/tmp/pebble-rebuild-08`（你的是 `~/pebble`）里运行：
+在工作区根目录里运行：
 
 ```bash
 cargo test -p pebble-value
@@ -2283,10 +2291,12 @@ cargo clippy --workspace --all-targets -- -D warnings
 cargo fmt --all --check
 ```
 
+```text
 $ cargo clippy --workspace --all-targets -- -D warnings
     Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.01s
 $ cargo fmt --all --check; echo "exit: $?"
 exit: 0
+```
 
 `cargo test -p pebble-value` 的预期输出就是上面最后一次：`11 passed`。
 
@@ -2298,7 +2308,7 @@ exit: 0
 检查方法（在你的工作区根目录里，需要在有 tag 的仓库里取原文件）：
 
 ```bash
-diff <(git -C /path/to/pebble show tutorial-v1:crates/pebble-value/src/lib.rs) crates/pebble-value/src/lib.rs && echo same
+diff <(git -C ~/pebble-tag show tutorial-v1:crates/pebble-value/src/lib.rs) crates/pebble-value/src/lib.rs && echo same
 ```
 
 章节之间用三行横线注释隔开，格式如下（六节的标题依次是 `Values`、`Operators`、`Errors`、`Environments`、`Functions`、`Native functions`）：

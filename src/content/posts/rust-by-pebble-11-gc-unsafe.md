@@ -95,6 +95,8 @@ C 程序员的第一反应是：对象在堆上，引用就是指针。但在 Ru
 
 这一篇用第三种办法，也是游戏引擎和 ECS 里的老手艺：**对象放在一个 `Vec` 里，引用就是下标。** 下标是个整数，可以随便复制，不涉及借用，不涉及生命周期，全程安全代码。
 
+先把 `cargo new` 生成的 `src/lib.rs` 清空（里面有一个 `add` 函数和一个测试，我们不要）。
+
 写 `crates/pebble-gc/src/lib.rs`。先从文件开头开始：crate 文档、一个 `use`、一个模块声明。这段文档比较长，因为它是整个 crate 的使用说明，而且里面的 `# Example` 会被 `cargo test` 当成 doc test 编译运行：
 
 ```rust
@@ -514,7 +516,7 @@ fn main() {
 
 办法一：不要递归。用一个局部的工作表（worklist）`pending: Vec<GcRef>`，闭包只往这个局部变量里 push，不碰 `self`。这样 `&mut self` 版本其实**能编译**（`ch11_cell_roots.rs` 里的 `Heap::mark` 就是这样，它编译通过了）。所以 `Cell` 不是被"逼出来"的，这一点我想说清楚，免得你以为借用检查器非要它不可。
 
-那为什么还用 `Cell`？因为问题出在调用者。`mark(&mut self)` 要求调用者手里没有任何对堆的借用。真正的 VM 经常要一边读堆里的对象一边决定哪些是根，比如"凡是被钉住的对象都是根"（`ch11_cell_roots.rs`）：
+那为什么还用 `Cell`？因为问题出在调用者。`mark(&mut self)` 要求调用者手里没有任何对堆的借用。这是个设计选择：让根的枚举可以一边持有对堆的共享借用一边调用 `mark`，比如"凡是被钉住的对象都是根"（`ch11_cell_roots.rs`）：
 
 ```rust
 for (r, node) in heap.iter() {
@@ -821,7 +823,7 @@ fn main() {
 `test-thread` 参数表示在一个 2 MiB 栈的线程里跑（`cargo test` 给每个测试线程的默认大小），否则在 8 MiB 的主线程里跑。debug 构建里 10,000 层居然没事，2 MiB 栈上 20,000 层就崩，8 MiB 的主线程 50,000 层崩。（崩的时候是 `abort`：进程直接被杀，不是 panic，`catch_unwind` 也拦不住。）Pebble 程序里的嵌套深度是用户可以控制的，所以回收器不能把"别人写的数据有多深"变成"我的栈有多深"。显式工作表把深度挪到堆上：`pending` 是一个 `Vec`，它能长到内存耗尽为止。
 
 > [!WARNING] 实话实说
-> 仓库里的测试 `deeply_nested_lists_survive` 用的深度是 10,000。上面的实验说明，在 debug 构建里一个递归标记器其实也能撑过 10,000 层，所以这个测试单靠深度**并不能**把递归实现和工作表实现区分开。我没有去改它（它在标签里就是这样），但如果你要它真的守住这条回归，把 10,000 改成 100,000 就够了。
+> 仓库里的测试 `deeply_nested_lists_survive` 用的深度是 10,000。上面的实验说明，在 debug 构建里一个递归标记器其实也能撑过 10,000 层，所以这个测试单靠深度**并不能**把递归实现和工作表实现区分开。我没有去改它（它在标签里就是这样），但如果你要它真的守住这条回归，把循环里的 `10_000` 改成 `100_000`，断言里的 `10_001` 同步改成 `100_001`。
 
 ## 清扫、查询，以及剩下的方法
 
@@ -958,7 +960,7 @@ mod tests {
     }
 ```
 
-`use rand::prelude::*;` 引入了一个**外部 crate**，这是本系列第一次。`rand` 来自 crates.io（Rust 的官方包仓库，你在 C++ 里用 vcpkg/Conan 做的事）。我们在 `Cargo.toml` 的 `[dev-dependencies]` 里声明了它，第一次 `cargo test` 时 Cargo 会下载并编译它，并把解析出的确切版本写进 `Cargo.lock`。`GcObject` 的实现里，`match self` 的三个分支正是"这个对象引用了谁"：字符串没有子引用，列表和闭包把自己持有的句柄逐个汇报。`TestObject::Closure { captured, .. }` 里的 `..` 是"其余字段我不关心"。
+`use rand::prelude::*;` 引入外部 crate `rand`。你在第 6、7 篇已经加过外部依赖，这次放在 `[dev-dependencies]` 里：只有测试编译它。`rand` 来自 crates.io（Rust 的官方包仓库，你在 C++ 里用 vcpkg/Conan 做的事）。第一次 `cargo test` 时 Cargo 会下载并编译它，并把解析出的确切版本写进 `Cargo.lock`。`GcObject` 的实现里，`match self` 的三个分支正是"这个对象引用了谁"：字符串没有子引用，列表和闭包把自己持有的句柄逐个汇报。`TestObject::Closure { captured, .. }` 里的 `..` 是"其余字段我不关心"。
 
 接着要加进来的测试，分写和抄两种。**抄**的：从 [`crates/pebble-gc/src/lib.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/crates/pebble-gc/src/lib.rs) 里把 `alloc_get_and_get_mut`、`freed_slots_are_reused`、`mark_traces_children_transitively`、`collect_without_roots_frees_everything` 四个测试，按这个顺序紧跟在 `list` 函数后面粘贴；再把 `is_alive_tracks_slots` 粘在后面说的 `unreachable_cycles_are_collected` 之后。它们各自只验证一个简单的断言（分配取回、槽位复用、传递标记、无根全清、`is_alive` 的行为），没有新的 Rust 概念，逐行读即可。位置和顺序也属于逐字节比对的内容。
 
@@ -1078,7 +1080,7 @@ mod tests {
 
 最后那个 `}` 闭合 `mod tests`。几个细节：
 
-- `heap.slots[i]` 是私有字段，但测试模块是 crate 内部的子模块，可以访问。第 2 篇说的"模块边界即私有边界"在这里体现成：单元测试住在被测代码里面，可以看内部；集成测试（`tests/` 目录）只能用公开 API。
+- `heap.slots[i]` 是私有字段，但测试模块是 crate 内部的子模块，可以访问。第 2 篇讲过的"私有只到模块边界"在这里体现成：单元测试住在被测代码里面，可以看内部；集成测试（`tests/` 目录）只能用公开 API。
 - `reachable.insert(node)` 返回 `bool`：是不是新插入。这让"去重 + 判断是否第一次到达"变成一次调用，和 `Cell::replace` 异曲同工。
 - `BTreeSet` 对迭代顺序有保证（有序），`into_iter().collect()` 得到的就是排好序的 `Vec`。我在实验里并排试了三个同类容器（`ch11_collections.rs`）：
 
@@ -1221,7 +1223,7 @@ fn main() {
 
 </details>
 
-它用 `Vec<u8>` 当缓冲区，下标自带越界检查，`from_utf8_mut` 带校验。它比 `unsafe` 版本短，还更安全。那 `unsafe` 版本换来了什么？只有两件小事：缓冲区不用先全部清零成 `0`（`MaybeUninit`），`alloc_str` 不用再扫一遍字节做 UTF-8 校验（明明刚从 `&str` 拷出来）。我没有为它们量过时间；在这个规模下大概可以忽略。所以说实话，这是教学用的例子，不是性能优化。真实世界里一个 `unsafe` 块值不值得写，标准是你量过的数字。
+它用 `Vec<u8>` 当缓冲区，下标自带越界检查，`from_utf8_mut` 带校验。它比 `unsafe` 版本短，还更安全。那 `unsafe` 版本换来了什么？只有两件小事：缓冲区在语义上不需要先初始化（`MaybeUninit`），`alloc_str` 不用再扫一遍字节做 UTF-8 校验（明明刚从 `&str` 拷出来）。我没有为它们量过时间；在这个规模下大概可以忽略。所以说实话，这是教学用的例子，不是性能优化。真实世界里一个 `unsafe` 块值不值得写，标准是你量过的数字。
 
 安全版本还替我们验证了一件事，这件事在 `unsafe` 版本里同样成立：
 
@@ -1378,7 +1380,7 @@ fn main() {
 
 ### UB：C 程序员熟悉的那个词
 
-Rust 的"安全代码不会引发 UB"是这门语言最重要的承诺。UB（undefined behavior，未定义行为）和 C 里是同一个意思：有符号溢出、越界读写、读未初始化内存、违反严格别名规则、解引用空指针，这些在 C 里"编译通过，运行时爱怎样怎样"。Rust 的安全子集里它们要么编译不过，要么运行时 panic（第 1 篇看过的溢出 panic）。进了 `unsafe` 块，你就是在对编译器说："这一块里的 UB 由我负责排除。"如果你错了，后果和 C 里一样，没有 panic，没有报错，可能"偶尔能跑"。
+Rust 的"安全代码不会引发 UB"是这门语言最重要的承诺。UB（undefined behavior，未定义行为）和 C 里是同一个意思：有符号溢出、越界读写、读未初始化内存、违反严格别名规则、解引用空指针，这些在 C 里"编译通过，运行时爱怎样怎样"。Rust 的安全子集里它们要么编译不过，要么在运行时 panic 或有定义地回绕（第 1 篇的溢出：debug 构建 panic，release 构建回绕）。进了 `unsafe` 块，你就是在对编译器说："这一块里的 UB 由我负责排除。"如果你错了，后果和 C 里一样，没有 panic，没有报错，可能"偶尔能跑"。
 
 所以 `unsafe` 的工程纪律是：**块要小；每个块前面写一条 `// SAFETY:` 注释，论证为什么这里不会 UB；把 unsafe 包在一个安全的函数签名后面，让调用者无从犯错。** 我们马上就会看到这三点。
 
@@ -1646,6 +1648,8 @@ note: an unsafe function restricts its caller, but its body is safe by default
   = note: `#[warn(unsafe_op_in_unsafe_fn)]` (part of `#[warn(rust_2024_compatibility)]`) on by default
 ```
 
+（2024 edition 里这条 lint 本来就是 warn，工作区的 `unsafe_op_in_unsafe_fn = "warn"` 那一行只是把它写明。）
+
 <details>
 <summary>完整源码：ch11_unsafe_fn_lint.rs</summary>
 
@@ -1782,11 +1786,11 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 - [`crates/pebble-gc/src/lib.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/crates/pebble-gc/src/lib.rs)
 - [`crates/pebble-gc/src/bump.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/crates/pebble-gc/src/bump.rs)
 
-比对方式（在标签对应的仓库克隆里）：
+比对方式（`~/pebble-tag` 是 tag 的本地克隆，在你的 workspace 根目录运行）：
 
 ```bash
 for f in Cargo.toml src/lib.rs src/bump.rs; do
-  diff <(git show tutorial-v1:crates/pebble-gc/$f) crates/pebble-gc/$f && echo "$f ok"
+  diff <(git -C ~/pebble-tag show tutorial-v1:crates/pebble-gc/$f) crates/pebble-gc/$f && echo "$f ok"
 done
 ```
 
@@ -1880,7 +1884,7 @@ size_of::<GcRef>() = 8
 <details>
 <summary>参考答案</summary>
 
-递归标记每深一层就多一个栈帧，而被标记的数据结构的深度由 Pebble 程序决定，不由回收器决定。上面的 `ch11_deep_recursion` 实验里，递归标记器在 2 MiB 栈的线程上 20,000 层就崩了（`has overflowed its stack`，进程被 abort），在 8 MiB 的主线程上 50,000 层崩；而工作表 `Vec<GcRef>` 住在堆上，上限是内存。附带的还有一个借用检查器的理由：递归版本要在闭包里调用 `self.mark`，和 `self.get(r)` 的借用冲突（上面的 E0500）。要注意的是，这个 crate 里的 `deeply_nested_lists_survive` 用的是 10,000 层，实验表明这个深度在 debug 构建里递归实现也能过，所以这条测试对"不递归"这件事的约束其实很弱，要加强它应该把深度调到 100,000 以上。
+递归标记每深一层就多一个栈帧，而被标记的数据结构的深度由 Pebble 程序决定，不由回收器决定。上面的 `ch11_deep_recursion` 实验里，递归标记器在 2 MiB 栈的线程上 20,000 层就崩了（`has overflowed its stack`，进程被 abort），在 8 MiB 的主线程上 50,000 层崩；而工作表 `Vec<GcRef>` 住在堆上，上限是内存。附带的还有一个借用检查器的理由：递归版本要在闭包里调用 `self.mark`，和 `self.get(r)` 的借用冲突（上面的 E0500）。要注意的是，这个 crate 里的 `deeply_nested_lists_survive` 用的是 10,000 层，实验表明这个深度在 debug 构建里递归实现也能过，所以这条测试对"不递归"这件事的约束其实很弱，要加强它应该把循环里的 `10_000` 调到 `100_000` 以上，断言里的 `10_001` 同步改。
 
 </details>
 

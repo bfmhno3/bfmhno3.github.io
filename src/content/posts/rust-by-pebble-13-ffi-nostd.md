@@ -2,7 +2,7 @@
 title: "越过边界：FFI 调 C 与 no_std"
 commentId: "post:rust-by-pebble-13-ffi-nostd"
 published: "2026-10-13 20:00:00 +08:00"
-description: "Pebble 的最后两条边界：向下调用一个手写的 C 库，再向下干脆脱掉操作系统。我们写 pebble-sys（build.rs、unsafe extern、Drop、void* 回调、catch_unwind）和 pebble-nostd（no_std、UnsafeCell、原子操作、GlobalAlloc、const 泛型），再用实验补上 repr、union、ManuallyDrop、cdylib。"
+description: "Pebble 的最后两条边界：向下调用一个手写的 C 库，再向下脱掉操作系统。写 pebble-sys（build.rs、unsafe extern、Drop、catch_unwind）和 pebble-nostd（no_std、原子操作、GlobalAlloc、const 泛型），再用实验补上 repr、union、cdylib。"
 category: Note
 tags:
   - Rust
@@ -20,7 +20,7 @@ slug: rust-by-pebble-13-ffi-nostd
 到上一篇为止，Pebble 里每一个字节都归 Rust 管：`String` 归 `Rc`，`Rc` 归编译器，编译器说了算。这一篇我们把边界从两头戳穿。向下，调用一个用 C 写的库（一个 FNV-1a 哈希、一个 arena 分配器、一个接收回调的 `fold`，总共两百来行的 C99）；再向下，连操作系统也不要了，让词法分析器和一个整数求值器跑在我们自己写的分配器上，对 `(1 + 2) * 3 - 4 / 2` 求值总共只向这个分配器要了 2000 字节。边界上的一切都是 `unsafe` 的，所以这篇的主题其实只有一个：怎么把 `unsafe` 关进一个小笼子里，让笼子外面的人不需要知道它存在。
 
 > [!NOTE] 本篇检查点
-> 做完这一篇，你会有 `pebble-sys`（`build.rs`、C 源码、`fnv1a`、`Arena`、`fold`）和 `pebble-nostd`（`no_std` 的求值器加一个 const 泛型的 bump 分配器），两个 crate 都和 tag `tutorial-v1` 逐字节一致，`cargo test -p pebble-sys -p pebble-nostd` 通过。会用到的 Rust 特性：`unsafe extern`、`repr(C)`、`NonNull`、`Drop`、`Send`/`Sync` 与 `PhantomData`、`catch_unwind`、`UnsafeCell`、原子操作、`GlobalAlloc`、const 泛型。上一篇在 [栈式虚拟机](/posts/rust-by-pebble-12-vm-backends/)，那里的 `unsafe` 只出现在 GC 的内存池里；这一篇的 `unsafe` 全是跨边界的。
+> 做完这一篇，你会有 `pebble-sys`（`build.rs`、C 源码、`fnv1a`、`Arena`、`fold`）和 `pebble-nostd`（`no_std` 的求值器加一个 const 泛型的 bump 分配器），两个 crate 都和 tag `tutorial-v1` 逐字节一致，`cargo test -p pebble-sys -p pebble-nostd` 通过。会用到的 Rust 特性：`unsafe extern`、`repr(C)`、`NonNull`、`Drop`、`Send`/`Sync` 与 `PhantomData`、`catch_unwind`、`UnsafeCell`、原子操作、`GlobalAlloc`、const 泛型。上一篇在 [栈式虚拟机](/posts/rust-by-pebble-12-vm-backends/)，VM 自己是 `forbid(unsafe_code)` 的，`unsafe` 上一次出现是第 11 篇的 GC；这一篇的 `unsafe` 全是跨边界的。
 
 ## 先把工作区补齐
 
@@ -889,7 +889,23 @@ error: could not compile `lab-ch13-sys` (bin "arena_two_slices") due to 1 previo
 
 ### 对齐：看一眼 C 在做什么
 
-`used()` 为什么说"包括对齐的 padding"？实验 `arena_bytes.rs`（同一个 lab 里）连续分配 1、1、24 个字节，再要 8 个：
+`used()` 为什么说"包括对齐的 padding"？实验 `arena_bytes.rs`（同一个 lab 里，依赖 `pebble-sys`）建一个容量 64 字节的 `Arena`，连续分配 1、1、24 个字节，再要 8 个：
+
+```rust
+use pebble_sys::Arena;
+
+fn main() {
+    let mut arena = Arena::with_capacity(64).expect("no memory");
+    for len in [1, 1, 24] {
+        let slice = arena.alloc(len).expect("full");
+        println!("len {len:>2} at address ...{:02x}", slice.as_ptr() as usize & 0xff);
+        println!("   used = {}", arena.used());
+    }
+    println!("a fourth, 8-byte request: {:?}", arena.alloc(8));
+}
+```
+
+输出：
 
 ```text
 len  1 at address ...f0
@@ -1399,7 +1415,7 @@ LD_LIBRARY_PATH=target/debug ./main
 
 ```text
 0000000000007b30 T pebble_add
-mangled matches: 0
+0
 ```
 
 ```text
@@ -1746,6 +1762,8 @@ unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout);
 
 `Layout` 是"大小加对齐"，`alloc` 返回的指针必须满足对齐，失败返回空指针。我们写最简单的分配器：bump（也叫 arena 或 linear allocator）：一块固定的内存，一个游标，每次分配把游标往前推一格，释放什么也不做。C++ 里它的近亲是 `std::pmr::monotonic_buffer_resource`。这看起来像偷懒，但在固件里完全是合理的设计：程序跑完就重启，中途回收内存换不来任何东西，反而要付出记账的成本。
 
+`UnsafeCell<T>` 是 `Cell` 和 `RefCell` 底下的原语，也是 Rust 里唯一合法的"从共享引用改内容"的入口：`get()` 接受 `&self`，返回 `*mut T`，之后别名和并发访问是否安全，全由你自己负责。`Cell`、`RefCell`、`Mutex`、原子类型内部都是它加上各自的规则。C++ 里没有对应物，因为 C++ 没有"共享引用不能改"这条规则，也就不需要一个特殊的逃生口。
+
 写 `crates/pebble-nostd/src/bump.rs`。先写一个朴素版本，让编译器告诉我们哪里不对。游标和内存都放进一个结构体，做成 `static`（`GlobalAlloc` 要求全局的）。最直接的写法：游标用 `Cell<usize>`（第 11 篇讲过的内部可变性），内存用 `UnsafeCell<[u8; N]>`。实验 `ch13_static_sync.rs`：
 
 ```rust
@@ -1870,7 +1888,7 @@ error: could not compile `rust-lab` (bin "ch13_const_generic_mismatch") due to 1
 
 像第 5 篇的泛型一样，编译器对每个不同的 `N` 单独生成一份代码（单态化），所以没有运行时代价。
 
-现在写 `bump.rs` 的主体。先是常量和游标：
+现在写 `bump.rs` 的主体。文件最前面那 13 行 `//!` 模块文档（"A bump allocator over a fixed, static arena..."）照抄 [tag](https://github.com/bfmhno3/pebble/blob/tutorial-v1/crates/pebble-nostd/src/bump.rs)，下面从 `use` 开始。先是常量和游标：
 
 ```rust
 use core::alloc::{GlobalAlloc, Layout};
@@ -2211,7 +2229,7 @@ pub fn eval_source(src: &str) -> Result<i64, EvalError> {
 }
 ```
 
-这里把前面几篇的零件接起来：`SourceMap::new()`（第 2 篇）建一个空的源文件表，`add` 登记一个叫 `<nostd>` 的"文件"得到 `SourceId`，`tokenize`（第 4 篇）吐出 token 和诊断信息，诊断非空说明有非法字符，直接拒绝。注意 `TokenKind` 里的字符串是借用自 `src` 的 `&str`（第 4 篇的 `'src` 生命周期），所以整个过程除了 `Vec<Token>` 之外没有拷贝文本。
+这里把前面几篇的零件接起来：`SourceMap::new()`（第 2 篇）建一个空的源文件表，`add` 登记一个叫 `<nostd>` 的"文件"得到 `SourceId`，`tokenize`（第 4 篇）吐出 token 和诊断信息，诊断非空说明有非法字符，直接拒绝。注意 `TokenKind` 里的字符串是借用自 `src` 的 `&str`（第 4 篇的 `'src` 生命周期），所以 `tokenize` 本身没有拷贝文本。
 
 一个自然的疑问：2000 字节都用在哪了？实验 `stages.rs`（同一个 lab）量了前两步：
 
@@ -2295,7 +2313,7 @@ fn eval_rpn(rpn: &[Rpn]) -> Result<i64, EvalError> {
 `kind @ (A | B | ...)` 是"绑定加模式"：先用括号里的或模式判断 token 是不是五个运算符之一，匹配的话再把整个匹配到的值绑定到名字 `kind` 上，下面的内层 `match` 就可以直接用它。内层最后一个 `_ => unreachable!(...)` 的存在，说明编译器没法从外层的模式推出内层已经穷尽，所以只能手写一个"不可能"，这是这种写法的小代价。
 
 > [!NOTE] 跑一遍
-> `cargo test -p pebble-nostd` 之前，确认 `eval.rs` 里的 `use alloc::vec::Vec;` 还在，而且整个文件除了 `std` 之外没有任何别的标准库导入：`pebble-nostd` 里的"正文"只有 `core` 和 `alloc`。
+> `cargo test -p pebble-nostd` 之前，确认 `eval.rs` 里的 `use alloc::vec::Vec;` 还在，而且整个文件没有任何 `std::` 导入：`pebble-nostd` 里的"正文"只有 `core` 和 `alloc`。
 
 运行例子：
 
@@ -2334,11 +2352,11 @@ test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 
 `pebble-sys` 15 个单元测试加 2 个文档测试（`fnv1a` 和 `fold` 各一个），`pebble-nostd` 10 个单元测试（6 个求值器的，4 个分配器的）加 1 个文档测试（`BumpAllocator` 上的 `static HEAP: BumpAllocator = ...`）。第二条命令（clippy，`-D warnings` 把所有警告当作错误）在我的重建目录里通过，输出只有 `Checking`/`Finished` 几行，没有任何警告。
 
-这些文件现在必须和 tag 逐字节一致。把 pebble 仓库克隆下来、切到 tag（`git clone https://github.com/bfmhno3/pebble && git -C pebble checkout tutorial-v1`），然后对每个目录跑 `diff -r`：
+这些文件现在必须和 tag 逐字节一致。把 tag 克隆到 `~/pebble-tag`（第 1 篇做过就跳过：`git clone --branch tutorial-v1 https://github.com/bfmhno3/pebble ~/pebble-tag`），然后在你的工作区根目录里对每个目录跑 `diff -r`：
 
 ```bash
-diff -r crates/pebble-sys ../pebble/crates/pebble-sys
-diff -r crates/pebble-nostd ../pebble/crates/pebble-nostd
+diff -r crates/pebble-sys ~/pebble-tag/crates/pebble-sys
+diff -r crates/pebble-nostd ~/pebble-tag/crates/pebble-nostd
 ```
 
 两条命令都没有任何输出。这十个文件是"完成品"：

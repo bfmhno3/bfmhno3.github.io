@@ -217,7 +217,7 @@ impl SourceFile {
     }
 ```
 
-`id()` 返回 `SourceId`，`Copy`，直接按值复制一份。`name()` 返回 `&str`：把内部 `String` 借出去。`&self.name` 的类型是 `&String`，函数声明要 `&str`，这里编译器自动做了转换（**解引用强制转换**，`&String` 能自动变成 `&str`，因为 `String` 实现了"可以当 `str` 用"，第 8 篇再细讲这个机制；现在记住：需要 `&str` 的地方放 `&String` 总是可以的）。
+`id()` 返回 `SourceId`，`Copy`，直接按值复制一份。`name()` 返回 `&str`：把内部 `String` 借出去。`&self.name` 的类型是 `&String`，函数声明要 `&str`，这里编译器自动做了转换（**解引用强制转换**，`&String` 能自动变成 `&str`，因为 `String` 实现了"可以当 `str` 用"，第 5 篇再细讲这个机制；现在记住：需要 `&str` 的地方放 `&String` 总是可以的）。
 
 `&self` 是第 1 篇预告过的东西：方法**借用**调用者，不拿走。也就是说 `file.name()` 之后 `file` 还在。返回的 `&str` 因此必须不比 `file` 活得更久。我们当场验证编译器是否强制这一点（`ch02_getter.rs`：把一个 `File` 的 `name()` 存到块外面，然后让 `File` 先死）：
 
@@ -415,7 +415,7 @@ help: consider dereferencing the borrow
 ...
 ```
 
-`start` 是 `&u32`，`offset` 是 `u32`，不能直接比。两种修法，都在 `ch02_closure_ok.rs` 里跑过（预期都输出 3）：`|&start|` 在参数里解引用，或者 `|start| *start <= offset` 在函数体里用 `*` 解引用（和 C 一样，`*` 是解引用）。我偏爱前者，把"它是个引用"这件事放在签名里。
+`start` 是 `&u32`，`offset` 是 `u32`，不能直接比。两种修法，都在 `ch02_closure_ok.rs` 里跑过（前两行都输出 3；这个文件的第三行用 `|&start| start <= 2`，输出 1，说明偏移 2 之前只有 `0` 一个行首）：`|&start|` 在参数里解引用，或者 `|start| *start <= offset` 在函数体里用 `*` 解引用（和 C 一样，`*` 是解引用）。我偏爱前者，把"它是个引用"这件事放在签名里。
 
 `(count - 1) as u32`：`count` 是 `usize`（切片下标的类型）。因为 `line_starts[0] == 0`，对任何 `offset` 谓词至少对第一个元素成立，`count >= 1`，所以 `count - 1` 不会下溢。我把这个推理写在了注释里，这是"为什么这里不用 `checked_sub`"的理由。
 
@@ -1138,9 +1138,11 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 - [`crates/pebble-span/src/lib.rs`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/crates/pebble-span/src/lib.rs)：现在是最终版，368 行。
 - [`crates/pebble-span/Cargo.toml`](https://github.com/bfmhno3/pebble/blob/tutorial-v1/crates/pebble-span/Cargo.toml)：第 1 篇已经完成。
 
+（`~/pebble-tag` 是第 1 篇检查点里克隆的 `tutorial-v1` 标签；还没有的话先运行 `git clone --branch tutorial-v1 https://github.com/bfmhno3/pebble ~/pebble-tag`。）
+
 ```bash
-diff <(git -C /path/to/pebble show tutorial-v1:crates/pebble-span/src/lib.rs) crates/pebble-span/src/lib.rs
-diff <(git -C /path/to/pebble show tutorial-v1:crates/pebble-span/Cargo.toml) crates/pebble-span/Cargo.toml
+diff <(git -C ~/pebble-tag show tutorial-v1:crates/pebble-span/src/lib.rs) crates/pebble-span/src/lib.rs
+diff <(git -C ~/pebble-tag show tutorial-v1:crates/pebble-span/Cargo.toml) crates/pebble-span/Cargo.toml
 ```
 
 两条 `diff` 都应该没有输出。文件顺序（对照用）：属性和文档、`extern crate`、`use`、`SourceId` 与它的 `Debug`、`Span` 与它的 `Debug`/`Display`、`Position`、`SourceFile`、`impl SourceFile`、`SourceFile` 的 `Debug`、`compute_line_starts`、`strip_line_ending`、`Spanned` 与 `impl Spanned for Span`、`SourceMap`、`impl SourceMap`、`Index` 实现、`SourceMap` 的 `Debug`、`mod tests`（顺序是 `line_starts_...`、`handles_crlf`、`position_counts_...`、`merge_covers_both`、`merge_across_files_is_a_bug`、`source_map_assigns_...`）。
@@ -1211,10 +1213,10 @@ diff <(git -C /path/to/pebble show tutorial-v1:crates/pebble-span/Cargo.toml) cr
 **2.** 下面这个函数为什么编译不过？有哪两种修法？
 
 ```rust
-fn first_word(s: String) -> &str {
-    match s.find(' ') {
-        Some(end) => &s[..end],
-        None => &s,
+fn first_word(text: String) -> &str {
+    match text.find(' ') {
+        Some(end) => &text[..end],
+        None => &text,
     }
 }
 ```
@@ -1248,7 +1250,7 @@ help: ...or alternatively, you might want to return an owned value
 ...
 ```
 
-根本原因：`s` 是**按值**传进来的，函数结束时它就被释放了。返回一个指向它内部的 `&str` 就是悬垂引用，所以编译器连"借自谁"都找不到（参数里没有任何引用）。两种修法：把参数改成借用 `&str`（`ch02_dangling_ok.rs` 里就是这个版本，输入 `"let x = 1;"` 输出 `let`），或者返回拥有所有权的 `String`（需要 `.to_string()` 复制出来）。哪一种更好取决于你想不想复制。
+根本原因：`text` 是**按值**传进来的，函数结束时它就被释放了。返回一个指向它内部的 `&str` 就是悬垂引用，所以编译器连"借自谁"都找不到（参数里没有任何引用）。两种修法：把参数改成借用 `&str`（`ch02_dangling_ok.rs` 里就是这个版本，输入 `"let x = 1;"` 输出 `let`），或者返回拥有所有权的 `String`（需要 `.to_string()` 复制出来）。哪一种更好取决于你想不想复制。
 
 </details>
 
