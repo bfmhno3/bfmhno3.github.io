@@ -1120,7 +1120,7 @@ Monte Carlo, seeds 1..50, 6-dof NEES bounds [5.078, 6.997]
 
 全程只有 67.2% 的步落在界内，低于我给自己设的 80%。但是平静段 $[20,60)$ 是 96.0%，平均 NEES 6.048，几乎正好是 6（自由度）。滤波器的噪声参数在没有干扰时是准的。失败的部分是线加速度扰动：它没有被门控挡住（第 5 篇讲过原因），也不在滤波器的模型里，加速度计把水平加速度当成了重力方向的偏转，NEES 在那 10 秒里是 9400。
 
-计划里的补救办法是重新调滤波器的 $\sigma_g$、$\sigma_{bw}$。我试了，但这不是对症的药（`python3 python/ch06_eskf.py tune`，大约 5 分钟，不在 `make ch06` 里）：
+常规的补救办法是重新调滤波器的 $\sigma_g$、$\sigma_{bw}$。我试了，但这不是对症的药（`python3 python/ch06_eskf.py tune`，大约 5 分钟，不在 `make ch06` 里）：
 
 ```text
 $ python3 python/ch06_eskf.py tune
