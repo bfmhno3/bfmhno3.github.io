@@ -421,7 +421,7 @@ pub fn joseph_update<const N: usize, const M: usize>(
 
 ### C
 
-C 版的滤波器状态是一个结构体，所有数组都是定长的，包括一块 256 个元素的内联工作区：
+C 版的滤波器状态是一个结构体，所有数组都是定长的，包括一块 280 个元素的内联工作区：
 
 ```c
 typedef struct {
@@ -429,11 +429,11 @@ typedef struct {
 	kl_real sg, sbw, sa, sm; /* gyro, bias random walk, accel, mag noise */
 	kl_real m_w[3];
 	kl_real accel_gate; /* m/s^2 on | |f| - g |; negative disables gating */
-	kl_real work[256];  /* scratch for predict and the updates */
+	kl_real work[280];  /* scratch: predict needs 196, accel/mag updates 30 + KL_JOSEPH_WORK_LEN(7, 3) = 279 */
 } kl_ekf_att;
 ```
 
-没有 `malloc`，没有"调用者要提供缓冲区"的负担，代价是每个 `kl_ekf_att` 对象带着一块不一定用满的工作区（实际用到的最大值是 `predict` 里的 196 个元素）。预测：
+没有 `malloc`，没有"调用者要提供缓冲区"的负担，代价是每个 `kl_ekf_att` 对象带着一块不一定用满的工作区：`predict` 用到 196 个元素，两个测量更新用到 30 加上 `KL_JOSEPH_WORK_LEN(7, 3)` 共 279 个，所以是 280。（这个数字我第一次写的是 256，更新步骤会越界写 23 个元素，覆盖紧挨着结构体的下一个变量。第 5 篇的 app 里它恰好没有踩到任何有用的东西，输出还是和 Python 对得上；到了第 8 篇，同一份代码链接进另一个程序，邻居变成了一个全局常量，结果变成了 NaN，我才发现。这是 C 里没有边界检查的代价，也是为什么 C++ 和 Rust 版本没有这个问题：矩阵尺寸是类型的一部分。）预测：
 
 ```c
 void kl_ekf_att_predict(kl_ekf_att *f, const kl_real gyro[3], kl_real dt)
@@ -689,7 +689,7 @@ typedef struct {
 	kl_real sg, sbw, sa, sm; /* gyro, bias random walk, accel, mag noise */
 	kl_real m_w[3];
 	kl_real accel_gate; /* m/s^2 on | |f| - g |; negative disables gating */
-	kl_real work[256];  /* scratch for predict and the updates */
+	kl_real work[280];  /* scratch: predict needs 196, accel/mag updates 30 + KL_JOSEPH_WORK_LEN(7, 3) = 279 */
 } kl_ekf_att;
 
 /* p0_diag: initial diagonal of P (7). The bias starts at zero. */

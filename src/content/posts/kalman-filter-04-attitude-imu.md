@@ -32,7 +32,7 @@ slug: kalman-filter-04-attitude-imu
 - 世界系 NED（北东地），机体系 FRD（前右下）。重力加速度 $g = 9.80665$ m/s²，世界系下 $\mathbf g_w = [0,0,g]^T$。
 - 四元数用 Hamilton 约定，标量在前：$q = [w,x,y,z]$。$q$ 把机体系向量旋转到世界系：$v_w = q\otimes v_b\otimes q^*$，对应的旋转矩阵记作 $C(q) = C_{wb}$（机体到世界）。
 - 运动学 $\dot q = \tfrac12 q\otimes[0,\omega_b]$，离散形式 $q_{k+1} = q_k\otimes\exp(\tfrac12\omega\Delta t)$（这里的 $\exp$ 在下面定义）。
-- 误差定义（右乘，局部/机体系误差）：$q_{true} = \hat q\otimes\exp(\tfrac12\delta\theta)$，姿态误差向量 $\delta\theta = 2\log(\hat q^{-1}\otimes q_{true})$，规范化为 $w\ge0$。
+- 误差定义（右乘，局部/机体系误差）：$q_{\mathrm{true}} = \hat q\otimes\exp(\tfrac12\delta\theta)$，姿态误差向量 $\delta\theta = 2\log(\hat q^{-1}\otimes q_{\mathrm{true}})$，规范化为 $w\ge0$。
 - 欧拉角用 ZYX 顺序（偏航、俯仰、横滚），只用于显示和报告误差，误差折到 $[-180^\circ,180^\circ)$。我会报告三个轴各自的欧拉角 RMSE（度）和总的旋转角误差 $|\delta\theta|$ 的 RMSE（度）。
 - 传感器模型：
   - 陀螺：$\omega_m = \omega + b + n_g$，$b$ 随机游走。
@@ -178,7 +178,7 @@ $$
 b\leftarrow b - k_ie\,\Delta t,\qquad \hat q\leftarrow\hat q\otimes\exp\big((\omega_m - b + k_pe)\Delta t\big)
 $$
 
-$b$ 的符号是这么确定的：稳态下 $k_pe = -(b_{true}-\hat b)$（失配平衡掉零偏误差），所以 $e$ 是负的零偏误差的 $1/k_p$ 倍；要让 $\hat b$ 趋向 $b_{true}$，需要 $\hat b$ 沿 $-e$ 方向增长，即 $\hat b\leftarrow\hat b - k_ie\Delta t$。
+$b$ 的符号是这么确定的：稳态下 $k_pe = -(b_{\mathrm{true}}-\hat b)$（失配平衡掉零偏误差），所以 $e$ 是负的零偏误差的 $1/k_p$ 倍；要让 $\hat b$ 趋向 $b_{\mathrm{true}}$，需要 $\hat b$ 沿 $-e$ 方向增长，即 $\hat b\leftarrow\hat b - k_ie\Delta t$。
 
 $k_p$ 控制"多快相信测量"，对应第 1 篇 $K_\infty/\Delta t$（时间常数的倒数）；$k_i$ 控制零偏估计多快。我取 $k_p = 1.0$，$k_i = 0.05$ 作为基线，没有调。
 
@@ -299,7 +299,7 @@ def wrap_pi(a):
 - `qlog` 先把 $w<0$ 的四元数取反，保证返回的是 $[0,\pi]$ 内最短的旋转。
 - `dcm_to_quat` 是 Shepperd 方法：对矩阵的迹和三个对角元里最大的那个分情况，避免对接近零的数开方后再相除。
 - `euler_zyx` 里 `np.clip` 防止舍入误差把 `arcsin` 的参数推到 $\pm1$ 之外。
-- `att_error` 返回 $\log(\hat q^{-1}\otimes q_{true})$，没有乘 2：`qlog` 本身已经返回旋转向量（含了那个 2），它就是约定里的 $\delta\theta$。
+- `att_error` 返回 $\log(\hat q^{-1}\otimes q_{\mathrm{true}})$，没有乘 2：`qlog` 本身已经返回旋转向量（含了那个 2），它就是约定里的 $\delta\theta$。
 
 ### 仿真器
 

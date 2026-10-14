@@ -26,18 +26,18 @@ slug: kalman-filter-01-one-dimension
 
 ## 这个系列怎么读
 
-下面是整个系列的地图，目前只有第 1 篇写完：
+下面是整个系列的地图：
 
 | 篇 | 标题 | 主要内容 |
 | --- | --- | --- |
 | 1 | 一维卡尔曼滤波：两个高斯相乘 | 高斯、贝叶斯、预测与更新、稳态增益 |
-| 2 | 升到高维：多变量卡尔曼滤波的推导与实现 | 协方差矩阵、Joseph 形式、Cholesky、手写矩阵库 |
-| 3 | 调参与诊断：怎么知道滤波器没在骗你 | NEES、NIS、可观性、稳态增益、数值稳定 |
-| 4 | 姿态的数学：旋转、四元数与 IMU 仿真器 | SO(3)、四元数、IMU 仿真、互补滤波基线 |
-| 5 | 扩展卡尔曼滤波：把四元数塞进 EKF | 线性化、雅可比、EKF 的代价 |
-| 6 | 误差状态卡尔曼滤波：四元数的正确打开方式 | 误差状态、切空间、注入与重置 |
-| 7 | 无迹卡尔曼滤波，以及四个滤波器同台 | 无迹变换、Mahony/EKF/ESKF/UKF 对比 |
-| 8 | 移植之前：float32、定长内存与每步耗时 | float32、UD 分解、无堆内存、耗时 |
+| 2 | [升到高维：多变量卡尔曼滤波的推导与实现](/posts/kalman-filter-02-multivariate/) | 协方差矩阵、Joseph 形式、Cholesky、手写矩阵库 |
+| 3 | [调参与诊断：怎么知道滤波器没在骗你](/posts/kalman-filter-03-tuning-diagnostics/) | NEES、NIS、可观性、稳态增益、数值稳定 |
+| 4 | [姿态的数学：旋转、四元数与 IMU 仿真器](/posts/kalman-filter-04-attitude-imu/) | SO(3)、四元数、IMU 仿真、互补滤波基线 |
+| 5 | [扩展卡尔曼滤波：把四元数塞进 EKF](/posts/kalman-filter-05-ekf/) | 线性化、雅可比、EKF 的代价 |
+| 6 | [误差状态卡尔曼滤波：四元数的正确打开方式](/posts/kalman-filter-06-eskf/) | 误差状态、切空间、注入与重置 |
+| 7 | [无迹卡尔曼滤波，以及四个滤波器同台](/posts/kalman-filter-07-ukf/) | 无迹变换、Mahony/EKF/ESKF/UKF 对比 |
+| 8 | [移植之前：float32、定长内存与每步耗时](/posts/kalman-filter-08-porting/) | float32、UD 分解、无堆内存、耗时 |
 
 **四种语言。** 每一章的滤波器我都写四遍：Python（numpy，只用来当参考实现和画图）、C（C11，不使用 `malloc`）、C++（C++20，模板，纯头文件）、Rust（edition 2024，`no_std` 兼容）。Python 版承担推导和完整讲解；C、C++、Rust 的核心函数我会贴出来，文字只讲它们和 Python 版的区别：内存归谁、尺寸在哪里确定、标量类型怎么切换、语言本身的惯用法。
 

@@ -31,7 +31,7 @@ slug: kalman-filter-06-eskf
 EKF 把四元数的 4 个分量直接当成状态，带来了一个多余的自由度（第 5 篇最后看到的 $P_{qq}$ 的第四个特征值）。ESKF 换了个做法：
 
 - **名义状态** $(q, b)$：我们认为的姿态和零偏，非线性地传播，不带协方差。
-- **误差状态** $\delta x = [\delta\theta,\ \delta b]\in\mathbb R^6$：真值和名义状态的差。姿态误差定义成第 4 篇的右乘形式：$q_{true} = q\otimes\exp(\delta\theta)$，零偏误差 $b_{true} = b+\delta b$。滤波器的协方差是这个 6 维向量的协方差，$P\in\mathbb R^{6\times6}$。
+- **误差状态** $\delta x = [\delta\theta,\ \delta b]\in\mathbb R^6$：真值和名义状态的差。姿态误差定义成第 4 篇的右乘形式：$q_{\mathrm{true}} = q\otimes\exp(\delta\theta)$，零偏误差 $b_{\mathrm{true}} = b+\delta b$。滤波器的协方差是这个 6 维向量的协方差，$P\in\mathbb R^{6\times6}$。
 
 好处有三：
 
@@ -41,16 +41,23 @@ EKF 把四元数的 4 个分量直接当成状态，带来了一个多余的自�
 
 ### 误差的动力学
 
-设真实角速度 $\omega = \omega_m-b_{true}-n_g$，名义角速度 $\hat\omega = \omega_m-b$。要求 $\delta\theta$ 怎么演化。令 $\delta q = q^*\otimes q_{true} = \exp(\delta\theta)$，对时间求导，用 $\dot q = \tfrac12q\otimes\omega$（$\omega$ 在这里指 $[0,\omega]$）：
+设真实角速度 $\omega = \omega_m-b_{\mathrm{true}}-n_g$，名义角速度 $\hat\omega = \omega_m-b$。要求 $\delta\theta$ 怎么演化。令 $\delta q = q^*\otimes q_{\mathrm{true}} = \exp(\delta\theta)$，对时间求导，用 $\dot q = \tfrac12q\otimes\omega$（$\omega$ 在这里指 $[0,\omega]$）：
 
 $$
-\dot{\delta q} = \dot q^*\otimes q_{true}+q^*\otimes\dot q_{true} = \tfrac12(q\otimes\hat\omega)^*\otimes q_{true}+\tfrac12q^*\otimes q_{true}\otimes\omega = \tfrac12\big(\delta q\otimes\omega-\hat\omega\otimes\delta q\big)
+\begin{aligned}
+\dot{\delta q} &= \dot q^*\otimes q_{\mathrm{true}}+q^*\otimes\dot q_{\mathrm{true}}\\
+&= \tfrac12(q\otimes\hat\omega)^*\otimes q_{\mathrm{true}}+\tfrac12q^*\otimes q_{\mathrm{true}}\otimes\omega\\
+&= \tfrac12\big(\delta q\otimes\omega-\hat\omega\otimes\delta q\big)
+\end{aligned}
 $$
 
 （用了 $(q\otimes\hat\omega)^* = \hat\omega^*\otimes q^* = -\hat\omega\otimes q^*$，纯虚四元数的共轭是它的负。）把 $\delta q\approx[1,\tfrac12\delta\theta]$ 代入，向量部分：
 
 $$
-\tfrac12\dot{\delta\theta} = \tfrac12\big(\omega-\hat\omega+\tfrac12\delta\theta\times\omega-\tfrac12\hat\omega\times\delta\theta\big)\approx\tfrac12(\omega-\hat\omega)+\tfrac12\delta\theta\times\hat\omega
+\begin{aligned}
+\tfrac12\dot{\delta\theta} &= \tfrac12\big(\omega-\hat\omega+\tfrac12\delta\theta\times\omega-\tfrac12\hat\omega\times\delta\theta\big)\\
+&\approx\tfrac12(\omega-\hat\omega)+\tfrac12\delta\theta\times\hat\omega
+\end{aligned}
 $$
 
 （保留一阶小量，$\omega\approx\hat\omega$ 用在二阶项里。）所以
@@ -59,7 +66,7 @@ $$
 \dot{\delta\theta} = -[\hat\omega]_\times\delta\theta - \delta b - n_g,\qquad \dot{\delta b} = n_{bw}
 $$
 
-这里 $\omega-\hat\omega = -(b_{true}-b)-n_g = -\delta b-n_g$。这是 Solà 的结果。
+这里 $\omega-\hat\omega = -(b_{\mathrm{true}}-b)-n_g = -\delta b-n_g$。这是 Solà 的结果。
 
 **离散化。** 角速度在一步里取常数 $\hat\omega$，$-[\hat\omega]_\times$ 的矩阵指数是旋转 $\exp(-\hat\omega\Delta t)$ 对应的矩阵，也就是 $C\big(\exp(\hat\omega\Delta t)\big)^T$；对 $\delta b$ 的耦合到一阶是 $-I\Delta t$：
 
@@ -71,7 +78,7 @@ $$
 
 ### 测量模型
 
-**加速度计。** 重力方向的真实机体系读数是 $C(q_{true})^Tv$，$v = [0,0,-1]^T$。$C(q\otimes\exp(\delta\theta))^T = \exp(\delta\theta)^T$ 对应的矩阵作用在 $C(q)^T$ 上，一阶是 $(I-[\delta\theta]_\times)$，所以
+**加速度计。** 重力方向的真实机体系读数是 $C(q_{\mathrm{true}})^Tv$，$v = [0,0,-1]^T$。$C(q\otimes\exp(\delta\theta))^T = \exp(\delta\theta)^T$ 对应的矩阵作用在 $C(q)^T$ 上，一阶是 $(I-[\delta\theta]_\times)$，所以
 
 $$
 z_a\approx(I-[\delta\theta]_\times)\,h = h+[h]_\times\delta\theta,\qquad h = C(q)^Tv
@@ -81,7 +88,7 @@ $$
 
 **磁力计：只更新航向。** 第 5 篇的 EKF 把磁力计的整个 3 维向量塞进更新，磁干扰会污染横滚俯仰。这一篇换一个模型：把磁力计测量按名义姿态旋转到世界系，只比较水平面内的航向角。设 $m' = C(q)\,z_m$，测得的航向 $\psi_z = \operatorname{atan2}(m'_y,m'_x)$，参考场的航向 $\psi_h = \operatorname{atan2}(m_{w,y},m_{w,x}) = 0$，新息 $y = \operatorname{wrap}(\psi_z-\psi_h)$，折到一个周期内。
 
-求 $H$。真实姿态是 $q\otimes\exp(\delta\theta)$，磁力计读数 $z_m = C_{true}^Tm_w$，$m' = C(q)C_{true}^Tm_w$。令世界系下的误差旋转 $\delta\phi = C(q)\delta\theta$（局部误差转到世界系），$C_{true} = (I+[\delta\phi]_\times)C(q)$，所以 $m'\approx(I-[\delta\phi]_\times)m_w = m_w-\delta\phi\times m_w$。对航向角求导：$\psi = \operatorname{atan2}(m'_y,m'_x)$，$\partial\psi/\partial m' = [-m'_y,\ m'_x]/(m'^2_x+m'^2_y)$，在标称点 $m' = m_w = [m_x,m_y,m_z]$，$\partial m'/\partial\delta\phi = [m_w]_\times$（因为 $-\delta\phi\times m_w = m_w\times\delta\phi$），链式法则得到
+求 $H$。真实姿态是 $q\otimes\exp(\delta\theta)$，磁力计读数 $z_m = C_{\mathrm{true}}^Tm_w$，$m' = C(q)C_{\mathrm{true}}^Tm_w$。令世界系下的误差旋转 $\delta\phi = C(q)\delta\theta$（局部误差转到世界系），$C_{\mathrm{true}} = (I+[\delta\phi]_\times)C(q)$，所以 $m'\approx(I-[\delta\phi]_\times)m_w = m_w-\delta\phi\times m_w$。对航向角求导：$\psi = \operatorname{atan2}(m'_y,m'_x)$，$\partial\psi/\partial m' = [-m'_y,\ m'_x]/(m'^2_x+m'^2_y)$，在标称点 $m' = m_w = [m_x,m_y,m_z]$，$\partial m'/\partial\delta\phi = [m_w]_\times$（因为 $-\delta\phi\times m_w = m_w\times\delta\phi$），链式法则得到
 
 $$
 \frac{\partial\psi}{\partial\delta\phi} = \frac{[\,m_xm_z,\ \ m_ym_z,\ \ -(m_x^2+m_y^2)\,]}{m_x^2+m_y^2},\qquad H_{\delta\theta} = \frac{\partial\psi}{\partial\delta\phi}\,C(q),\quad H_{\delta b} = 0
@@ -592,9 +599,15 @@ kl_real kl_wrap_pi(kl_real a);
 
 #define PI ((kl_real)3.14159265358979323846)
 
+#ifdef KL_USE_FLOAT
+#define KL_FMOD fmodf /* fmod would drag soft-double code into a Cortex-M4F build */
+#else
+#define KL_FMOD fmod
+#endif
+
 kl_real kl_wrap_pi(kl_real a)
 {
-	kl_real r = fmod(a + PI, 2 * PI);
+	kl_real r = KL_FMOD(a + PI, 2 * PI);
 	if (r < 0)
 		r += 2 * PI;
 	return r - PI;
@@ -879,16 +892,16 @@ pub struct Eskf {
     pub q: Quat,
     pub b: [Real; 3],
     pub p: Mat<6, 6>,
-    sg: Real,
-    sbw: Real,
-    sa: Real,
-    sm: Real,
-    m_w: [Real; 3],
+    pub sg: Real,
+    pub sbw: Real,
+    pub sa: Real,
+    pub sm: Real,
+    pub m_w: [Real; 3],
     /// Gates on | |f| - g | (m/s^2) and | |m| - 1 |; negative disables gating.
-    accel_gate: Real,
-    mag_gate: Real,
+    pub accel_gate: Real,
+    pub mag_gate: Real,
     /// Apply the reset Jacobian P <- G P G^T after each injection.
-    reset: bool,
+    pub reset: bool,
 }
 
 impl Eskf {
