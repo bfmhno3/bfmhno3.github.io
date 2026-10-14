@@ -15,6 +15,14 @@
 - [打赏](https://bfmhno3.github.io/sponsor/): 如果我的内容对你有帮助，欢迎通过以下方式打赏我，你的支持是我持续创作的动力！
 
 ## Recent Posts
+- [移植之前：float32、定长内存与每步耗时](https://bfmhno3.github.io/posts/kalman-filter-08-porting/): 卡尔曼滤波系列第 8 篇，也是最后一篇：在上硬件之前，纯软件地量清楚 float32 的精度代价、顺序标量更新和 UD 分解、每个滤波器的内存占用、没有堆分配的证据、Cortex-M4F 上的代码体积和每步耗时，附一份移植清单和一个硬铁偏置的演示。
+- [无迹卡尔曼滤波，以及四个滤波器同台](https://bfmhno3.github.io/posts/kalman-filter-07-ukf/): 卡尔曼滤波系列第 7 篇：推导无迹变换为什么能抓到均值的二阶项，写一个不需要雅可比的误差状态 UKF，并在同一份 50 个种子的数据上把 Mahony、EKF、ESKF、UKF 摆在一张表里比较，包括大初始误差。Python、C、C++、Rust 实现。
+- [误差状态卡尔曼滤波：四元数的正确打开方式](https://bfmhno3.github.io/posts/kalman-filter-06-eskf/): 卡尔曼滤波系列第 6 篇：推导误差状态卡尔曼滤波（ESKF），把姿态误差放在 3 维切空间里，协方差满秩；仅用航向更新磁力计；诚实地对比 EKF，包括一个我没想到的结论：大部分收益来自一行门控。Python、C、C++、Rust 实现。
+- [扩展卡尔曼滤波：把四元数塞进 EKF](https://bfmhno3.github.io/posts/kalman-filter-05-ekf/): 卡尔曼滤波系列第 5 篇：推导扩展卡尔曼滤波，用四元数加陀螺零偏的 7 维状态做三维姿态估计，手推测量雅可比并用有限差分验证，看它在平静段、线加速度扰动和磁干扰下的表现，并指出四元数协方差的结构性问题。Python、C、C++、Rust 实现。
+- [姿态的数学：旋转、四元数与 IMU 仿真器](https://bfmhno3.github.io/posts/kalman-filter-04-attitude-imu/): 卡尔曼滤波系列第 4 篇：旋转矩阵、欧拉角与万向锁、轴角与指数映射、四元数及其运动学的完整推导；一个带零偏、噪声和两段扰动的 IMU 仿真器；以及纯陀螺积分、TRIAD 和 Mahony 互补滤波三个基线，Python、C、C++、Rust 同步实现。
+- [调参与诊断：怎么知道滤波器没在骗你](https://bfmhno3.github.io/posts/kalman-filter-03-tuning-diagnostics/): 卡尔曼滤波系列第 3 篇：用 NEES、NIS、新息自相关检验滤波器是否自洽，用可观性矩阵判断哪些状态估不出来，用 Riccati 迭代求稳态增益，并比较协方差更新的 Joseph 形式与短形式。Python、C、C++、Rust 同步实现。
+- [升到高维：多变量卡尔曼滤波的推导与实现](https://bfmhno3.github.io/posts/kalman-filter-02-multivariate/): 卡尔曼滤波系列第 2 篇：从协方差矩阵和多元高斯的条件分布推导一般形式的卡尔曼滤波，给出 Joseph 形式与 Cholesky 求解，推导连续到离散的过程噪声，并手写一个没有任何第三方依赖的矩阵库，用 Python、C、C++、Rust 实现。
+- [一维卡尔曼滤波：两个高斯相乘](https://bfmhno3.github.io/posts/kalman-filter-01-one-dimension/): 卡尔曼滤波系列第 1 篇：从高斯分布和贝叶斯公式出发，推导一维卡尔曼滤波的预测与更新，求稳态增益，并用 Python、C、C++、Rust 四种语言实现同一个滤波器，结果逐位一致。
 - [收尾：Cargo features、测试、lint 与 CI](https://bfmhno3.github.io/posts/rust-by-pebble-15-engineering/): 最后一篇没有新语法。我们把 pebble repl 做成可选的 Cargo feature，看清单元、集成和文档测试的分工，让 rustdoc、clippy、rustfmt 把风格交给机器，读完 CI 配置，再把整个工作区与 tag 做最后一次逐字节对比。
 - [并发与 async：线程、Send/Sync 和一个 Tokio 服务](https://bfmhno3.github.io/posts/rust-by-pebble-14-concurrency-async/): 让 pebble check 并行检查多个文件，再写一个能同时服务很多连接的 Tokio 求值服务器。从 thread::scope、Send/Sync 讲到手写 Future，最后写 pebble-net：成帧、FrameError、select!。
 - [越过边界：FFI 调 C 与 no_std](https://bfmhno3.github.io/posts/rust-by-pebble-13-ffi-nostd/): Pebble 的最后两条边界：向下调用一个手写的 C 库，再向下脱掉操作系统。写 pebble-sys（build.rs、unsafe extern、Drop、catch_unwind）和 pebble-nostd（no_std、原子操作、GlobalAlloc、const 泛型），再用实验补上 repr、union、cdylib。
@@ -27,11 +35,3 @@
 - [过程宏：让编译器替我写 impl Spanned](https://bfmhno3.github.io/posts/rust-by-pebble-06-proc-macros/): 上一篇我们手写了三个一模一样的 impl Spanned。这一篇写一个 derive 过程宏，让编译器在编译时替我们生成它：从 TokenStream、syn 与 quote 讲起，撞上泛型、引用绑定、卫生性和自定义编译错误，最后删掉三段手写代码，测试一个字不改。
 - [递归类型、泛型与 trait：搭一棵 AST](https://bfmhno3.github.io/posts/rust-by-pebble-05-ast-generics/): 把 token 流变成一棵树：用 Box 打破递归枚举的无限大小，用泛型和 trait bound 写出能处理任何访问者的遍历函数，再亲手撞上 ?Sized、IntoIterator 与手写 Spanned 的重复劳动。
 - [生命周期：让 token 借用源码](https://bfmhno3.github.io/posts/rust-by-pebble-04-lifetimes-lexer/): 写 pebble-lexer：token 不复制源码而是借用它。从 C++ string_view 的悬垂说起，亲手撞上 E0106 和 E0597，再学生命周期标注、省略规则、'static、Cow、Iterator 和模式匹配，最后让词法分析器在报错之后继续往下走。
-- [enum、trait 与第一份错误报告](https://bfmhno3.github.io/posts/rust-by-pebble-03-enums-traits-diagnostics/): 写 pebble-diag：用 enum 表示严重程度，用 builder 拼出带下划线的错误报告，用 trait 决定错误去哪。顺带弄清 Display 与 Debug、fmt::Write 与 io::Write、supertrait 和孤儿规则。
-- [所有权：SourceMap 里的 String 归谁](https://bfmhno3.github.io/posts/rust-by-pebble-02-ownership/): 用 Pebble 从零学 Rust 的第 2 篇：写完 pebble-span。为了把字节偏移翻译成行列，我们需要一个持有源码文本的 SourceMap，顺便学会 String 与 &str、移动、借用、Vec、Option、闭包初见、UTF-8、Index 运算符重载和 no_std。
-- [第一个 crate：从 cargo new 到 Span](https://bfmhno3.github.io/posts/rust-by-pebble-01-first-crate/): 用 Pebble 从零学 Rust 的第 1 篇：先看完成品在两个后端上跑 fib，再从 cargo new 开始搭 workspace，亲手写出第一个 crate pebble-span，顺手学会 let、整数类型、表达式、控制流、struct、impl、derive 和单元测试。
-- [RAII 到底贵不贵：我把 C++ 的资源管理拆到了汇编](https://bfmhno3.github.io/posts/raii-in-cpp/): 我把 RAII 拆成 8 个可运行的实验：用手工清理对比析构函数，用替换的 operator new/delete 数泄漏对象，用 objdump 比对热路径与栈展开路径的指令数，再实测 unique_ptr 与 shared_ptr 的分配开销，最后整理浅拷贝、自赋值、抛异常的析构函数这些真实的坑。
-- [我把同一份 Agent 配置写了 4 遍: JSON、TOML、YAML 与配置文件的语法和选择](https://bfmhno3.github.io/posts/configuration-file-formats-for-ai-agents/): 我把同一份包含 16 个叶子值的 Agent 配置分别写成 JSON、TOML、YAML 和 INI，实际解析并比较它们，再解释 JSONC、.env、XML、Schema、覆盖顺序、密钥管理与常见陷阱。
-- [我不想再盲贴正则表达式了: 从语法到 Scoop、Python、CMake、C++ 和 TypeScript](https://bfmhno3.github.io/posts/regular-expressions-from-syntax-to-automation/): 我从一份包含 4 个版本号的发布页开始，逐步写出可解释、可移植、可测试的正则表达式，再把同一套方法放进 Scoop checkver、Python、CMake、C++ 和 JavaScript/TypeScript。
-- [我会用 Git，但它到底在做什么？从对象数据库到现代工作流](https://bfmhno3.github.io/posts/understanding-git/): 我用 Git 2.54.0 建了一个隔离仓库，从 blob、tree、commit、index、ref 和 reflog 拆开 add、commit、branch、merge、rebase、fetch、pull 与 push，再整理一套意图明确、可恢复的现代 Git 命令行。
-- [一台不存在的计算机：QEMU 工作原理与实践](https://bfmhno3.github.io/posts/understanding-qemu/): 我用 QEMU 10.2.4 从零启动一个 512 字节 x86 扇区，运行 992 字节 AArch64 ELF，再沿着 machine、TCG/KVM、设备与后端、VirtIO、QMP、GDB、磁盘、网络和 ARM virt 拆开完整系统模拟链。
