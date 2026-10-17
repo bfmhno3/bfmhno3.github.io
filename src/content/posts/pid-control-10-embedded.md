@@ -1632,9 +1632,9 @@ IAE difference after the setpoint step: 0.53 %
 host timing on: AMD Ryzen 7 PRO 6850U with Radeon Graphics
 ns per update, median of 5 runs of 1e6 (host, NOT the MCU)
             f64      f32      q16
-c          4.61     4.66     3.64
-cpp        1.83     2.17     1.98
-rs         4.00     4.09     5.22
+c          4.71     4.69     3.79
+cpp        1.87     2.18     2.00
+rs         4.01     4.08     5.41
 figure: figures/ch10/float32-stall.svg
 figure: figures/ch10/fixed-vs-float.svg
 figure: figures/ch10/can-quantization.svg
@@ -1714,9 +1714,9 @@ float32 的构建没有 Python 的 float32 参考，所以我做了两件事：�
 
 | 实现 | float64 | float32 | Q16.16 |
 | --- | ---: | ---: | ---: |
-| C | 4.61 | 4.66 | 3.64 |
-| C++ | 1.83 | 2.17 | 1.98 |
-| Rust | 4.00 | 4.09 | 5.22 |
+| C | 4.71 | 4.69 | 3.79 |
+| C++ | 1.87 | 2.18 | 2.00 |
+| Rust | 4.01 | 4.08 | 5.41 |
 
 ![主机计时：每种实现三种格式每次更新的纳秒数，C++ 最低，Q16.16 在 C 里最快、在 Rust 里最慢](/assets/images/pid-control/ch10-timing.svg)
 
