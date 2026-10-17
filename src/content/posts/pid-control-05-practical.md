@@ -19,7 +19,7 @@ slug: pid-control-05-practical
 前四篇我一直把 PID 当成一个公式：套上 $u = k_p e + k_i\int e + k_d\dot e$，调几个数，看曲线。这一篇我把它放到一个“会出事”的场景里：电机电流上限 20 A，设定值一次跳到 40 rad/s，积分器在饱和期间照常累加，结果轮速冲到 70.96 rad/s，超调 77.4%；换成条件积分，同一个阶跃只有 2.2%。**饱和、微分冲击、重力和增益切换，是 PID 从课本走到机器人上最先遇到的四个坑，它们各自都有一行修法，但每一行都会碰到别的东西。** 这一篇我把四个坑逐个复现，再把修法收成系列从此以后一直用的 PID 库：$b$、$c$ 两个设定值权重，滤波微分，四种抗饱和模式（还有一个让外部掐掉积分的开关），前馈入口和 `reset`。还有一个我事先用公式算过、看到曲线还是愣了一下的结果：积分限幅是最常见的写法，它在这个负载下留下了 0.79 rad/s 的稳态误差。
 
 > [!NOTE] 本篇检查点
-> 这一篇结束时你会有：`make ch05` 通过，`out/ch05/` 下 60 个 CSV（15 个算例：`windup_{none,limit,clamp,backcalc}`、`kick_c1`、`kick_c0`、`weight_b05`、`dfilter_tf{0,0.002,0.01}`、`ff_{none,gravity,gravity_acc}`、`bumpless_{off,on}`，每个 Python、C、C++、Rust 各一份），`figures/ch05/` 下 5 张图；以及积分饱和、设定值权重、微分滤波、前馈、无扰动切换的完整推导。
+> 这一篇结束时你会有：`make ch05` 通过，`out/ch05/` 下 60 个 CSV（15 个算例：`windup_{none,limit,clamp,backcalc}`、`kick_c1`、`kick_c0`、`weight_b05`、`dfilter_tf{0,0.002,0.01}`、`ff_{none,gravity,gravity_acc}`、`bumpless_{off,on}`，每个 Python、C、C++、Rust 各一份），`figures/ch05/` 下 5 张图；以及积分饱和、设定值权重、微分滤波、前馈、无扰动切换的推导。
 > 新增模块：Python 是 `pidlab/pid.py`，另外在 `pidlab/plants.py` 里加了 `GimbalPitch` 和 `round_half_away`；C 是 `pl/pid.h` 和 `pid.c`（`plants.h`、`plants.c` 里加了 `pl_gimbal_pitch`）；C++ 是 `pidlab/pid.h`（`plants.h` 里加了 `GimbalPitch<T>`）；Rust 是 `pid.rs`（`plants.rs` 里加了 `GimbalPitch`）。**这个 `pid` 模块的接口从这一篇起固定，第 6 到第 10 篇都直接用它。**
 > 前置：[第 4 篇](/posts/pid-control-04-discretization/)。需要的数学：第 2 篇的一阶、二阶系统，第 4 篇的离散化；这一篇没有新的数学工具。
 
@@ -138,34 +138,11 @@ flowchart LR
 
 ## Python 实现
 
-模块 `pidlab/pid.py`，完整代码：
+模块是 [`python/pidlab/pid.py`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/python/pidlab/pid.py)，不到 100 行。我只贴承重的部分。先是配置，所有字段都是物理单位的并联增益：
 
 ```python
-"""The series' PID: setpoint weights, filtered D, four windup modes."""
-
-import math
-from dataclasses import dataclass, replace
-from enum import Enum
-
-
-class Windup(Enum):
-    NONE = 0
-    LIMIT = 1
-    CLAMP = 2
-    BACK_CALC = 3
-
-
 @dataclass
 class PidConfig:
-    """Parallel gains in physical units, sample time ts.
-
-    u = kp (b r - y) + I + D + ff, with I' = ki (r - y) and
-    D(s) = kd s / (tf s + 1) acting on c r - y. b and c weight the
-    setpoint in the P and D terms. u is clamped to [u_min, u_max].
-    LIMIT clamps I to +-i_limit; BACK_CALC feeds (u - v) back with the
-    tracking time constant tt.
-    """
-
     kp: float
     ki: float
     kd: float
@@ -178,34 +155,29 @@ class PidConfig:
     windup: Windup = Windup.CLAMP
     i_limit: float = math.inf
     tt: float = 0.0
+```
 
+**字段顺序是 `kp, ki, kd, ts` 加一串有默认值的字段。** 默认是 $b = 1$、$c = 0$（微分只看测量值）、`CLAMP`、不限幅、不滤波。第 1 篇的 `PidBasic` 基本是它的特例：$c = 1$、`tf = 0`、`LIMIT`，区别只在积分先用后更新。
 
-def clamp(x: float, lo: float, hi: float) -> float:
-    return lo if x < lo else (hi if x > hi else x)
+构造函数拒绝四种配置，并且存的是配置的一份拷贝：
 
-
-class Pid:
-    """Positional PID. The first update primes the D term (no kick)."""
-
+```python
     def __init__(self, cfg: PidConfig) -> None:
         if cfg.ts <= 0.0 or cfg.tf < 0.0 or cfg.u_min > cfg.u_max:
             raise ValueError("need ts > 0, tf >= 0, u_min <= u_max")
         if cfg.windup is Windup.BACK_CALC and cfg.tt <= 0.0:
             raise ValueError("BACK_CALC needs tt > 0")
         self.cfg = replace(cfg)  # a copy: the gains may be edited later
-        self.integral = 0.0
-        self.d_state = 0.0
-        self.prev_ed = 0.0
-        self.primed = False
-        self.saturated = False
+        # ... integral, d_state, prev_ed = 0; primed = saturated = False
+```
 
-    def update(
-        self,
-        r: float,
-        y: float,
-        ff: float = 0.0,
-        hold_integral: bool = False,
-    ) -> float:
+四种配置是 `ts <= 0`、`tf < 0`、`u_min > u_max`，以及 `BACK_CALC` 却 `tt <= 0`。最后一条是新的，`ts / tt` 除零会产生 `inf`，我宁愿它在构造时失败。
+
+**`self.cfg = replace(cfg)` 这一行是被一个 bug 逼出来的。** 我第一版直接存 `cfg`。`bumpless_off` 在切换时 `pid.cfg.kp *= 2.0`，改的是算例表里那份共享的 `base` 配置，下一个算例 `bumpless_on` 拿到的就是已经翻了一倍的增益，从第 0 拍起就是 2 倍增益。三种原生实现和 Python 一对，`bumpless_on` 的 `sat` 列差了 1.0（`u` 列差了 0.45 N·m 量级），`compare_dir` 如实报了 FAIL。原生版本的配置是按值拷进控制器的，从来没有这个问题，是 Python 的对象引用惹的祸。
+
+接着是 `update`，上面“更新顺序”的七步一步不差：
+
+```python
         c = self.cfg
         p = c.kp * (c.b * r - y)
         ed = c.c * r - y
@@ -224,138 +196,58 @@ class Pid:
             e = r - y
             if c.windup is Windup.NONE:
                 self.integral += c.ki * c.ts * e
-            elif c.windup is Windup.LIMIT:
-                self.integral += c.ki * c.ts * e
-                self.integral = clamp(self.integral, -c.i_limit, c.i_limit)
+            # ... LIMIT: the same, then clamp(self.integral, +-i_limit)
             elif c.windup is Windup.CLAMP:
                 if not (self.saturated and e * (v - u) > 0.0):
                     self.integral += c.ki * c.ts * e
             else:
                 self.integral += c.ki * c.ts * e + c.ts / c.tt * (u - v)
         return u
+```
 
+要注意三处。**积分器吃的是 `e = r - y`，不是 `p` 用的 `b * r - y`，** 所以 $b$ 不会改变稳态。**`saturated` 是这一拍的 `u != v`，不含积分更新之后的任何东西，** 这正是第 7 篇外环要读的那个标志。`hold_integral` 为真时整个第 6 步跳过，包括 BACK_CALC 的回灌。`reset` 只有三行，就是前面的 $I \leftarrow u - k_p(br - y) - d$：
+
+```python
     def reset(self, u: float, r: float, y: float) -> None:
-        """Make the next update continue from output u (bumpless)."""
         c = self.cfg
         self.integral = u - c.kp * (c.b * r - y) - self.d_state
         self.prev_ed = c.c * r - y
         self.primed = True
 ```
 
-**配置的字段顺序是 `kp, ki, kd, ts` 加一串有默认值的字段。** 默认是 $b = 1$、$c = 0$（微分只看测量值）、`CLAMP`、不限幅、不滤波。第 1 篇的 `PidBasic` 基本是它的特例：$c = 1$、`tf = 0`、`LIMIT`，区别只在积分先用后更新。
+### 俯仰轴和四舍五入
 
-**构造函数拒绝四种配置：** `ts <= 0`、`tf < 0`、`u_min > u_max`，以及 `BACK_CALC` 却 `tt <= 0`。最后一条是新的，`ts / tt` 除零会产生 `inf`，我宁愿它在构造时失败。
-
-**`self.cfg = replace(cfg)` 是一次拷贝，这一行是被一个 bug 逼出来的。** 我第一版直接存 `cfg`。`bumpless_off` 在切换时 `pid.cfg.kp *= 2.0`，改的是算例表里那份共享的 `base` 配置，下一个算例 `bumpless_on` 拿到的就是已经翻了一倍的增益，从第 0 拍起就是 2 倍增益。结果三种原生实现和 Python 一对，`bumpless_on` 的 `sat` 列差了 1.0（`u` 列差了 0.45 N·m 量级），`compare_dir` 如实报了 FAIL。原生版本的配置是按值拷进控制器的，从来没有这个问题，是 Python 的对象引用惹的祸。
-
-驱动要的新植物 `GimbalPitch`（GM6020 俯仰，带重力和编码器）和四舍五入的辅助函数，加在 `pidlab/plants.py`：
+驱动要一个新植物 `GimbalPitch`（GM6020 俯仰，带重力和编码器）。它的运动方程是 $J\ddot\theta = \tau - \tau_d - b\dot\theta - mgl\cos\theta$，状态 $[\theta, \dot\theta]$，输入 $[\tau, \tau_d]$，$\tau_d$ 是外部负载力矩，加在 `plants.py` 里：
 
 ```python
-def round_half_away(x: float) -> float:
-    """Round to the nearest integer, ties away from zero (not banker's)."""
-    a = abs(x)
-    f = math.floor(a)
-    return math.copysign(f + (1.0 if a - f >= 0.5 else 0.0), x)
-
-
-@dataclass
-class GimbalPitch:
-    """GM6020 pitch, torque commanded, with gravity and an encoder.
-
-    J th'' = tau - tau_d - b th' - m g l cos(th).
-    State x = [th, th']; input u = [tau, tau_d]; output th. The encoder
-    reports th in multiples of `quantum`.
-    """
-
-    j: float = 0.015
-    b: float = 0.002
-    m: float = 1.5
-    l: float = 0.03  # noqa: E741
-    g: float = 9.81
-    u_max: float = 1.0
-    quantum: float = 2.0 * math.pi / 8192.0
-
-    n = 2
-    n_in = 2  # `m` is the mass here
-
     def deriv(self, x, u):
         grav = self.m * self.g * self.l * math.cos(x[0])
         acc = (u[0] - u[1] - self.b * x[1] - grav) / self.j
         return [x[1], acc]
-
-    def output(self, x):
-        return x[0]
 
     def encoder(self, x):
         q = self.quantum
         return round_half_away(x[0] / q) * q
 ```
 
-**`round_half_away` 是四种语言必须一致的东西。** Python 内置的 `round` 是银行家舍入（0.5 舍入到偶数），而 C 的 `round`、Rust 的 `f64::round` 都是“远离零”。我写了一个显式的版本，C 用 `round`/`roundf`，Rust 用 `libm::round`，C++ 用 `std::round`。`encoder` 把角度除以 $q$、舍入、再乘回去。`x` 是状态 $[\theta, \dot\theta]$，输入是 $[\tau, \tau_d]$，$\tau_d$ 是外部负载力矩。（类里没有输入个数 `m`，因为 `m` 在这里是质量，我用了 `n_in`。）
-
-驱动 `python/ch05_practical.py` 的算例表。转速环的 PI 是第 4 篇的 $\omega_n = 30$、$\zeta = 0.7$，俯仰的 PID 是 $\omega_n = 15$、$\zeta = 0.7$，$k_p = J\omega_n^2 = 3.375$、$k_d = 2\zeta\omega_nJ - b = 0.313$、$k_i = 0.2\,k_p = 0.675$：
+（类里没有输入个数 `m`，因为 `m` 在这里是质量，我用了 `n_in`。）`encoder` 把角度除以 $q$、舍入、再乘回去，也就是第 1 篇说过的“编码器读数是 $q$ 的整数倍”。**舍入函数是四种语言必须一致的东西。** Python 内置的 `round` 是银行家舍入（0.5 舍入到偶数），而 C 的 `round`、Rust 的 `f64::round` 都是“远离零”，所以我写了一个显式的版本：
 
 ```python
-def make_cases() -> list[Case]:
-    kps, kis = speed_gains()
-    cases = []
-    for name, mode in (
-        ("windup_none", Windup.NONE),
-        ("windup_limit", Windup.LIMIT),
-        ("windup_clamp", Windup.CLAMP),
-        ("windup_backcalc", Windup.BACK_CALC),
-    ):
-        cfg = PidConfig(
-            kps,
-            kis,
-            0.0,
-            TS,
-            u_min=-20.0,
-            u_max=20.0,
-            windup=mode,
-            i_limit=I_LIMIT,
-            tt=0.5 * kps / kis,
-        )
-        cases.append(Case(name, "ch05_windup", "speed", cfg))
-    kp, ki, kd = pitch_gains()
-    base = PidConfig(kp, ki, kd, TS, tf=TF, u_min=-1.0, u_max=1.0)
-    for name, b, c in (
-        ("kick_c1", 1.0, 1.0),
-        ("kick_c0", 1.0, 0.0),
-        ("weight_b05", 0.5, 0.0),
-    ):
-        cases.append(Case(name, "ch05_step", "pitch", replace(base, b=b, c=c)))
-    for tag, tf in (("0", 0.0), ("0.002", 0.002), ("0.01", 0.01)):
-        cases.append(
-            Case(
-                f"dfilter_tf{tag}", "ch05_step", "pitch", replace(base, tf=tf)
-            )
-        )
-    for name in ("ff_none", "ff_gravity", "ff_gravity_acc"):
-        cases.append(Case(name, f"ch05_{name}", "pitch", base))
-    cases.append(Case("bumpless_off", "ch05_bumpless", "pitch", base, 1))
-    cases.append(Case("bumpless_on", "ch05_bumpless", "pitch", base, 2))
-    return cases
-
+def round_half_away(x: float) -> float:
+    a = abs(x)
+    f = math.floor(a)
+    return math.copysign(f + (1.0 if a - f >= 0.5 else 0.0), x)
 ```
 
-仿真循环比前几章更短，因为没有传输延迟，限幅在 PID 里：
+C 用 `round`/`roundf`，Rust 用 `libm::round`，C++ 用 `std::round`。
+
+### 驱动
+
+驱动 [`python/ch05_practical.py`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/python/ch05_practical.py) 的算例表我不贴，用文字说：转速环的 PI 是第 4 篇的 $\omega_n = 30$、$\zeta = 0.7$（$k_p = 4.1667$、$k_i = 90$，电流限幅 $\pm 20$ A，四个 `windup_*` 算例只换 `windup` 字段，`i_limit = 5`、$T_t = 0.5\,k_p/k_i$）；俯仰的 PID 是 $\omega_n = 15$、$\zeta = 0.7$，$k_p = J\omega_n^2 = 3.375$、$k_d = 2\zeta\omega_nJ - b = 0.313$、$k_i = 0.2\,k_p = 0.675$，$t_f = 2$ ms，力矩限幅 $\pm 1$ N·m，微分冲击、滤波和前馈的算例都是在这份 `base` 上换几个字段。
+
+仿真循环比前几章更短，因为没有传输延迟，限幅在 PID 里。增益切换是循环里唯一特别的地方：
 
 ```python
-def run_case(case: Case, ideal: bool = False) -> dict[str, np.ndarray]:
-    """One closed loop. ideal=True reads the exact angle, not the encoder."""
-    plant = MotorSpeedLag() if case.plant == "speed" else GimbalPitch()
-    data = read_csv(DATA / f"{case.data}.csv")
-    pid = Pid(case.cfg)
-    x = [0.0] * plant.n
-    rows = []
-    u = 0.0
-    for k in range(len(data["t"])):
-        r, ff = data["r"][k], data["ff"][k]
-        if case.plant == "pitch" and not ideal:
-            y = plant.encoder(x)
-        else:
-            y = plant.output(x)
         if case.switch and k == SWITCH_K:
             pid.cfg.kp *= 2.0
             pid.cfg.ki *= 2.0
@@ -363,26 +255,9 @@ def run_case(case: Case, ideal: bool = False) -> dict[str, np.ndarray]:
             if case.switch == 2:
                 pid.reset(u - ff, r, y)
         u = pid.update(r, y, ff)
-        rows.append(
-            [
-                data["t"][k],
-                r,
-                y,
-                u,
-                plant.output(x),
-                pid.integral,
-                pid.d_state,
-                float(pid.saturated),
-            ]
-        )
-        x = advance(plant.deriv, x, [u, data["d"][k]], TS, SUBSTEPS)
-    return dict(zip(COLUMNS, np.array(rows).T))
-
 ```
 
-几个细节：`ideal=True` 时俯仰轴读精确角度而不是编码器，`report` 用它算“没有量化时的理想输出”；`switch` 为 1 或 2 时在第 1000 拍把三个增益都乘 2，为 2 时再调 `reset(u - ff, r, y)`。每个算例写 8 列：`t,r,y,u,ytrue,integral,d_state,sat`，`y` 是控制器看到的读数（俯仰轴是量化的），`ytrue` 是真实输出。数据文件（设定值、负载、前馈三列）由 `write_data` 一次写好，原生版本只读不算，所以 `ff` 的重力项也是 Python 算的，三个原生版本不重新算 $mgl\cos r$。
-
-完整驱动：[`python/ch05_practical.py`](https://github.com/bfmhno3/pid-lab/tree/tutorial-v1/python/ch05_practical.py)。
+`switch` 为 1 或 2 时在第 1000 拍把三个增益都乘 2，为 2 时再调 `reset(u - ff, r, y)`，减掉 `ff` 是因为 `reset` 的 `u` 不含前馈。俯仰轴的 `y` 是编码器读数，`ideal=True` 时读精确角度，`report` 用它算“没有量化时的理想输出”。每个算例写 8 列：`t,r,y,u,ytrue,integral,d_state,sat`，`ytrue` 是真实输出。数据文件（设定值、负载、前馈三列）由 `write_data` 一次写好，原生版本只读不算，所以 `ff` 的重力项也是 Python 算的，三个原生版本不重新算 $mgl\cos r$。
 
 ## C、C++、Rust 实现
 
@@ -391,148 +266,29 @@ def run_case(case: Case, ideal: bool = False) -> dict[str, np.ndarray]:
 - **枚举和配置。** C 是 `enum pl_windup` 加 `struct pl_pid_config`，没有 `typedef`；C++ 是 `enum class Windup` 和模板结构体 `PidConfig<T>`，用聚合初始化（`PidConfig<double>{kp, ki, kd, ts}`，后面的字段有默认值）；Rust 是 `enum Windup` 和 `PidConfig`，给了一个 `PidConfig::new(kp, ki, kd, ts)` 填默认值。
 - **构造的失败方式。** C 的 `pl_pid_init` 返回 0 或 `-EINVAL`；C++ 的 `Pid<T>::Create` 返回 `std::optional<Pid<T>>`；Rust 的 `Pid::new` 返回 `Result<Pid, PidError>`，`PidError::InvalidConfig` 带一个 `&'static str`。
 - **运行中改增益。** 第 10 篇还要在运行中改 `ts`。C 的 `pid->cfg` 是公开的结构体字段；C++ 给了 `mutable_config()`（和只读的 `config()` 并存）；Rust 的 `cfg` 是公开字段。这三个是在固定接口之外加的，Python 的 `pid.cfg` 本来就可写。
-- **`-Wdouble-promotion`。** C 的 `pid.c` 里我用 `cfg->ts <= 0` 而不是 `<= 0.0`：在 `-DPL_USE_FLOAT` 下，`float` 和 `double` 常量比较会被提升成 `double`，而整数常量不会。我也没有在 `pid.c` 里写任何 `0.5` 这样的字面量。
 - **内存。** 三种语言的控制器都是栈上的值，没有堆分配。
 
 ### C
 
-`pl_pid_update` 是 Python `update` 的逐行翻译，窗口模式用 `switch`：
+[`c/include/pl/pid.h`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/c/include/pl/pid.h) 里是两个结构体，配置和状态分开，状态里内嵌一份配置的拷贝：
 
 ```c
-pl_real pl_pid_update(struct pl_pid *pid, pl_real r, pl_real y, pl_real ff,
-		      bool hold_integral)
-{
-	const struct pl_pid_config *c = &pid->cfg;
-	pl_real p = c->kp * (c->b * r - y);
-	pl_real ed = c->c * r - y;
-	pl_real a, v, u, e;
-
-	if (!pid->primed) {
-		pid->prev_ed = ed;
-		pid->primed = true;
-	}
-	a = c->tf / (c->tf + c->ts);
-	pid->d_state = a * pid->d_state +
-		       c->kd / (c->tf + c->ts) * (ed - pid->prev_ed);
-	pid->prev_ed = ed;
-	v = p + pid->integral + pid->d_state + ff;
-	u = pl_clamp(v, c->u_min, c->u_max);
-	pid->saturated = u != v;
-	if (hold_integral)
-		return u;
-	e = r - y;
-	switch (c->windup) {
-	case PL_WINDUP_NONE:
-		pid->integral += c->ki * c->ts * e;
-		break;
-	case PL_WINDUP_LIMIT:
-		pid->integral += c->ki * c->ts * e;
-		pid->integral = pl_clamp(pid->integral, -c->i_limit, c->i_limit);
-		break;
-	case PL_WINDUP_CLAMP:
-		if (!(pid->saturated && e * (v - u) > 0))
-			pid->integral += c->ki * c->ts * e;
-		break;
-	case PL_WINDUP_BACK_CALC:
-		pid->integral += c->ki * c->ts * e + c->ts / c->tt * (u - v);
-		break;
-	}
-	return u;
-```
-
-`pl_pid_reset` 只有三行。完整源码：
-
-<details>
-<summary>完整源码：c/include/pl/pid.h、c/src/pid.c</summary>
-
-```c
-/* SPDX-License-Identifier: MIT OR Apache-2.0 */
-/* The series' PID: setpoint weights, filtered D, four windup modes. */
-#ifndef PL_PID_H
-#define PL_PID_H
-
-#include <stdbool.h>
-
-#include "pl/real.h"
-
-enum pl_windup {
-	PL_WINDUP_NONE,
-	PL_WINDUP_LIMIT,
-	PL_WINDUP_CLAMP,
-	PL_WINDUP_BACK_CALC,
-};
-
-/* Parallel gains in physical units, sample time ts. */
-/* u = kp (b r - y) + I + D + ff, with I' = ki (r - y) and */
-/* D(s) = kd s / (tf s + 1) acting on c r - y. b and c weight the */
-/* setpoint in the P and D terms. u is clamped to [u_min, u_max]. */
-/* LIMIT clamps I to +-i_limit; BACK_CALC feeds (u - v) back with the */
-/* tracking time constant tt. */
 struct pl_pid_config {
 	pl_real kp, ki, kd, ts, tf, b, c;
 	pl_real u_min, u_max, i_limit, tt;
 	enum pl_windup windup;
 };
 
-/* The first update primes the D term (no kick). */
 struct pl_pid {
 	struct pl_pid_config cfg;
 	pl_real integral, d_state, prev_ed;
 	bool primed, saturated;
 };
-
-/* Returns 0, or -EINVAL unless ts > 0, tf >= 0, u_min <= u_max, and */
-/* BACK_CALC has tt > 0. */
-int pl_pid_init(struct pl_pid *pid, const struct pl_pid_config *cfg);
-
-/* One sample. ff is added to the output; hold_integral skips the */
-/* integrator update entirely. */
-pl_real pl_pid_update(struct pl_pid *pid, pl_real r, pl_real y, pl_real ff,
-		      bool hold_integral);
-
-/* Make the next update continue from output u (bumpless). */
-void pl_pid_reset(struct pl_pid *pid, pl_real u, pl_real r, pl_real y);
-
-#endif /* PL_PID_H */
 ```
 
+[`c/src/pid.c`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/c/src/pid.c) 里的 `pl_pid_update` 是 Python `update` 的逐行翻译，窗口模式用 `switch`。从饱和判断开始：
+
 ```c
-// SPDX-License-Identifier: MIT OR Apache-2.0
-#include <errno.h>
-
-#include "pl/pid.h"
-
-int pl_pid_init(struct pl_pid *pid, const struct pl_pid_config *cfg)
-{
-	if (cfg->ts <= 0 || cfg->tf < 0 || cfg->u_min > cfg->u_max)
-		return -EINVAL;
-	if (cfg->windup == PL_WINDUP_BACK_CALC && cfg->tt <= 0)
-		return -EINVAL;
-	pid->cfg = *cfg;
-	pid->integral = 0;
-	pid->d_state = 0;
-	pid->prev_ed = 0;
-	pid->primed = false;
-	pid->saturated = false;
-	return 0;
-}
-
-pl_real pl_pid_update(struct pl_pid *pid, pl_real r, pl_real y, pl_real ff,
-		      bool hold_integral)
-{
-	const struct pl_pid_config *c = &pid->cfg;
-	pl_real p = c->kp * (c->b * r - y);
-	pl_real ed = c->c * r - y;
-	pl_real a, v, u, e;
-
-	if (!pid->primed) {
-		pid->prev_ed = ed;
-		pid->primed = true;
-	}
-	a = c->tf / (c->tf + c->ts);
-	pid->d_state = a * pid->d_state +
-		       c->kd / (c->tf + c->ts) * (ed - pid->prev_ed);
-	pid->prev_ed = ed;
 	v = p + pid->integral + pid->d_state + ff;
 	u = pl_clamp(v, c->u_min, c->u_max);
 	pid->saturated = u != v;
@@ -540,13 +296,7 @@ pl_real pl_pid_update(struct pl_pid *pid, pl_real r, pl_real y, pl_real ff,
 		return u;
 	e = r - y;
 	switch (c->windup) {
-	case PL_WINDUP_NONE:
-		pid->integral += c->ki * c->ts * e;
-		break;
-	case PL_WINDUP_LIMIT:
-		pid->integral += c->ki * c->ts * e;
-		pid->integral = pl_clamp(pid->integral, -c->i_limit, c->i_limit);
-		break;
+	/* ... NONE and LIMIT as in Python */
 	case PL_WINDUP_CLAMP:
 		if (!(pid->saturated && e * (v - u) > 0))
 			pid->integral += c->ki * c->ts * e;
@@ -556,68 +306,19 @@ pl_real pl_pid_update(struct pl_pid *pid, pl_real r, pl_real y, pl_real ff,
 		break;
 	}
 	return u;
-}
-
-void pl_pid_reset(struct pl_pid *pid, pl_real u, pl_real r, pl_real y)
-{
-	const struct pl_pid_config *c = &pid->cfg;
-
-	pid->integral = u - c->kp * (c->b * r - y) - pid->d_state;
-	pid->prev_ed = c->c * r - y;
-	pid->primed = true;
-}
 ```
 
-</details>
+**`-Wdouble-promotion` 在这里起作用。** C 的 `pid.c` 里我用 `cfg->ts <= 0` 而不是 `<= 0.0`：在 `-DPL_USE_FLOAT` 下，`float` 和 `double` 常量比较会被提升成 `double`，而整数常量不会。我也没有在 `pid.c` 里写任何 `0.5` 这样的字面量。
 
-植物 `pl_gimbal_pitch` 在 `plants.c` 里：
+植物 `pl_gimbal_pitch` 在 [`c/src/plants.c`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/c/src/plants.c) 里，导数和编码器和 Python 一一对应，编码器是 `PL_ROUND(x[0] / p->quantum) * p->quantum`。C 的 `<math.h>` 在 `-std=c11 -Wpedantic` 下没有 `M_PI`，所以 $2\pi$ 写成数值字面量 `3.141592653589793`；`PL_ROUND` 是新加进 `real.h` 的宏（`double` 下是 `round`，`float` 下是 `roundf`）。
 
-```c
-void pl_gimbal_pitch_init(struct pl_gimbal_pitch *p)
-{
-	p->j = 0.015;
-	p->b = 0.002;
-	p->m = 1.5;
-	p->l = 0.03;
-	p->g = 9.81;
-	p->u_max = 1.0;
-	p->quantum = 2.0 * 3.141592653589793 / 8192.0;
-}
-
-void pl_gimbal_pitch_deriv(const void *ctx, const pl_real *x,
-			   const pl_real *u, pl_real *dx)
-{
-	const struct pl_gimbal_pitch *p = ctx;
-	pl_real grav = p->m * p->g * p->l * PL_COS(x[0]);
-
-	dx[0] = x[1];
-	dx[1] = (u[0] - u[1] - p->b * x[1] - grav) / p->j;
-}
-
-pl_real pl_gimbal_pitch_output(const pl_real *x)
-{
-	return x[0];
-}
-
-pl_real pl_gimbal_pitch_encoder(const struct pl_gimbal_pitch *p,
-				const pl_real *x)
-{
-	return PL_ROUND(x[0] / p->quantum) * p->quantum;
-}
-```
-
-C 的 `<math.h>` 在 `-std=c11 -Wpedantic` 下没有 `M_PI`，所以 $2\pi$ 写成数值字面量；`PL_ROUND` 是新加进 `real.h` 的宏（`double` 下是 `round`，`float` 下是 `roundf`）。
-
-驱动：[`c/apps/ch05.c`](https://github.com/bfmhno3/pid-lab/tree/tutorial-v1/c/apps/ch05.c)。15 个算例放在一个 `struct sim_case` 数组里（`MAX_CASES 15`，我第一次写的是 14，数组越界，段错误，这是这一章唯一一次 `make` 直接崩）。
+驱动 [`c/apps/ch05.c`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/c/apps/ch05.c) 把 15 个算例放在一个 `struct sim_case` 数组里（`MAX_CASES 15`，我第一次写的是 14，数组越界，段错误，这是这一章唯一一次 `make` 直接崩）。
 
 ### C++
 
-`Create` 做校验，`Update` 里的常量写成 `T(0)`，让它们跟着标量类型走：
+[`cpp/include/pidlab/pid.h`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/cpp/include/pidlab/pid.h) 是头文件库。`Create` 做校验，常量写成 `T(0)`，让它们跟着标量类型走：
 
 ```cpp
- public:
-  // Returns std::nullopt unless ts > 0, tf >= 0, u_min <= u_max, and
-  // kBackCalc has tt > 0.
   static std::optional<Pid> Create(const PidConfig<T>& cfg) {
     if (cfg.ts <= T(0) || cfg.tf < T(0) || cfg.u_min > cfg.u_max) {
       return std::nullopt;
@@ -627,32 +328,18 @@ C 的 `<math.h>` 在 `-std=c11 -Wpedantic` 下没有 `M_PI`，所以 $2\pi$ 写�
     }
     return Pid(cfg);
   }
+```
 
-  // One sample. ff is added to the output; hold_integral skips the
-  // integrator update entirely.
-  T Update(T r, T y, T ff = T(0), bool hold_integral = false) {
-    const T p = cfg_.kp * (cfg_.b * r - y);
-    const T ed = cfg_.c * r - y;
-    if (!primed_) {
-      prev_ed_ = ed;
-      primed_ = true;
-    }
-    const T a = cfg_.tf / (cfg_.tf + cfg_.ts);
-    d_state_ = a * d_state_ + cfg_.kd / (cfg_.tf + cfg_.ts) * (ed - prev_ed_);
-    prev_ed_ = ed;
+构造函数是私有的，`Create` 是唯一入口，所以拿到一个 `Pid` 就意味着它通过了校验。`Update` 的主体和 C 的是同一段，只是成员带下划线、常量带 `T()`：
+
+```cpp
     const T v = p + integral_ + d_state_ + ff;
     const T u = Clamp(v, cfg_.u_min, cfg_.u_max);
     saturated_ = u != v;
     if (hold_integral) return u;
     const T e = r - y;
     switch (cfg_.windup) {
-      case Windup::kNone:
-        integral_ += cfg_.ki * cfg_.ts * e;
-        break;
-      case Windup::kLimit:
-        integral_ += cfg_.ki * cfg_.ts * e;
-        integral_ = Clamp(integral_, -cfg_.i_limit, cfg_.i_limit);
-        break;
+      // ... kNone and kLimit
       case Windup::kClamp:
         if (!(saturated_ && e * (v - u) > T(0))) {
           integral_ += cfg_.ki * cfg_.ts * e;
@@ -663,253 +350,15 @@ C 的 `<math.h>` 在 `-std=c11 -Wpedantic` 下没有 `M_PI`，所以 $2\pi$ 写�
         break;
     }
     return u;
-  }
 ```
 
-构造函数是私有的，`Create` 是唯一入口，所以拿到一个 `Pid` 就意味着它通过了校验。限幅函数是类里的一个私有静态 `Clamp`，没有用 `std::clamp`：后者在 `lo > hi` 时是未定义行为，而 `i_limit` 没有被校验过符号。
-
-<details>
-<summary>完整源码：cpp/include/pidlab/pid.h</summary>
-
-```cpp
-// The series' PID: setpoint weights, filtered D, four windup modes.
-#ifndef PIDLAB_PID_H_
-#define PIDLAB_PID_H_
-
-#include <limits>
-#include <optional>
-
-namespace pidlab {
-
-enum class Windup { kNone, kLimit, kClamp, kBackCalc };
-
-// Parallel gains in physical units, sample time ts.
-// u = kp (b r - y) + I + D + ff, with I' = ki (r - y) and
-// D(s) = kd s / (tf s + 1) acting on c r - y. b and c weight the setpoint
-// in the P and D terms. u is clamped to [u_min, u_max]. kLimit clamps I to
-// +-i_limit; kBackCalc feeds (u - v) back with the tracking time constant
-// tt.
-template <class T = double>
-struct PidConfig {
-  T kp, ki, kd, ts;
-  T tf = T(0);
-  T b = T(1);
-  T c = T(0);
-  T u_min = -std::numeric_limits<T>::infinity();
-  T u_max = std::numeric_limits<T>::infinity();
-  T i_limit = std::numeric_limits<T>::infinity();
-  T tt = T(0);
-  Windup windup = Windup::kClamp;
-};
-
-// The first Update primes the D term (no kick).
-template <class T = double>
-class Pid {
- public:
-  // Returns std::nullopt unless ts > 0, tf >= 0, u_min <= u_max, and
-  // kBackCalc has tt > 0.
-  static std::optional<Pid> Create(const PidConfig<T>& cfg) {
-    if (cfg.ts <= T(0) || cfg.tf < T(0) || cfg.u_min > cfg.u_max) {
-      return std::nullopt;
-    }
-    if (cfg.windup == Windup::kBackCalc && cfg.tt <= T(0)) {
-      return std::nullopt;
-    }
-    return Pid(cfg);
-  }
-
-  // One sample. ff is added to the output; hold_integral skips the
-  // integrator update entirely.
-  T Update(T r, T y, T ff = T(0), bool hold_integral = false) {
-    const T p = cfg_.kp * (cfg_.b * r - y);
-    const T ed = cfg_.c * r - y;
-    if (!primed_) {
-      prev_ed_ = ed;
-      primed_ = true;
-    }
-    const T a = cfg_.tf / (cfg_.tf + cfg_.ts);
-    d_state_ = a * d_state_ + cfg_.kd / (cfg_.tf + cfg_.ts) * (ed - prev_ed_);
-    prev_ed_ = ed;
-    const T v = p + integral_ + d_state_ + ff;
-    const T u = Clamp(v, cfg_.u_min, cfg_.u_max);
-    saturated_ = u != v;
-    if (hold_integral) return u;
-    const T e = r - y;
-    switch (cfg_.windup) {
-      case Windup::kNone:
-        integral_ += cfg_.ki * cfg_.ts * e;
-        break;
-      case Windup::kLimit:
-        integral_ += cfg_.ki * cfg_.ts * e;
-        integral_ = Clamp(integral_, -cfg_.i_limit, cfg_.i_limit);
-        break;
-      case Windup::kClamp:
-        if (!(saturated_ && e * (v - u) > T(0))) {
-          integral_ += cfg_.ki * cfg_.ts * e;
-        }
-        break;
-      case Windup::kBackCalc:
-        integral_ += cfg_.ki * cfg_.ts * e + cfg_.ts / cfg_.tt * (u - v);
-        break;
-    }
-    return u;
-  }
-
-  // Make the next Update continue from output u (bumpless).
-  void Reset(T u, T r, T y) {
-    integral_ = u - cfg_.kp * (cfg_.b * r - y) - d_state_;
-    prev_ed_ = cfg_.c * r - y;
-    primed_ = true;
-  }
-
-  bool saturated() const { return saturated_; }
-  T integral() const { return integral_; }
-  T d_state() const { return d_state_; }
-  const PidConfig<T>& config() const { return cfg_; }
-  // Gains and ts may be changed between updates (see the bumpless case).
-  PidConfig<T>& mutable_config() { return cfg_; }
-
- private:
-  explicit Pid(const PidConfig<T>& cfg) : cfg_(cfg) {}
-
-  static T Clamp(T x, T lo, T hi) { return x < lo ? lo : (x > hi ? hi : x); }
-
-  PidConfig<T> cfg_;
-  T integral_ = T(0);
-  T d_state_ = T(0);
-  T prev_ed_ = T(0);
-  bool primed_ = false;
-  bool saturated_ = false;
-};
-
-}  // namespace pidlab
-
-#endif  // PIDLAB_PID_H_
-```
-
-</details>
-
-驱动：[`cpp/apps/ch05.cc`](https://github.com/bfmhno3/pid-lab/tree/tutorial-v1/cpp/apps/ch05.cc)。`RunLoop<P>` 对植物类型做模板；俯仰轴有 `Encoder` 成员，用 `if constexpr (requires { plant.Encoder(x); })` 在编译期选测量方式，别的植物直接用 `Output`。
+限幅函数是类里的一个私有静态 `Clamp`，没有用 `std::clamp`：后者在 `lo > hi` 时是未定义行为，而 `i_limit` 没有被校验过符号。驱动 [`cpp/apps/ch05.cc`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/cpp/apps/ch05.cc) 里的 `RunLoop<P>` 对植物类型做模板；俯仰轴有 `Encoder` 成员，用 `if constexpr (requires { plant.Encoder(x); })` 在编译期选测量方式，别的植物直接用 `Output`。
 
 ### Rust
 
-```rust
-    /// One sample. `ff` is added to the output; `hold_integral` skips the
-    /// integrator update entirely.
-    pub fn update(&mut self, r: Real, y: Real, ff: Real, hold_integral: bool) -> Real {
-        let c = &self.cfg;
-        let p = c.kp * (c.b * r - y);
-        let ed = c.c * r - y;
-        if !self.primed {
-            self.prev_ed = ed;
-            self.primed = true;
-        }
-        let a = c.tf / (c.tf + c.ts);
-        self.d_state = a * self.d_state + c.kd / (c.tf + c.ts) * (ed - self.prev_ed);
-        self.prev_ed = ed;
-        let v = p + self.integral + self.d_state + ff;
-        let u = clamp(v, c.u_min, c.u_max);
-        self.saturated = u != v;
-        if hold_integral {
-            return u;
-        }
-        let e = r - y;
-        match c.windup {
-            Windup::None => self.integral += c.ki * c.ts * e,
-            Windup::Limit => {
-                self.integral += c.ki * c.ts * e;
-                self.integral = clamp(self.integral, -c.i_limit, c.i_limit);
-            }
-            Windup::Clamp => {
-                if !(self.saturated && e * (v - u) > 0.0) {
-                    self.integral += c.ki * c.ts * e;
-                }
-            }
-            Windup::BackCalc => self.integral += c.ki * c.ts * e + c.ts / c.tt * (u - v),
-        }
-        u
-    }
-
-    /// Make the next update continue from output `u` (bumpless).
-```
-
-`clamp` 是文件里的一个小函数，没有用 `f64::clamp`：标准库那个在 `min > max` 或有 NaN 时会 panic，库是 `no_std` 的，我不想让它 panic。`update` 里的 `match` 是穷尽的，加一种窗口模式编译器会逼着我补这一支。
-
-<details>
-<summary>完整源码：rust/src/pid.rs</summary>
+[`rust/src/pid.rs`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/rust/src/pid.rs) 里的 `Pid` 只有 `cfg` 是公开字段，其余状态是私有的：
 
 ```rust
-//! The series' PID: setpoint weights, filtered D, four windup modes.
-
-use crate::real::Real;
-
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum Windup {
-    None,
-    Limit,
-    Clamp,
-    BackCalc,
-}
-
-#[derive(Debug, PartialEq, Eq)]
-pub enum PidError {
-    InvalidConfig(&'static str),
-}
-
-/// Parallel gains in physical units, sample time `ts`.
-/// `u = kp (b r - y) + I + D + ff`, with `I' = ki (r - y)` and
-/// `D(s) = kd s / (tf s + 1)` acting on `c r - y`. `b` and `c` weight the
-/// setpoint in the P and D terms. `u` is clamped to `[u_min, u_max]`.
-/// `Limit` clamps `I` to `+-i_limit`; `BackCalc` feeds `u - v` back with
-/// the tracking time constant `tt`.
-#[derive(Clone, Copy, Debug)]
-pub struct PidConfig {
-    pub kp: Real,
-    pub ki: Real,
-    pub kd: Real,
-    pub ts: Real,
-    pub tf: Real,
-    pub b: Real,
-    pub c: Real,
-    pub u_min: Real,
-    pub u_max: Real,
-    pub i_limit: Real,
-    pub tt: Real,
-    pub windup: Windup,
-}
-
-impl PidConfig {
-    /// Clamp mode, no limits, `b = 1`, `c = 0`, no D filter.
-    pub fn new(kp: Real, ki: Real, kd: Real, ts: Real) -> Self {
-        Self {
-            kp,
-            ki,
-            kd,
-            ts,
-            tf: 0.0,
-            b: 1.0,
-            c: 0.0,
-            u_min: Real::NEG_INFINITY,
-            u_max: Real::INFINITY,
-            i_limit: Real::INFINITY,
-            tt: 0.0,
-            windup: Windup::Clamp,
-        }
-    }
-}
-
-fn clamp(x: Real, lo: Real, hi: Real) -> Real {
-    if x < lo {
-        lo
-    } else if x > hi {
-        hi
-    } else {
-        x
-    }
-}
-
-/// The first `update` primes the D term (no kick). `cfg` is public: gains
-/// and `ts` may be changed between updates.
 pub struct Pid {
     pub cfg: PidConfig,
     integral: Real,
@@ -918,42 +367,11 @@ pub struct Pid {
     primed: bool,
     saturated: bool,
 }
+```
 
-impl Pid {
-    /// Fails unless `ts > 0`, `tf >= 0`, `u_min <= u_max`, and `BackCalc`
-    /// has `tt > 0`.
-    pub fn new(cfg: PidConfig) -> Result<Self, PidError> {
-        if cfg.ts <= 0.0 || cfg.tf < 0.0 || cfg.u_min > cfg.u_max {
-            return Err(PidError::InvalidConfig(
-                "need ts > 0, tf >= 0, u_min <= u_max",
-            ));
-        }
-        if cfg.windup == Windup::BackCalc && cfg.tt <= 0.0 {
-            return Err(PidError::InvalidConfig("BackCalc needs tt > 0"));
-        }
-        Ok(Self {
-            cfg,
-            integral: 0.0,
-            d_state: 0.0,
-            prev_ed: 0.0,
-            primed: false,
-            saturated: false,
-        })
-    }
+`update` 的后半段，窗口模式用 `match`：
 
-    /// One sample. `ff` is added to the output; `hold_integral` skips the
-    /// integrator update entirely.
-    pub fn update(&mut self, r: Real, y: Real, ff: Real, hold_integral: bool) -> Real {
-        let c = &self.cfg;
-        let p = c.kp * (c.b * r - y);
-        let ed = c.c * r - y;
-        if !self.primed {
-            self.prev_ed = ed;
-            self.primed = true;
-        }
-        let a = c.tf / (c.tf + c.ts);
-        self.d_state = a * self.d_state + c.kd / (c.tf + c.ts) * (ed - self.prev_ed);
-        self.prev_ed = ed;
+```rust
         let v = p + self.integral + self.d_state + ff;
         let u = clamp(v, c.u_min, c.u_max);
         self.saturated = u != v;
@@ -962,11 +380,7 @@ impl Pid {
         }
         let e = r - y;
         match c.windup {
-            Windup::None => self.integral += c.ki * c.ts * e,
-            Windup::Limit => {
-                self.integral += c.ki * c.ts * e;
-                self.integral = clamp(self.integral, -c.i_limit, c.i_limit);
-            }
+            // ... None and Limit
             Windup::Clamp => {
                 if !(self.saturated && e * (v - u) > 0.0) {
                     self.integral += c.ki * c.ts * e;
@@ -975,33 +389,9 @@ impl Pid {
             Windup::BackCalc => self.integral += c.ki * c.ts * e + c.ts / c.tt * (u - v),
         }
         u
-    }
-
-    /// Make the next update continue from output `u` (bumpless).
-    pub fn reset(&mut self, u: Real, r: Real, y: Real) {
-        let c = &self.cfg;
-        self.integral = u - c.kp * (c.b * r - y) - self.d_state;
-        self.prev_ed = c.c * r - y;
-        self.primed = true;
-    }
-
-    pub fn saturated(&self) -> bool {
-        self.saturated
-    }
-
-    pub fn integral(&self) -> Real {
-        self.integral
-    }
-
-    pub fn d_state(&self) -> Real {
-        self.d_state
-    }
-}
 ```
 
-</details>
-
-驱动：[`rust/src/bin/ch05.rs`](https://github.com/bfmhno3/pid-lab/tree/tutorial-v1/rust/src/bin/ch05.rs)。`run_loop<const N: usize>` 接受三个闭包：测量、真实输出和导数，转速环（`MotorSpeedLag`，2 维）和俯仰轴（`GimbalPitch`，2 维）共用它；`Real` 是 `f64`，`GimbalPitch::new` 里的 $2\pi/8192$ 用 `core::f64::consts::TAU / 8192.0` 再转成 `Real`，这样在 `f32` 特性下同一行也能编译。
+`clamp` 是文件里的一个小函数，没有用 `f64::clamp`：标准库那个在 `min > max` 或有 NaN 时会 panic，库是 `no_std` 的，我不想让它 panic。`match` 是穷尽的，加一种窗口模式编译器会逼着我补这一支。驱动 [`rust/src/bin/ch05.rs`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/rust/src/bin/ch05.rs) 里的 `run_loop<const N: usize>` 接受三个闭包：测量、真实输出和导数，转速环（`MotorSpeedLag`，2 维）和俯仰轴（`GimbalPitch`，2 维）共用它；`Real` 是 `f64`，`GimbalPitch::new` 里的 $2\pi/8192$ 用 `core::f64::consts::TAU / 8192.0` 再转成 `Real`，这样在 `f32` 特性下同一行也能编译。
 
 ### PID 库的接口
 
@@ -1047,103 +437,7 @@ pub fn saturated(&self) -> bool;
 
 ## 结果
 
-`make ch05` 一次跑完。15 个算例乘三种语言，45 个对比文件，下面是完整输出：
-
-```text
-$ make -s ch05
-ch05: C wrote 15 cases to out/ch05
-ch05: C++ wrote 15 cases to out/ch05
-ch05: Rust wrote 15 cases to out/ch05
-ok   bumpless_off_c.csv: max diff 0.000e+00 <= 1.0e-09
-ok   bumpless_off_cpp.csv: max diff 0.000e+00 <= 1.0e-09
-ok   bumpless_off_rs.csv: max diff 0.000e+00 <= 1.0e-09
-ok   bumpless_on_c.csv: max diff 0.000e+00 <= 1.0e-09
-ok   bumpless_on_cpp.csv: max diff 0.000e+00 <= 1.0e-09
-ok   bumpless_on_rs.csv: max diff 6.939e-18 <= 1.0e-09
-ok   dfilter_tf0.002_c.csv: max diff 0.000e+00 <= 1.0e-09
-ok   dfilter_tf0.002_cpp.csv: max diff 0.000e+00 <= 1.0e-09
-ok   dfilter_tf0.002_rs.csv: max diff 0.000e+00 <= 1.0e-09
-ok   dfilter_tf0.01_c.csv: max diff 0.000e+00 <= 1.0e-09
-ok   dfilter_tf0.01_cpp.csv: max diff 0.000e+00 <= 1.0e-09
-ok   dfilter_tf0.01_rs.csv: max diff 0.000e+00 <= 1.0e-09
-ok   dfilter_tf0_c.csv: max diff 0.000e+00 <= 1.0e-09
-ok   dfilter_tf0_cpp.csv: max diff 0.000e+00 <= 1.0e-09
-ok   dfilter_tf0_rs.csv: max diff 2.776e-17 <= 1.0e-09
-ok   ff_gravity_acc_c.csv: max diff 0.000e+00 <= 1.0e-09
-ok   ff_gravity_acc_cpp.csv: max diff 0.000e+00 <= 1.0e-09
-ok   ff_gravity_acc_rs.csv: max diff 0.000e+00 <= 1.0e-09
-ok   ff_gravity_c.csv: max diff 0.000e+00 <= 1.0e-09
-ok   ff_gravity_cpp.csv: max diff 0.000e+00 <= 1.0e-09
-ok   ff_gravity_rs.csv: max diff 0.000e+00 <= 1.0e-09
-ok   ff_none_c.csv: max diff 0.000e+00 <= 1.0e-09
-ok   ff_none_cpp.csv: max diff 0.000e+00 <= 1.0e-09
-ok   ff_none_rs.csv: max diff 0.000e+00 <= 1.0e-09
-ok   kick_c0_c.csv: max diff 0.000e+00 <= 1.0e-09
-ok   kick_c0_cpp.csv: max diff 0.000e+00 <= 1.0e-09
-ok   kick_c0_rs.csv: max diff 0.000e+00 <= 1.0e-09
-ok   kick_c1_c.csv: max diff 0.000e+00 <= 1.0e-09
-ok   kick_c1_cpp.csv: max diff 0.000e+00 <= 1.0e-09
-ok   kick_c1_rs.csv: max diff 1.388e-17 <= 1.0e-09
-ok   weight_b05_c.csv: max diff 0.000e+00 <= 1.0e-09
-ok   weight_b05_cpp.csv: max diff 0.000e+00 <= 1.0e-09
-ok   weight_b05_rs.csv: max diff 0.000e+00 <= 1.0e-09
-ok   windup_backcalc_c.csv: max diff 0.000e+00 <= 1.0e-09
-ok   windup_backcalc_cpp.csv: max diff 0.000e+00 <= 1.0e-09
-ok   windup_backcalc_rs.csv: max diff 0.000e+00 <= 1.0e-09
-ok   windup_clamp_c.csv: max diff 0.000e+00 <= 1.0e-09
-ok   windup_clamp_cpp.csv: max diff 0.000e+00 <= 1.0e-09
-ok   windup_clamp_rs.csv: max diff 0.000e+00 <= 1.0e-09
-ok   windup_limit_c.csv: max diff 0.000e+00 <= 1.0e-09
-ok   windup_limit_cpp.csv: max diff 0.000e+00 <= 1.0e-09
-ok   windup_limit_rs.csv: max diff 0.000e+00 <= 1.0e-09
-ok   windup_none_c.csv: max diff 0.000e+00 <= 1.0e-09
-ok   windup_none_cpp.csv: max diff 0.000e+00 <= 1.0e-09
-ok   windup_none_rs.csv: max diff 0.000e+00 <= 1.0e-09
-speed PI at zeta 0.7, wn 30.0: kp = 4.1667, ki = 90.0000
-pitch PID at zeta 0.7, wn 15.0: kp = 3.3750, ki = 0.6750, kd = 0.3130
-constructor rejects 4 of 4 invalid configs
-first update with r = 0.1, y = 0, c = 1: D = 0.000 (unprimed would be 10.433 N*m)
-
-            case  peak y  overshoot  max|I|   min y  settle after drop  e under load
-     windup_none   70.96      77.4%   373.7  -11.25             0.558s        0.0000
-    windup_limit   40.58       1.5%     5.0    9.15             0.262s        0.7937
-    windup_clamp   40.89       2.2%     8.7    8.98             0.266s        0.0000
- windup_backcalc   41.00       2.5%    44.7    8.89             0.266s        0.0000
-LIMIT steady error: formula 0.7937 rad/s, simulated 0.7937 rad/s
-
-       case  peak D  max|u| 5ms  overshoot  y at 1.45 s    rise  sat 50 ms
-    kick_c1   10.43       1.000      5.48%       0.1015   0.135          9
-    kick_c0    0.24       0.777      5.63%       0.1016   0.139          0
- weight_b05    0.14       0.608      0.00%       0.0625     nan          0
-
-            case  rms(u - u_ideal)  overshoot  settle  D per quantum
-     dfilter_tf0           0.16672      6.26%  0.509s         0.2401
- dfilter_tf0.002           0.04447      5.63%  0.509s         0.0800
-  dfilter_tf0.01           0.01221      3.28%  0.499s         0.0218
-chatter ratio tf = 0 over tf = 0.01: 13.7x
-
-m g l = 0.4414 N*m, J r'' amplitude = 0.0444 N*m
-           case    rms e   max|e|
-        ff_none   0.1151   0.2095
-     ff_gravity   0.0626   0.0911
- ff_gravity_acc   0.0620   0.0904
-gravity ff cuts the rms error by 1.84x
-
-         case  u before  u after      |du|  D before  e before
- bumpless_off    0.5122   0.6745  1.62e-01   -0.0800    0.0402
-  bumpless_on    0.5122   0.5388  2.67e-02   -0.0800    0.0402
-residual jump predicted from the D state: 2.67e-02
-reset cuts the jump by 6.1x
-figure: figures/ch05/windup.svg
-figure: figures/ch05/derivative-kick.svg
-figure: figures/ch05/d-filter-noise.svg
-figure: figures/ch05/gravity-ff.svg
-figure: figures/ch05/bumpless.svg
-
-ch05 OK
-```
-
-45 个文件和 Python 的最大差值，绝大多数是 `0.000e+00`，逐位一致；有三个是 $10^{-17}$ 到 $10^{-18}$ 的量级（Rust 版的 `dfilter_tf0` 是 $2.8\times 10^{-17}$，`kick_c1` 是 $1.4\times 10^{-17}$，`bumpless_on` 是 $6.9\times 10^{-18}$）。这三个都是俯仰轴的算例，我猜原因是 Rust 的 `cos` 来自 `libm` crate，C、C++ 和 Python 用的是 glibc，两个实现偶尔会差最后一位，我没有去核对。这一章的非线性（限幅、`round`、条件积分）都是比较和舍入，我担心过量化会在最后一位上翻一次台阶，结果没有，所以不需要任何算例的放宽容差。
+下面五组数字来自同一次 `make -s ch05`：15 个算例乘三种语言，45 个对比文件，输出在后面的检查点里。每个小节先给表，再解释。
 
 ### 积分饱和：四种模式
 
@@ -1236,7 +530,9 @@ reset cuts the jump by 6.1x
 
 两条线之后的路径也很不一样（图下半）：直接改增益的角度被突然变大的力矩拉向目标，`bumpless_on` 的角度在这 0.15 s 里几乎不动，只是后面微分的量化抖动更明显了一些（图上半橙线后半段的尖峰，增益翻倍后 $k_d$ 也翻倍，同一个量化台阶造成的 D 项也翻倍）。我不会说 `reset` 是“更好”：它保证了输出连续，代价是这 0.15 s 里响应更钝，要不要这一脚取决于你是想要平滑还是想要快。
 
-### 对不上的地方
+### 没有按直觉发生的事
+
+有几件事和我动手前的直觉不一样，我把它们列在一起，每一条前面的小节里都有数据：
 
 - LIMIT 是超调最低、回稳最快的一个，同时也是唯一一个留下稳态误差（0.79 rad/s）的，所以只看暂态指标会选错。
 - 微分冲击把力矩夹在上限 9 拍，但超调和上升时间都没有变差，我没能量化它的坏处。
@@ -1244,6 +540,64 @@ reset cuts the jump by 6.1x
 - 加速度前馈只让 rms 误差降了 1%，我对“剩下的误差是什么”只有猜测。
 - 微分滤波在这个回路里没有任何代价，但这是因为 $\omega_n$ 低；回路更快时我估计会不一样，这一点我没测。
 - `reset` 之后还剩 0.0267 N·m 的跳变，是 D 状态衰减，不是零。
+
+## 检查点
+
+在仓库根目录（`nix develop` 里）运行：
+
+```bash
+make -s ch05
+```
+
+输出一共一百来行，我只留下有代表性的几行：每个文件的对比结果是一行 `ok`，下面截取了 Rust 版里差值非零的三个文件和每种算例各一个；中间的指标表就是前面各小节贴过的那些，这里省略。
+
+```text
+$ make -s ch05
+ch05: C wrote 15 cases to out/ch05
+ch05: C++ wrote 15 cases to out/ch05
+ch05: Rust wrote 15 cases to out/ch05
+ok   bumpless_off_c.csv: max diff 0.000e+00 <= 1.0e-09
+ok   bumpless_on_rs.csv: max diff 6.939e-18 <= 1.0e-09
+ok   dfilter_tf0_rs.csv: max diff 2.776e-17 <= 1.0e-09
+ok   kick_c1_rs.csv: max diff 1.388e-17 <= 1.0e-09
+ok   windup_backcalc_cpp.csv: max diff 0.000e+00 <= 1.0e-09
+(... 其余 40 个 ok 行，差值全是 0.000e+00 ...)
+speed PI at zeta 0.7, wn 30.0: kp = 4.1667, ki = 90.0000
+pitch PID at zeta 0.7, wn 15.0: kp = 3.3750, ki = 0.6750, kd = 0.3130
+constructor rejects 4 of 4 invalid configs
+first update with r = 0.1, y = 0, c = 1: D = 0.000 (unprimed would be 10.433 N*m)
+(... 五张指标表 ...)
+figure: figures/ch05/windup.svg
+figure: figures/ch05/derivative-kick.svg
+figure: figures/ch05/d-filter-noise.svg
+figure: figures/ch05/gravity-ff.svg
+figure: figures/ch05/bumpless.svg
+
+ch05 OK
+```
+
+45 个文件和 Python 的最大差值，绝大多数是 `0.000e+00`，逐位一致；有三个是 $10^{-17}$ 到 $10^{-18}$ 的量级（Rust 版的 `dfilter_tf0` 是 $2.8\times 10^{-17}$，`kick_c1` 是 $1.4\times 10^{-17}$，`bumpless_on` 是 $6.9\times 10^{-18}$）。这三个都是俯仰轴的算例，我猜原因是 Rust 的 `cos` 来自 `libm` crate，C、C++ 和 Python 用的是 glibc，两个实现偶尔会差最后一位，我没有去核对。这一章的非线性（限幅、`round`、条件积分）都是比较和舍入，我担心过量化会在最后一位上翻一次台阶，结果没有，所以不需要任何算例的放宽容差。
+
+### 实验清单
+
+文件都在 [pid-lab](https://github.com/bfmhno3/pid-lab/tree/tutorial-v1) 仓库的 `tutorial-v1` 标签里。下面的命令都在仓库根目录运行；`make -s ch05` 会依次生成 Python 参考输出、编译并运行三个原生程序，再做对比和画图，所以表里“结果”一列对应的是这一条命令的整体输出。
+
+| 文件 | 命令 | 结果 |
+| --- | --- | --- |
+| [`python/pidlab/pid.py`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/python/pidlab/pid.py) | `make -s ch05` | PID 库的 Python 参考实现，构造函数拒绝 4 种非法配置（4 of 4） |
+| [`python/pidlab/plants.py`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/python/pidlab/plants.py) | `make -s ch05` | 新增 `GimbalPitch` 和 `round_half_away`，编码器量化 $q = 2\pi/8192$ |
+| [`python/pidlab/sim.py`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/python/pidlab/sim.py) | `make -s ch05` | 前几篇的 RK4 积分，这一章直接复用 |
+| [`python/ch05_practical.py`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/python/ch05_practical.py) | `python3 python/ch05_practical.py ref`，`make -s ch05` | `ref` 写数据和 15 个 `_py.csv`；`report` 对比 45 个文件、断言 LIMIT 稳态误差公式与仿真都是 0.7937 rad/s，画 5 张图，最后打印 `ch05 OK` |
+| [`c/include/pl/pid.h`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/c/include/pl/pid.h)、[`c/src/pid.c`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/c/src/pid.c) | `make -s ch05` | C 版 PID 库，15 个 `_c.csv` 全部 `ok`，差值 0 |
+| [`c/include/pl/plants.h`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/c/include/pl/plants.h)、[`c/src/plants.c`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/c/src/plants.c)、[`c/include/pl/real.h`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/c/include/pl/real.h) | `make -s ch05` | `pl_gimbal_pitch` 和 `PL_ROUND` |
+| [`cpp/include/pidlab/pid.h`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/cpp/include/pidlab/pid.h) | `make -s ch05` | C++ 版，`Pid<T>::Create`，15 个 `_cpp.csv` 全部 `ok`，差值 0 |
+| [`cpp/include/pidlab/plants.h`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/cpp/include/pidlab/plants.h) | `make -s ch05` | `GimbalPitch<T>` |
+| [`rust/src/pid.rs`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/rust/src/pid.rs) | `make -s ch05` | Rust 版，`Pid::new`，15 个 `_rs.csv` 全部 `ok`，最大差值 $2.8\times 10^{-17}$ |
+| [`rust/src/plants.rs`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/rust/src/plants.rs)、[`rust/src/real.rs`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/rust/src/real.rs) | `make -s ch05` | `GimbalPitch`，`Real` 标量别名 |
+| [`c/apps/ch05.c`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/c/apps/ch05.c) | `make -s ch05` | 读 `data/`，写 `out/ch05/`，输出 `C wrote 15 cases` |
+| [`cpp/apps/ch05.cc`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/cpp/apps/ch05.cc) | `make -s ch05` | 输出 `C++ wrote 15 cases` |
+| [`rust/src/bin/ch05.rs`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/rust/src/bin/ch05.rs) | `make -s ch05` | 输出 `Rust wrote 15 cases` |
+| `figures/ch05/`（5 张 SVG，被忽略的构建产物） | `make -s ch05` | `windup`、`derivative-kick`、`d-filter-noise`、`gravity-ff`、`bumpless`，同步到本站的 `ch05-*.svg` |
 
 ## 下一篇
 

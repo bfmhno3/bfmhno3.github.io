@@ -139,7 +139,7 @@ $$
 
 要把话说准：这不是说单环做不到。串级的 $(k_d, k_p, k_i) = (1.658, 91.9, 864)$ 直接塞进一个单环 PID，特征多项式和扰动响应完全一样。差别是单环用的是我选的“三个极点都放在 12 rad/s”的配方，三个增益被这个配方锁死了；串级的配方是“先把内环做到 60 rad/s，外环按比值再降”，它用同样的三个增益自由度，摆出了更刚的一组极点，并且让整定变成两个有物理含义的旋钮：内环带宽和比值。设定值通道也不同（外环 P 没有积分，没有那个 $-5$ rad/s 的零点）。
 
-**底盘角速度前馈。** 底盘陀螺（底盘上本来就有）给出 $\omega_c$，所以扰动 $b_f\omega_c$ 是已知的，可以直接在内环的输出上抵消。符号要小心：云台静止（$\dot\psi = 0$）时，耦合项对云台的力矩是 $+b_f\omega_c$，所以前馈是 $\mathrm{ff} = -b_f\omega_c$。（计划里我写的是 $+b_f\omega_c$，写反了；仿真第一次就会告诉你，这里直接用对的。）
+**底盘角速度前馈。** 底盘陀螺（底盘上本来就有）给出 $\omega_c$，所以扰动 $b_f\omega_c$ 是已知的，可以直接在内环的输出上抵消。符号要小心：云台静止（$\dot\psi = 0$）时，耦合项对云台的力矩是 $+b_f\omega_c$，所以前馈是 $\mathrm{ff} = -b_f\omega_c$。
 
 ### 带宽比：多快才算“快得够”
 
@@ -157,7 +157,7 @@ $$
 
 延迟一拍是因为内环要在外环之后才更新；我猜 1 kHz 下一拍的差别可以忽略，但没有单独测。这个策略很粗：内环一饱和就整个冻结外环积分，不看误差方向；第 5 篇的条件积分只在“继续往饱和方向积”时才跳过。我这一篇没有比较两种策略。
 
-## Python 实现
+## Python：增益、闭环和裕度分析
 
 不新增库模块，所以这一篇的 Python 全部在驱动 `python/ch07_cascade.py` 里：算例表、增益、一个闭环仿真、用 `freq` 的裕度分析和 `report`。先是两组增益，和上面的公式一一对应：
 
@@ -284,514 +284,9 @@ def disturbance_polys() -> dict[str, list[float]]:
 
 `report` 的断言是这一篇的“实验结论”：相角裕度随比值单调增；上升时间随比值单调增；小阶跃（5 mrad，不会碰到力矩限幅）的超调随比值单调降；单环的 `ψ` 峰值大于串级大于串级加前馈；`outer_aw_on` 的超调小于 `outer_aw_off`；斜坡公式的预测值和仿真峰值之比落在 0.9 到 2.0 之间。
 
-完整驱动（含 `report`、画图）折在这里：
+完整驱动（含 `report` 和画图）：[`python/ch07_cascade.py`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/python/ch07_cascade.py)。
 
-<details>
-<summary>完整源码：python/ch07_cascade.py</summary>
-
-```python
-#!/usr/bin/env python3
-"""Chapter 7 driver: `ch07_cascade.py ref` then `report`."""
-
-import math
-import sys
-from dataclasses import dataclass
-from pathlib import Path
-
-import numpy as np
-
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from compare import compare_dir  # noqa: E402
-from pidlab.freq import margins  # noqa: E402
-from pidlab.io import read_csv, write_csv  # noqa: E402
-from pidlab.metrics import step_metrics  # noqa: E402
-from pidlab.pid import Pid, PidConfig, Windup  # noqa: E402
-from pidlab.plants import GimbalAxis  # noqa: E402
-from pidlab.plotting import ROOT  # noqa: E402
-from pidlab.poly import poly_mul, poly_roots  # noqa: E402
-from pidlab.sim import advance  # noqa: E402
-
-TS = 1e-3
-SUBSTEPS = 10
-ZETA = 0.7
-WN_I = 60.0  # rad/s, inner rate loop
-RATIO = 5.0  # default wn_i / k_o
-RATIOS = (1.5, 3.0, 5.0, 10.0)
-OUTER_KI = 0.2  # outer PI: ki = 0.2 ko^2
-STEP_K = 50  # setpoint step at 0.05 s
-SPIN_T0, SPIN_T1, SPIN_W = 1.0, 1.5, 6.0  # rad/s ramp of the chassis
-GYRO_SIGMA = 0.01  # rad/s
-ANGLE_SIGMA = 1e-4  # rad
-SEED = 7
-OUT = ROOT / "out" / "ch07"
-DATA = ROOT / "data"
-COLUMNS = ("t", "r", "wc", "psi", "psid", "wref", "u", "i_out", "sat")
-
-
-@dataclass
-class Case:
-    name: str
-    data: str
-    kind: str  # "single" or "cascade"
-    ratio: float = RATIO
-    ff: bool = False  # inner feedforward of the chassis rate
-    outer_i: bool = False  # outer loop is PI instead of P
-    hold: bool = False  # freeze the outer integrator while inner saturates
-
-
-def make_cases() -> list[Case]:
-    cases = [Case("single_step", "ch07_step", "single")]
-    for ratio in RATIOS:
-        cases.append(
-            Case(f"cascade_r{ratio:g}_step", "ch07_step", "cascade", ratio)
-        )
-    cases += [
-        Case("single_spin", "ch07_spin", "single"),
-        Case("cascade_spin", "ch07_spin", "cascade"),
-        Case("cascade_spin_ff", "ch07_spin", "cascade", ff=True),
-        Case("outer_aw_off", "ch07_aw", "cascade", outer_i=True),
-        Case("outer_aw_on", "ch07_aw", "cascade", outer_i=True, hold=True),
-    ]
-    return cases
-
-
-def inner_gains() -> tuple[float, float]:
-    """Rate PI on J s + (b + bf) placed at zeta, WN_I."""
-    g = GimbalAxis()
-    kp = 2.0 * ZETA * WN_I * g.j - (g.b + g.bf)
-    ki = WN_I * WN_I * g.j
-    return kp, ki
-
-
-def single_gains() -> tuple[float, float, float]:
-    """kp, ki and the gyro damping kdg for poles (s + wo)(s^2 + ... wo^2)."""
-    g = GimbalAxis()
-    wo = WN_I / RATIO
-    p = wo
-    kdg = g.j * (p + 2.0 * ZETA * wo) - (g.b + g.bf)
-    kp = g.j * (wo * wo + 2.0 * ZETA * wo * p)
-    ki = g.j * p * wo * wo
-    return kp, ki, kdg
-
-
-def write_data() -> None:
-    rng = np.random.default_rng(SEED)
-
-    def table(steps, r, wc):
-        k = np.arange(steps)
-        t = k * TS
-        return {
-            "t": t,
-            "r": r(k),
-            "wc": wc(t),
-            "n_gyro": GYRO_SIGMA * rng.standard_normal(steps),
-            "n_angle": ANGLE_SIGMA * rng.standard_normal(steps),
-        }
-
-    def ramp(t):
-        frac = np.clip((t - SPIN_T0) / (SPIN_T1 - SPIN_T0), 0.0, 1.0)
-        return SPIN_W * frac
-
-    def still(t):
-        return np.zeros_like(t)
-
-    def step(k, amp):
-        return amp * (k >= STEP_K)
-
-    write_csv(
-        DATA / "ch07_step.csv", table(2000, lambda k: step(k, 0.2), still)
-    )
-    write_csv(DATA / "ch07_spin.csv", table(3000, lambda k: 0.0 * k, ramp))
-    write_csv(DATA / "ch07_aw.csv", table(3000, lambda k: step(k, 1.5), still))
-
-
-def run_case(case: Case, data=None) -> dict[str, np.ndarray]:
-    """One closed loop; `data` overrides the CSV (used by the linear check)."""
-    plant = GimbalAxis()
-    if data is None:
-        data = read_csv(DATA / f"{case.data}.csv")
-    u_lim = plant.u_max
-    if case.kind == "single":
-        kp, ki, kdg = single_gains()
-        outer = Pid(PidConfig(kp, ki, 0.0, TS, u_min=-u_lim, u_max=u_lim))
-        inner = None
-    else:
-        kpi, kii = inner_gains()
-        ko = WN_I / case.ratio
-        kio = OUTER_KI * ko * ko if case.outer_i else 0.0
-        outer = Pid(PidConfig(ko, kio, 0.0, TS))
-        inner = Pid(
-            PidConfig(
-                kpi,
-                kii,
-                0.0,
-                TS,
-                u_min=-u_lim,
-                u_max=u_lim,
-                windup=Windup.CLAMP,
-            )
-        )
-    x = [0.0, 0.0]
-    rows = []
-    for k in range(len(data["t"])):
-        r, wc = data["r"][k], data["wc"][k]
-        angle = x[0] + data["n_angle"][k]  # the angle estimate
-        gyro = x[1] + data["n_gyro"][k]
-        if inner is None:
-            wref = 0.0
-            u = outer.update(r, angle, -kdg * gyro)
-            sat = outer.saturated
-        else:
-            hold = case.hold and inner.saturated  # last sample's flag
-            wref = outer.update(r, angle, 0.0, hold)
-            ff = -plant.bf * wc if case.ff else 0.0
-            u = inner.update(wref, gyro, ff)
-            sat = inner.saturated
-        rows.append(
-            [data["t"][k], r, wc, x[0], x[1], wref, u, outer.integral, sat]
-        )
-        x = advance(plant.deriv, x, [u, 0.0, wc], TS, SUBSTEPS)
-    return dict(zip(COLUMNS, np.array(rows, dtype=float).T))
-
-
-def ref() -> None:
-    write_data()
-    for case in make_cases():
-        write_csv(OUT / f"{case.name}_py.csv", run_case(case))
-
-
-def load(name: str) -> dict[str, np.ndarray]:
-    return read_csv(OUT / f"{name}_py.csv")
-
-
-# ---- report ------------------------------------------------------------
-
-
-def log_grid(n: int = 2000) -> list[float]:
-    lo, hi = math.log10(0.1), math.log10(1e4)
-    return [10.0 ** (lo + (hi - lo) * i / (n - 1)) for i in range(n)]
-
-
-def outer_margins(ratio: float, first_order: bool = False):
-    """Margins of L_o = k_o T_i(s) / s, the loop opened at the rate setpoint.
-
-    T_i is the exact inner closed loop (PI on J s + b + bf), or the
-    first-order stand-in 1 / (s / wn_i + 1). The delay is the ZOH's ts / 2.
-    """
-    g = GimbalAxis()
-    kpi, kii = inner_gains()
-    ko = WN_I / ratio
-    if first_order:
-        num, den = [ko], poly_mul([1.0, 0.0], [1.0 / WN_I, 1.0])
-    else:
-        num = [ko * kpi, ko * kii]
-        den = poly_mul([1.0, 0.0], [g.j, g.b + g.bf + kpi, kii])
-    return margins(num, den, 0.5 * TS, log_grid())
-
-
-def single_margins():
-    """The single loop opened at the plant input (gyro term in the loop)."""
-    g = GimbalAxis()
-    kp, ki, kdg = single_gains()
-    num = [kdg, kp, ki]
-    den = [g.j, g.b + g.bf, 0.0, 0.0]
-    m = margins(num, den, 0.5 * TS, log_grid())
-    # L starts on a double integrator, where the principal phase picks the
-    # +180 degree branch; fold the margin back into (-180, 180].
-    pm = (m.pm_deg + 180.0) % 360.0 - 180.0
-    return m._replace(pm_deg=pm)
-
-
-def linear_overshoot(case: Case, amp: float = 0.005) -> float:
-    """Step overshoot (%) for a step small enough to never clip."""
-    n = 2000
-    zeros = np.zeros(n)
-    k = np.arange(n)
-    data = {
-        "t": k * TS,
-        "r": amp * (k >= STEP_K),
-        "wc": zeros,
-        "n_gyro": zeros,
-        "n_angle": zeros,
-    }
-    o = run_case(case, data)
-    assert o["sat"].sum() == 0
-    return step_metrics(o["psi"], TS, STEP_K, amp).overshoot
-
-
-def report_steps() -> dict:
-    names = ["single_step"] + [f"cascade_r{r:g}_step" for r in RATIOS]
-    res = {n: load(n) for n in names}
-    print(
-        f"\n{'case':>18s} {'rise':>7s} {'overshoot':>10s} {'settle':>7s} "
-        f"{'max|u|':>7s} {'sat ms':>7s} {'PM':>7s} {'PM 1st':>7s} {'wc':>6s}"
-    )
-    stats = {}
-    for n, o in res.items():
-        sm = step_metrics(o["psi"], TS, STEP_K, 0.2)
-        sat = int(o["sat"].sum())
-        if n == "single_step":
-            m = single_margins()
-            pm1 = None
-        else:
-            ratio = float(n.removeprefix("cascade_r").removesuffix("_step"))
-            m = outer_margins(ratio)
-            pm1 = outer_margins(ratio, first_order=True).pm_deg
-        stats[n] = (sm, m, pm1)
-        print(
-            f"{n:>18s} {sm.rise:7.3f} {sm.overshoot:9.2f}% {sm.settle:6.3f}s "
-            f"{np.abs(o['u']).max():7.3f} {sat:7d} {m.pm_deg:6.1f}d "
-            f"{'-' if pm1 is None else format(pm1, '5.1f') + 'd':>7s} "
-            f"{m.wc:6.2f}"
-        )
-    pms = [stats[f"cascade_r{r:g}_step"][1].pm_deg for r in RATIOS]
-    rises = [stats[f"cascade_r{r:g}_step"][0].rise for r in RATIOS]
-    assert pms == sorted(pms), "PM must grow with the ratio"
-    assert rises == sorted(rises), "a slower outer loop must rise slower"
-    print(f"\n{'loop':>8s} {'PM':>7s} {'unclipped overshoot (5 mrad)':>30s}")
-    single = linear_overshoot(Case("lin", "", "single"))
-    print(
-        f"{'single':>8s} {stats['single_step'][1].pm_deg:6.1f}d "
-        f"{single:29.3f}%"
-    )
-    lin = []
-    for r, pm in zip(RATIOS, pms):
-        lin.append(linear_overshoot(Case("lin", "", "cascade", r)))
-        print(f"{'r = ' + format(r, 'g'):>8s} {pm:6.1f}d {lin[-1]:29.3f}%")
-    assert lin == sorted(lin, reverse=True), "overshoot must fall"
-    return res
-
-
-def spin_error(o: dict, k0: int = 1000) -> tuple[float, float, float]:
-    """Peak |psi|, rms |psi| over [1.0, 3.0) s, final |psi| mean."""
-    psi = o["psi"][k0:]
-    return (
-        float(np.abs(psi).max()),
-        float(np.sqrt(np.mean(psi**2))),
-        float(np.mean(o["psi"][-200:])),
-    )
-
-
-def disturbance_polys() -> dict[str, list[float]]:
-    """Denominator of psi / torque disturbance, highest power first.
-
-    Both loops reduce to J s^3 + (b + bf + kd) s^2 + kp s + ki, with the
-    cascade's equivalent gains kd = kpi, kp = ko kpi + kii, ki = ko kii.
-    """
-    g = GimbalAxis()
-    bt = g.b + g.bf
-    kp, ki, kdg = single_gains()
-    kpi, kii = inner_gains()
-    ko = WN_I / RATIO
-    return {
-        "single": [g.j, bt + kdg, kp, ki],
-        "cascade": [g.j, bt + kpi, ko * kpi + kii, ko * kii],
-    }
-
-
-def report_spin() -> dict:
-    names = ("single_spin", "cascade_spin", "cascade_spin_ff")
-    res = {n: load(n) for n in names}
-    g = GimbalAxis()
-    print(
-        f"\nchassis ramp to {SPIN_W} rad/s: disturbance torque "
-        f"bf wc = {g.bf * SPIN_W:.3f} N*m"
-    )
-    polys = disturbance_polys()
-    for name, den in polys.items():
-        roots = ", ".join(
-            f"{z.real:.2f}{z.imag:+.2f}j" for z in poly_roots(den)
-        )
-        print(
-            f"{name:>8s}: J s^3 + {den[1]:.3f} s^2 + {den[2]:.3f} s + "
-            f"{den[3]:.3f}; poles {roots}"
-        )
-    slope = g.bf * SPIN_W / (SPIN_T1 - SPIN_T0)
-    pred = {n: slope / d[3] for n, d in polys.items()}
-    print(
-        f"torque ramp slope {slope:.3f} N*m/s over ki_eq: single "
-        f"{1e3 * pred['single']:.3f} mrad, cascade "
-        f"{1e3 * pred['cascade']:.3f} mrad"
-    )
-    print(
-        f"{'case':>16s} {'peak |psi|':>11s} {'rms |psi|':>10s} "
-        f"{'final':>10s} {'rms u (last 0.5 s)':>19s}"
-    )
-    peaks = []
-    for n, o in res.items():
-        peak, rms, fin = spin_error(o)
-        peaks.append(peak)
-        u_rms = float(np.sqrt(np.mean(o["u"][-500:] ** 2)))
-        print(f"{n:>16s} {peak:11.5f} {rms:10.5f} {fin:10.6f} {u_rms:19.5f}")
-    print(
-        f"cascade cuts the peak by {peaks[0] / peaks[1]:.2f}x, "
-        f"with feedforward by {peaks[0] / peaks[2]:.2f}x"
-    )
-    assert peaks[0] > peaks[1] > peaks[2]
-    # the ramp error of a type-1 loop settles at slope / ki_eq
-    for key, n in (("single", "single_spin"), ("cascade", "cascade_spin")):
-        ratio = spin_error(res[n])[0] / pred[key]
-        print(f"{key:>8s}: simulated peak / ramp formula = {ratio:.2f}")
-        assert 0.9 < ratio < 2.0, key
-    return res
-
-
-def report_aw() -> dict:
-    res = {n: load(n) for n in ("outer_aw_off", "outer_aw_on")}
-    print(
-        f"\n{'case':>13s} {'peak psi':>9s} {'overshoot':>10s} "
-        f"{'max I_out':>10s} {'sat ms':>7s} {'at +1':>6s} {'at -1':>6s} "
-        f"{'settle':>7s}"
-    )
-    stats = {}
-    for n, o in res.items():
-        sm = step_metrics(o["psi"], TS, STEP_K, 1.5)
-        stats[n] = sm
-        hi = int(np.sum(o["u"] >= GimbalAxis().u_max))
-        lo = int(np.sum(o["u"] <= -GimbalAxis().u_max))
-        print(
-            f"{n:>13s} {o['psi'].max():9.4f} {sm.overshoot:9.2f}% "
-            f"{np.abs(o['i_out']).max():10.3f} {int(o['sat'].sum()):7d} "
-            f"{hi:6d} {lo:6d} {sm.settle:6.3f}s"
-        )
-    off, on = stats["outer_aw_off"], stats["outer_aw_on"]
-    assert on.overshoot < off.overshoot
-    return res
-
-
-def report() -> None:
-    if not compare_dir(OUT, 1e-9):
-        sys.exit(1)
-    kpi, kii = inner_gains()
-    kp, ki, kdg = single_gains()
-    print(
-        f"inner rate PI at zeta {ZETA}, wn {WN_I}: kp = {kpi:.4f}, "
-        f"ki = {kii:.3f}"
-    )
-    print(
-        f"single loop (poles at {WN_I / RATIO:g} rad/s): kp = {kp:.4f}, "
-        f"ki = {ki:.4f}, kd_gyro = {kdg:.4f}"
-    )
-    ks = ", ".join(f"{WN_I / r:g} (ratio {r:g})" for r in RATIOS)
-    print(f"outer k_o = {ks}")
-    steps = report_steps()
-    spin = report_spin()
-    aw = report_aw()
-    plot_single_vs_cascade(steps)
-    plot_ratio(steps)
-    plot_spin(spin)
-    plot_inner_saturation(aw)
-    print("\nch07 OK")
-
-
-# ---- figures -----------------------------------------------------------
-
-
-def plot_single_vs_cascade(res: dict) -> None:
-    from pidlab.plotting import L, save
-    import matplotlib.pyplot as plt
-
-    fig, (a1, a2) = plt.subplots(2, 1, figsize=(8, 6.4), sharex=True)
-    sl = slice(0, 800)
-    for n, lab in (
-        ("single_step", L("单环（三阶极点配置）", "single loop")),
-        ("cascade_r5_step", L("串级，比值 5", "cascade, ratio 5")),
-    ):
-        o = res[n]
-        a1.plot(o["t"][sl], o["psi"][sl], label=lab)
-        a2.plot(o["t"][sl], o["u"][sl], label=lab)
-    a1.plot(o["t"][sl], o["r"][sl], "k:", lw=1, label=L("目标", "reference"))
-    a1.set_ylabel(L("云台角度 (rad)", "gimbal angle (rad)"))
-    a2.set_ylabel(L("力矩指令 (N·m)", "torque command (N*m)"))
-    a2.set_xlabel(L("时间 (秒)", "time (s)"))
-    a1.legend(loc="lower right")
-    save(fig, "ch07", "single-vs-cascade")
-
-
-def plot_ratio(res: dict) -> None:
-    from pidlab.plotting import L, save
-    import matplotlib.pyplot as plt
-
-    fig, (a1, a2) = plt.subplots(2, 1, figsize=(8, 7.2))
-    sl = slice(0, 700)
-    for r in RATIOS:
-        o = res[f"cascade_r{r:g}_step"]
-        a1.plot(
-            o["t"][sl], o["psi"][sl], label=L(f"比值 {r:g}", f"ratio {r:g}")
-        )
-    a1.plot(o["t"][sl], o["r"][sl], "k:", lw=1)
-    a1.set_xlabel(L("时间 (秒)", "time (s)"))
-    a1.set_ylabel(L("云台角度 (rad)", "gimbal angle (rad)"))
-    a1.legend(loc="lower right")
-    grid = np.geomspace(1.0, 30.0, 60)
-    exact = [outer_margins(float(r)).pm_deg for r in grid]
-    first = [outer_margins(float(r), True).pm_deg for r in grid]
-    a2.semilogx(grid, exact, label=L("精确内环", "exact inner loop"))
-    a2.semilogx(grid, first, "--", label=L("一阶近似内环", "first-order"))
-    for r in RATIOS:
-        a2.plot(r, outer_margins(r).pm_deg, "ko")
-    a2.set_xlabel(L("带宽比 ω_i / k_o", "bandwidth ratio wn_i / k_o"))
-    a2.set_ylabel(L("外环相角裕度 (度)", "outer phase margin (deg)"))
-    a2.legend(loc="lower right")
-    save(fig, "ch07", "bandwidth-ratio")
-
-
-def plot_spin(res: dict) -> None:
-    from pidlab.plotting import L, save
-    import matplotlib.pyplot as plt
-
-    names = {
-        "single_spin": L("单环", "single loop"),
-        "cascade_spin": L("串级", "cascade"),
-        "cascade_spin_ff": L("串级 + 底盘角速度前馈", "cascade + feedforward"),
-    }
-    fig, (a1, a2) = plt.subplots(2, 1, figsize=(8, 6.4), sharex=True)
-    sl = slice(800, 2200)
-    o = res["single_spin"]
-    a1.plot(o["t"][sl], o["wc"][sl], "k")
-    a1.set_ylabel(L("底盘角速度 (rad/s)", "chassis rate (rad/s)"))
-    for n, lab in names.items():
-        a2.plot(res[n]["t"][sl], 1e3 * res[n]["psi"][sl], label=lab)
-    a2.set_ylabel(L("云台角度误差 (mrad)", "gimbal angle error (mrad)"))
-    a2.set_xlabel(L("时间 (秒)", "time (s)"))
-    a2.legend(loc="upper right")
-    save(fig, "ch07", "spin-disturbance")
-
-
-def plot_inner_saturation(res: dict) -> None:
-    from pidlab.plotting import L, save
-    import matplotlib.pyplot as plt
-
-    names = {
-        "outer_aw_off": L("外环一直积分", "outer always integrates"),
-        "outer_aw_on": L(
-            "内环饱和时冻结外环积分", "freeze while inner saturated"
-        ),
-    }
-    fig, axes = plt.subplots(3, 1, figsize=(8, 8.4), sharex=True)
-    sl = slice(0, 2000)
-    for n, lab in names.items():
-        o = res[n]
-        axes[0].plot(o["t"][sl], o["psi"][sl], label=lab)
-        axes[1].plot(o["t"][sl], o["u"][sl], lw=1, label=lab)
-        axes[2].plot(o["t"][sl], o["i_out"][sl], label=lab)
-    o = res["outer_aw_off"]
-    axes[0].plot(o["t"][sl], o["r"][sl], "k:", lw=1)
-    axes[0].set_ylabel(L("云台角度 (rad)", "gimbal angle (rad)"))
-    axes[1].set_ylabel(L("内环力矩 (N·m)", "inner torque (N*m)"))
-    axes[2].set_ylabel(L("外环积分项 (rad/s)", "outer integral (rad/s)"))
-    axes[2].set_xlabel(L("时间 (秒)", "time (s)"))
-    axes[0].legend(loc="lower right")
-    save(fig, "ch07", "inner-saturation")
-
-
-if __name__ == "__main__":
-    {"ref": ref, "report": report}[sys.argv[1]]()
-```
-
-</details>
-
-## C、C++、Rust 实现
+## 同一套接线，三种语言
 
 没有新的库模块，三个版本的 ch07 应用都是 Python 驱动的逐行翻译：同样的算例表、同样的增益公式、同样的接线，读同一份数据。区别在这几处：
 
@@ -802,28 +297,9 @@ if __name__ == "__main__":
 
 ### C
 
-增益和两个控制器的构造放在 `make_loops`，注释里写明下标约定：
+构造放在 `make_loops`，下标约定是 `pid[0]` 外环（或单环），`pid[1]` 内环。增益公式和 Python 一行对一行，这里只看内环那一段：
 
 ```c
-/* Builds the controllers of one case: pid[0] is the outer (or only) loop, */
-/* pid[1] the inner rate loop. kdg is the gyro damping of the single loop. */
-static int make_loops(const struct sim_case *c, const struct pl_gimbal_axis *g,
-		      struct pl_pid *pid, pl_real *kdg)
-{
-	struct pl_pid_config cfg;
-	pl_real kpi, kii, ko, kio;
-	pl_real wo = WN_I / RATIO;
-	pl_real p = wo;
-	int ret;
-
-	*kdg = g->j * (p + 2.0 * ZETA * wo) - (g->b + g->bf);
-	if (c->kind == LOOP_SINGLE) {
-		set_cfg(&cfg, g->j * (wo * wo + 2.0 * ZETA * wo * p),
-			g->j * p * wo * wo);
-		cfg.u_min = -g->u_max;
-		cfg.u_max = g->u_max;
-		return pl_pid_init(&pid[0], &cfg);
-	}
 	kpi = 2.0 * ZETA * WN_I * g->j - (g->b + g->bf);
 	kii = WN_I * WN_I * g->j;
 	ko = WN_I / c->ratio;
@@ -836,21 +312,11 @@ static int make_loops(const struct sim_case *c, const struct pl_gimbal_axis *g,
 	cfg.u_min = -g->u_max;
 	cfg.u_max = g->u_max;
 	return pl_pid_init(&pid[1], &cfg);
-}
 ```
 
-闭环里的接线和 Python 一一对应，`hold` 在内环更新之前读：
+闭环里的接线，`hold` 在内环更新之前读：
 
 ```c
-	for (k = 0; !ret && k < data.nrows; k++) {
-		const double *row = &data.data[k * data.ncols];
-		double *out = &rows[k * SIM_COLS];
-		pl_real inputs[PL_GIMBAL_AXIS_M] = { 0 };
-		pl_real angle = x[0] + row[ca]; /* the angle estimate */
-		pl_real gyro = x[1] + row[cg];
-		pl_real wref = 0.0, u;
-		bool sat;
-
 		if (c->kind == LOOP_SINGLE) {
 			u = pl_pid_update(&pid[0], row[cr], angle, -kdg * gyro,
 					  false);
@@ -865,38 +331,15 @@ static int make_loops(const struct sim_case *c, const struct pl_gimbal_axis *g,
 			u = pl_pid_update(&pid[1], wref, gyro, ff, false);
 			sat = pid[1].saturated;
 		}
-		out[0] = row[ct];
-		out[1] = row[cr];
-		out[2] = row[cw];
-		out[3] = x[0];
-		out[4] = x[1];
-		out[5] = wref;
-		out[6] = u;
-		out[7] = pid[0].integral;
-		out[8] = sat ? 1.0 : 0.0;
-		inputs[0] = u;
-		inputs[2] = row[cw];
-		pl_advance(pl_gimbal_axis_deriv, &g, x, inputs,
-			   PL_GIMBAL_AXIS_N, TS, SUBSTEPS);
-	}
 ```
 
-完整应用：[`c/apps/ch07.c`](https://github.com/bfmhno3/pid-lab/tree/tutorial-v1/c/apps/ch07.c)。
+完整应用：[`c/apps/ch07.c`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/c/apps/ch07.c)。
 
 ### C++
 
 外环配置先按单环填好（带 $\pm1$ N·m 限幅），串级时整个换成无限幅的新配置；`Create` 返回 `std::optional`，`inner->saturated()` 是访问器：
 
 ```cpp
-  // outer is the single loop, or the angle loop of the cascade
-  pidlab::PidConfig<double> outer_cfg{g.j * (wo * wo + 2.0 * kZeta * wo * wo),
-                                      g.j * wo * wo * wo, 0.0, kTs};
-  outer_cfg.u_min = -u_lim;
-  outer_cfg.u_max = u_lim;
-  pidlab::PidConfig<double> inner_cfg{2.0 * kZeta * kWnI * g.j - (g.b + g.bf),
-                                      kWnI * kWnI * g.j, 0.0, kTs};
-  inner_cfg.u_min = -u_lim;
-  inner_cfg.u_max = u_lim;
   if (c.cascade) {
     const double ko = kWnI / c.ratio;
     outer_cfg = {ko, c.outer_i ? kOuterKi * ko * ko : 0.0, 0.0, kTs};
@@ -906,18 +349,7 @@ static int make_loops(const struct sim_case *c, const struct pl_gimbal_axis *g,
   auto outer = pidlab::Pid<double>::Create(outer_cfg);
   auto inner = pidlab::Pid<double>::Create(inner_cfg);
   if (!outer || !inner) return false;
-
-  std::vector<std::vector<double>> cols(9);
-  std::array<double, 2> x{};
-  for (std::size_t k = 0; k < t->size(); ++k) {
-    const double angle = x[0] + (*n_angle)[k];  // the angle estimate
-    const double gyro = x[1] + (*n_gyro)[k];
-    double wref = 0.0;
-    double u;
-    bool sat;
-    if (!c.cascade) {
-      u = outer->Update((*r)[k], angle, -kdg * gyro);
-      sat = outer->saturated();
+  // ...
     } else {
       // the inner flag still holds the last sample's value
       const bool hold = c.hold && inner->saturated();
@@ -926,17 +358,9 @@ static int make_loops(const struct sim_case *c, const struct pl_gimbal_axis *g,
       u = inner->Update(wref, gyro, ff);
       sat = inner->saturated();
     }
-    const double row[9] = {(*t)[k],        (*r)[k], (*wc)[k], x[0],
-                           x[1],           wref,    u,        outer->integral(),
-                           sat ? 1.0 : 0.0};
-    for (int i = 0; i < 9; ++i) cols[i].push_back(row[i]);
-    const std::array<double, 3> in = {u, 0.0, (*wc)[k]};
-    pidlab::Advance([&](const auto& s, const auto& v) { return g.Deriv(s, v); },
-                    x, in, kTs, kSubsteps);
-  }
 ```
 
-完整应用：[`cpp/apps/ch07.cc`](https://github.com/bfmhno3/pid-lab/tree/tutorial-v1/cpp/apps/ch07.cc)。
+完整应用：[`cpp/apps/ch07.cc`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/cpp/apps/ch07.cc)。
 
 ### Rust
 
@@ -950,15 +374,7 @@ static int make_loops(const struct sim_case *c, const struct pl_gimbal_axis *g,
     }
     let mut outer = Pid::new(outer_cfg).map_err(|e| format!("{e:?}"))?;
     let mut inner = Pid::new(inner_cfg).map_err(|e| format!("{e:?}"))?;
-
-    let mut x = [0.0; 2];
-    let mut cols: Vec<Vec<f64>> = vec![Vec::new(); 9];
-    for k in 0..t.len() {
-        let angle = x[0] + n_angle[k]; // the angle estimate
-        let gyro = x[1] + n_gyro[k];
-        let mut wref = 0.0;
-        let u;
-        let sat;
+    // ...
         if c.cascade {
             // the inner flag still holds the last sample's value
             let hold = c.hold && inner.saturated();
@@ -966,33 +382,10 @@ static int make_loops(const struct sim_case *c, const struct pl_gimbal_axis *g,
             wref = outer.update(r[k], angle, 0.0, hold);
             u = inner.update(wref, gyro, ff, false);
             sat = inner.saturated();
-        } else {
-            u = outer.update(r[k], angle, -kdg * gyro, false);
-            sat = outer.saturated();
         }
-        let row = [
-            t[k],
-            r[k],
-            wc[k],
-            x[0],
-            x[1],
-            wref,
-            u,
-            outer.integral(),
-            if sat { 1.0 } else { 0.0 },
-        ];
-        for (col, v) in cols.iter_mut().zip(row) {
-            col.push(v);
-        }
-        advance(|s, v| g.deriv(s, v), &mut x, &[u, 0.0, wc[k]], TS, SUBSTEPS);
-    }
 ```
 
-完整应用：[`rust/src/bin/ch07.rs`](https://github.com/bfmhno3/pid-lab/tree/tutorial-v1/rust/src/bin/ch07.rs)。
-
-### 编译和风格检查
-
-编译参数和前几篇一样：C 是 `gcc -std=c11 -O2 -Wall -Wextra -Wpedantic -Werror`（15.3.0），C++ 是 `g++ -std=c++20` 加同样的警告，Rust 是 rustc 1.95.0、edition 2024，`cargo clippy --release -- -D warnings`。风格检查：C 用内核的 `checkpatch.pl`（`--no-tree`，忽略 SPDX 和 typedef 两项），0 errors、0 warnings；C++ 用 clang-format 的 Google 风格（`-Werror`）；Python 用 `ruff format --check` 和 `ruff check`，行宽 79；Rust 用 `cargo fmt --check`。四项都在提交前过了。
+完整应用：[`rust/src/bin/ch07.rs`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/rust/src/bin/ch07.rs)。
 
 ## 结果
 
@@ -1113,15 +506,41 @@ ch07 OK
 
 冻结外环积分把超调从 46.41% 降到 1.59%（29 倍），积分峰值从 7.329 降到 0.379 rad/s（19 倍），调节时间从 1.240 s 缩到 0.329 s（3.8 倍）。内环饱和的时间也短了，467 ms 对 302 ms：外环不再把速度设定值积到离谱的高度，少饱和了 165 ms。`report` 把两种饱和分开数了：`outer_aw_off` 先贴着 $+1$ N·m 229 ms，再贴着 $-1$ N·m 反向刹车 238 ms；`outer_aw_on` 是 182 ms 和 120 ms，刹车的那一段短了一半。
 
-### 对不上的地方
+### 这些数字的边界
 
-- **前馈符号。** 我在计划里把内环前馈写成 $+b_f\omega_c$，物理上应该是 $-b_f\omega_c$，代码和上面的推导用的是后者。
+上面的比较有几处要打折，我逐条列出来：
+
 - **前馈的 44 倍是上限。** 前馈用的是精确的 $\omega_c$，没有给底盘陀螺加噪声和延迟。真车上的底盘陀螺有噪声，而且和云台陀螺不是同一颗，这 44 倍应当打折，打多少折我没测。
-- **单环不是“最好的单环”。** 我选的是三个极点都在 12 rad/s 的配方，它被锁在低增益里；上一节已经列出，串级的等效增益塞进单环就是同一个扰动响应。这一篇比较的是“两种整定配方”，不是“单环这种结构”对“串级这种结构”。
+- **单环不是“最好的单环”。** 我选的是三个极点都在 12 rad/s 的配方，它被锁在低增益里；前面已经推过，串级的等效增益塞进单环就是同一个扰动响应。这一篇比较的是“两种整定配方”，不是“单环这种结构”对“串级这种结构”。
 - **单环和串级的 $\omega_c$ 不能直接比。** 单环的开环断在对象输入，串级的断在速度设定值，两者的穿越频率是两个不同回路的量。表里放在一起只是为了省地方。
 - **饱和混进了线性分析。** 0.2 rad 的阶跃对所有回路都撞限幅，所以阶跃响应的比较要和 5 mrad 的线性表一起看。
-- **冻结策略没有和条件积分比较。** 见上面“内环饱和：外环怎么知道”一节。
+- **冻结策略没有和条件积分比较。** 见前面“内环饱和：外环怎么知道”一节。
 - **噪声和参数是假设。** $J$、$b$、$b_f$ 和两个噪声标准差都是我取的量级，没有测过。一台真的云台，$b_f$ 很可能比这小一个量级，那样底盘转动的扰动就没有这里这么大。
+
+## 检查点
+
+```bash
+make -s ch07
+```
+
+通过的标志是 30 个 `ok` 行最大差异都是 0，`report` 的断言全过，末尾打印 `ch07 OK`。编译参数和前几篇一样：C 是 `gcc -std=c11 -O2 -Wall -Wextra -Wpedantic -Werror`（15.3.0），C++ 是 `g++ -std=c++20` 加同样的警告，Rust 是 rustc 1.95.0、edition 2024，`cargo clippy --release -- -D warnings`。风格检查：C 用内核的 `checkpatch.pl`（`--no-tree`，忽略 SPDX 和 typedef 两项），0 errors、0 warnings；C++ 用 clang-format 的 Google 风格（`-Werror`）；Python 用 `ruff format --check` 和 `ruff check`，行宽 79；Rust 用 `cargo fmt --check`。四项都在提交前过了。
+
+### 实验清单
+
+| 文件 | 命令 | 结果 |
+| --- | --- | --- |
+| [`python/ch07_cascade.py`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/python/ch07_cascade.py) | `python3 python/ch07_cascade.py ref`，再 `report` | 10 个算例的 Python 参考输出；`report` 断言相角裕度、上升时间、小阶跃超调随比值单调，峰值单环 > 串级 > 串级加前馈，`outer_aw_on` 超调小于 `outer_aw_off` |
+| [`python/pidlab/pid.py`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/python/pidlab/pid.py) | 第 5 篇的 `Pid`，本篇不改 | 单环 1 个实例，串级 2 个实例 |
+| [`python/pidlab/freq.py`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/python/pidlab/freq.py) | 第 3 篇的 `margins` | 外环相角裕度：比值 1.5 是 61.7°，3 以上超过 85° |
+| [`python/pidlab/plants.py`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/python/pidlab/plants.py)，[`sim.py`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/python/pidlab/sim.py) | 第 1 篇的 `GimbalAxis` 和 RK4 | 第三个输入 $\omega_c$ 第一次非零 |
+| [`c/include/pl/pid.h`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/c/include/pl/pid.h)，[`c/src/pid.c`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/c/src/pid.c) | 第 5 篇的 `struct pl_pid` | 本篇不改 |
+| [`c/apps/ch07.c`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/c/apps/ch07.c) | `make -s ch07` | 写 10 个 `*_c.csv`，与 Python 最大差异 0 |
+| [`cpp/include/pidlab/pid.h`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/cpp/include/pidlab/pid.h) | 第 5 篇的 `Pid<T>` | 本篇不改 |
+| [`cpp/apps/ch07.cc`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/cpp/apps/ch07.cc) | `make -s ch07` | 写 10 个 `*_cpp.csv`，最大差异 0 |
+| [`rust/src/pid.rs`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/rust/src/pid.rs) | 第 5 篇的 `Pid` | 本篇不改 |
+| [`rust/src/bin/ch07.rs`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/rust/src/bin/ch07.rs) | `make -s ch07` | 写 10 个 `*_rs.csv`，最大差异 0 |
+| `out/ch07/`，`figures/ch07/`（构建产物，不入库） | `make -s ch07` | 40 个 CSV，4 张 SVG（`single-vs-cascade`、`bandwidth-ratio`、`spin-disturbance`、`inner-saturation`） |
+
 
 ## 下一篇
 

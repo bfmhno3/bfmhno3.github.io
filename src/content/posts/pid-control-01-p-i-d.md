@@ -42,7 +42,7 @@ slug: pid-control-01-p-i-d
 | 9 | [状态反馈：LQR、LQI 与平衡步兵](/posts/pid-control-09-lqr/) | LQR、LQI、PID 是状态反馈的一个子集 |
 | 10 | [上车之前：float32、定点数与 CAN 量化](/posts/pid-control-10-embedded/) | float32、Q16.16、量化、采样抖动 |
 
-**四种语言。** 每个控制器和每个仿真对象我都写四遍：Python（numpy，只用来当参考实现和画图，仿真本身是手写的）、C（C11，不使用 `malloc`）、C++（C++20，模板，纯头文件）、Rust（edition 2024，`no_std` 兼容）。Python 版承担推导和完整讲解；C、C++、Rust 的核心函数我会贴出来，文字只讲它们和 Python 版的区别：内存归谁、尺寸在哪里确定、标量类型怎么切换、语言本身的惯用法。
+**四种语言。** 每个控制器和每个仿真对象我都写四遍：Python（numpy，只用来当参考实现和画图，仿真本身是手写的）、C（C11，不使用 `malloc`）、C++（C++20，模板，纯头文件）、Rust（edition 2024，`no_std` 兼容）。Python 版承担推导和完整讲解；C、C++、Rust 的核心函数我会贴出来，文字只讲它们和 Python 版的区别：内存归谁、尺寸在哪里确定、标量类型怎么切换、语言本身的惯用法。文中只贴关键的几行，完整文件在仓库里，文末的检查点列了链接。
 
 **同一份数据。** 所有设定值、扰动和测量噪声都由 Python 生成，写成 CSV，四种语言读同一份文件，没有任何一种语言自己造随机数。这一篇的噪声是 0，但文件里已经留了噪声这一列，后面几篇会用到。这恰好也是上车之后的工作流：日志进来，控制器处理。
 
@@ -165,35 +165,15 @@ $$
 
 控制器每 1 ms 才看一次 $y$，输出 $u_k$ 在下一个采样点之前保持不变（零阶保持，ZOH）。一个保持器平均相当于 $t_s/2$ 的延迟，再加上“测量到输出”本身晚一拍，大约是一个半采样周期的纯延迟。$t_s = 1$ ms 时它远小于对象的时间常数，可以忽略；但我后面会遇到它：下面 $e_{ss}$ 的验证里，我得把预测向后移一个采样周期才对得上。第 3、4 篇会把它变成裕度和采样率的数字。
 
-整个仿真的每一个采样点 $k$ 按这个顺序执行，四种语言一模一样：
-
-1. $t_k = k\,t_s$。
-2. 测量 $y_k = h(x_k) + n_k$，$n_k$ 来自数据文件。
-3. 控制器输出 $u_k$。
-4. 执行器限幅。
-5. 把指令推进延迟线（整数个采样周期，0 也允许，这一篇用 0）。
-6. 延迟后的指令和扰动 $d_k$ 在 10 个 RK4 小步里保持不变。
-7. 记录这一行，用的是积分之前的 $x_k$。
-
 最后是我要先打个预防针的一点：**很多 RM 代码里 `ki` 和 `kd` 是把 $t_s$ 吸收进去的**，比如积分写成 `integral += error` 而不乘 $t_s$，微分写成 `error - last_error` 而不除 $t_s$。据我所知这很常见，但我没有统计过。这样写的增益数值和我这里的 $K_i$、$K_d$ 差一个 $t_s$ 因子，换采样率就要重调。我这里把 $t_s$ 显式留在公式里，第 4 篇会专门算这笔账。
 
 ## Python 实现
 
-### 积分器与延迟线
+### 积分器、延迟线和对象
 
-RK4 用最朴素的写法：状态是 `list[float]`，对象给出 `deriv(x, u)`，积分器每一步调用四次。`advance` 把一个控制周期切成 `substeps` 小步，输入保持不变。
+对象的方程要变成代码，先要一个积分器。我用最朴素的经典 RK4：状态是 `list[float]`，对象给出 `deriv(x, u)`，`rk4_step` 在一步里调用它四次，输入 `u` 在这一步里保持不变：
 
 ```python
-"""Fixed-step RK4 integrator and an integer-sample delay line."""
-
-from collections import deque
-from collections.abc import Callable, Sequence
-
-MAX_DELAY = 256
-
-Deriv = Callable[[Sequence[float], Sequence[float]], list[float]]
-
-
 def rk4_step(
     f: Deriv, x: Sequence[float], u: Sequence[float], h: float
 ) -> list[float]:
@@ -207,31 +187,11 @@ def rk4_step(
         x[i] + h / 6.0 * (k1[i] + 2.0 * k2[i] + 2.0 * k3[i] + k4[i])
         for i in range(n)
     ]
+```
 
+一个控制周期里 `advance` 把它调 `substeps` 次（我取 10），每次步长 `ts / substeps`。指令的传输延迟（整数个采样周期）用 `DelayLine`：一个 `deque` 当环形缓冲区，`push(u)` 存进去，取出 `delay` 次之前存的值，`delay = 0` 直接透传。这一篇的延迟是 0，但后面几篇都要用，所以现在就放进回路里。
 
-def advance(
-    f: Deriv,
-    x: Sequence[float],
-    u: Sequence[float],
-    ts: float,
-    substeps: int,
-) -> list[float]:
-    """Hold u for one controller period: `substeps` RK4 steps."""
-    h = ts / substeps
-    y = list(x)
-    for _ in range(substeps):
-        y = rk4_step(f, y, u, h)
-    return y
-
-
-class DelayLine:
-    """Command delay of `delay` whole samples; delay 0 passes through."""
-
-    def __init__(self, delay: int, init: float = 0.0) -> None:
-        if not 0 <= delay <= MAX_DELAY:
-            raise ValueError("delay must be in [0, MAX_DELAY]")
-        self.buf = deque([init] * delay)
-
+```python
     def push(self, u: float) -> float:
         """Store u, return the value pushed `delay` calls ago."""
         if not self.buf:
@@ -241,94 +201,26 @@ class DelayLine:
         return out
 ```
 
-`DelayLine` 用一个 `deque` 当环形缓冲区：`push(u)` 存进去，取出 `delay` 次之前存的值，`delay = 0` 就直接透传。容量上限 `MAX_DELAY = 256` 是为了和 C 里固定大小的数组一致。
-
-### 对象
-
-输入向量约定为 `u = [指令, 扰动...]`，所以扰动只是 `u` 的额外条目，数据文件里写什么，对象就收到什么。这个约定后面九篇一直用。
+对象只负责回答“在状态 $x$、输入 $u$ 下导数是多少”。输入向量约定为 `u = [指令, 扰动...]`，所以扰动只是 `u` 的额外条目，数据文件里写什么，对象就收到什么。这个约定后面九篇一直用。转速环和云台各一个方法：
 
 ```python
-"""RoboMaster plants. Inputs are u = [command, disturbances...]."""
-
-from dataclasses import dataclass
-
-
-@dataclass
-class MotorSpeed:
-    """M3508 wheel on the output shaft: J dw/dt = Kt i - b w - tau_d.
-
-    State x = [w]; input u = [i_cmd, tau_d]; output w.
-    """
-
-    kt: float = 0.3
-    j: float = 0.03
-    b: float = 0.01
-    u_max: float = 20.0
-
-    n = 1
-    m = 2
-
     def deriv(self, x, u):
         return [(self.kt * u[0] - self.b * x[0] - u[1]) / self.j]
+```
 
-    def output(self, x):
-        return x[0]
-
-
-@dataclass
-class GimbalAxis:
-    """GM6020 yaw, torque commanded.
-
-    J psi'' = tau - tau_d - b psi' - bf (psi' - w_c).
-    State x = [psi, psi']; input u = [tau, tau_d, w_c]; output psi.
-    """
-
-    j: float = 0.02
-    b: float = 0.002
-    bf: float = 0.02
-    u_max: float = 1.0
-
-    n = 2
-    m = 3
-
+```python
     def deriv(self, x, u):
         acc = (u[0] - u[1] - self.b * x[1] - self.bf * (x[1] - u[2])) / self.j
         return [x[1], acc]
-
-    def output(self, x):
-        return x[0]
 ```
+
+上面是 `MotorSpeed` 和 `GimbalAxis` 的 `deriv`，分别就是 $J\dot\omega = K_t i - b\omega - \tau_d$ 和 $J\ddot\psi = \tau - \tau_d - b\dot\psi - b_f(\dot\psi - \omega_c)$ 解出导数的样子。云台的状态是 $[\psi, \dot\psi]$，所以第一个分量就是 `x[1]`。
 
 ### 位置式 PID
 
 这就是 RM 比赛代码里最常见的那一类：积分是矩形累加再限幅，微分是对误差的后向差分，第一拍微分为 0（`primed` 标志防止第一拍用一个不存在的上一次误差），输出限幅。
 
 ```python
-"""Competition-style positional PID, the baseline of chapter 1."""
-
-
-def clamp(x: float, lo: float, hi: float) -> float:
-    return lo if x < lo else (hi if x > hi else x)
-
-
-class PidBasic:
-    """u = kp e + ki * integral(e) + kd (e - e_prev) / ts, then clamped."""
-
-    def __init__(
-        self,
-        kp: float,
-        ki: float,
-        kd: float,
-        ts: float,
-        i_limit: float,
-        out_limit: float,
-    ) -> None:
-        self.kp, self.ki, self.kd, self.ts = kp, ki, kd, ts
-        self.i_limit, self.out_limit = i_limit, out_limit
-        self.integral = 0.0
-        self.prev_err = 0.0
-        self.primed = False
-
     def update(self, ref: float, meas: float) -> float:
         err = ref - meas
         self.integral += err * self.ts
@@ -344,59 +236,34 @@ class PidBasic:
 
 ### 驱动：数据、回路、实验表
 
-驱动 `python/ch01_p_i_d.py` 有两个子命令：`ref` 写数据并跑 Python 参考实现，`report` 对比四种语言、打印指标、断言结论并画图。实验表和数据生成：
+驱动 `python/ch01_p_i_d.py` 有两个子命令：`ref` 写数据并跑 Python 参考实现，`report` 对比四种语言、打印指标、断言结论并画图。九个实验用一张表描述：
 
 ```python
-TS = 0.001
-SUBSTEPS = 10
-STEPS = 2000
-STEP_AT = 50  # sample index of the setpoint step (0.05 s)
-LOAD_AT = 1000  # sample index of the load step (1.0 s)
-OUT = ROOT / "out" / "ch01"
-DATA = ROOT / "data"
-
 # name: (plant, kp, ki, kd, r, load, i_limit)
 CASES = {
     "speed_p_k0.2": ("speed", 0.2, 0.0, 0.0, 10.0, 1.0, 2.0),
-    "speed_p_k0.5": ("speed", 0.5, 0.0, 0.0, 10.0, 1.0, 2.0),
-    "speed_p_k1": ("speed", 1.0, 0.0, 0.0, 10.0, 1.0, 2.0),
-    "speed_p_k2": ("speed", 2.0, 0.0, 0.0, 10.0, 1.0, 2.0),
-    "speed_p_k5": ("speed", 5.0, 0.0, 0.0, 10.0, 1.0, 2.0),
-    "speed_pi": ("speed", 1.0, 10.0, 0.0, 10.0, 1.0, 2.0),
+    # ... speed_p_k0.5, k1, k2, k5, speed_pi
     "pos_p": ("pos", 5.0, 0.0, 0.0, 0.1, 0.1, 0.05),
     "pos_pd": ("pos", 5.0, 0.0, 0.3, 0.1, 0.1, 0.05),
     "pos_pid": ("pos", 5.0, 20.0, 0.3, 0.1, 0.1, 0.05),
 }
-SPEED_KPS = (0.2, 0.5, 1.0, 2.0, 5.0)
-COLUMNS = ("t", "r", "y", "u", "p", "i", "d")
-
-
-def write_data() -> None:
-    k = np.arange(STEPS)
-    for name, (_, _, _, _, r, load, _) in CASES.items():
-        write_csv(
-            DATA / f"ch01_{name}.csv",
-            {
-                "t": k * TS,
-                "r": np.where(k >= STEP_AT, r, 0.0),
-                "d": np.where(k >= LOAD_AT, load, 0.0),
-                "n": np.zeros(STEPS),
-            },
-        )
 ```
 
-九个实验：转速环的 P（五个 $K_p$）、一个 PI，云台的 P、PD、PID。每个实验 2 秒，设定值在 0.05 s 跳变，负载在 1.0 s 加上。数据文件里有 `t,r,d,n` 四列，`n` 是测量噪声，这一篇全是 0。回路本体和上面列的七步一一对应：
+转速环的 P（五个 $K_p$）、一个 PI，云台的 P、PD、PID。每个实验 2 秒，设定值在 0.05 s 跳变，负载在 1.0 s 加上。数据文件里有 `t,r,d,n` 四列，`n` 是测量噪声，这一篇全是 0。
+
+每个采样点 $k$ 按下面的顺序执行，四种语言一模一样：
+
+1. $t_k = k\,t_s$。
+2. 测量 $y_k = h(x_k) + n_k$，$n_k$ 来自数据文件。
+3. 控制器输出 $u_k$。
+4. 执行器限幅。
+5. 把指令推进延迟线（整数个采样周期，0 也允许，这一篇用 0）。
+6. 延迟后的指令和扰动 $d_k$ 在 10 个 RK4 小步里保持不变。
+7. 记录这一行，用的是积分之前的 $x_k$。
+
+`run_case` 的循环体和这七步一一对应：
 
 ```python
-def run_case(name: str) -> dict[str, np.ndarray]:
-    """Simulate one case following the loop order of the series."""
-    kind, kp, ki, kd, _, _, i_limit = CASES[name]
-    plant = MotorSpeed() if kind == "speed" else GimbalAxis()
-    pid = PidBasic(kp, ki, kd, TS, i_limit, plant.u_max)
-    delay = DelayLine(0)
-    data = read_csv(DATA / f"ch01_{name}.csv")
-    x = [0.0] * plant.n
-    rows = []
     for k in range(STEPS):
         r, load = data["r"][k], data["d"][k]
         y = plant.output(x) + data["n"][k]
@@ -413,11 +280,9 @@ def run_case(name: str) -> dict[str, np.ndarray]:
         else:
             inputs = [u_in, load, 0.0]
         x = advance(plant.deriv, x, inputs, TS, SUBSTEPS)
-    cols = np.array(rows).T
-    return dict(zip(COLUMNS, cols))
 ```
 
-注意 `d_term` 和 `kp * err`、`ki * pid.integral` 是在驱动里另算一遍的，目的是把三项分别记进 CSV 画图，PID 类本身不暴露它们。`ref()` 把所有实验循环跑一遍，写 `out/ch01/<case>_py.csv`。`report` 里是对比、指标、断言和画图，全文见 [`python/ch01_p_i_d.py`](https://github.com/bfmhno3/pid-lab/tree/tutorial-v1/python/ch01_p_i_d.py)。
+注意 `d_term` 和 `kp * err`、`ki * pid.integral` 是在驱动里另算一遍的，目的是把三项分别记进 CSV 画图，PID 类本身不暴露它们。`ref()` 把所有实验循环跑一遍，写 `out/ch01/<case>_py.csv`；`report` 里是对比、指标、断言和画图，在 [`python/ch01_p_i_d.py`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/python/ch01_p_i_d.py) 里。
 
 ## C、C++、Rust 实现
 
@@ -451,302 +316,9 @@ pl_real pl_pid_basic_update(struct pl_pid_basic *pid, pl_real ref,
 }
 ```
 
-RK4 一步，`k1` 到 `k4` 放在栈上的固定数组里，`n` 不能超过 `PL_MAX_STATES`（调用者的责任）：
+对象的 `deriv` 函数签名统一成 `(ctx, x, u, dx)`，`ctx` 指向参数结构体，结果写进调用者给的 `dx`，所以同一个 `pl_rk4_step` 和 `pl_advance` 能积分任何对象：
 
 ```c
-void pl_rk4_step(void (*f)(const void *ctx, const pl_real *x,
-			   const pl_real *u, pl_real *dx),
-		 const void *ctx, pl_real *x, const pl_real *u, int n,
-		 pl_real h)
-{
-	pl_real k1[PL_MAX_STATES], k2[PL_MAX_STATES];
-	pl_real k3[PL_MAX_STATES], k4[PL_MAX_STATES];
-	pl_real tmp[PL_MAX_STATES];
-	int i;
-
-	f(ctx, x, u, k1);
-	for (i = 0; i < n; i++)
-		tmp[i] = x[i] + 0.5 * h * k1[i];
-	f(ctx, tmp, u, k2);
-	for (i = 0; i < n; i++)
-		tmp[i] = x[i] + 0.5 * h * k2[i];
-	f(ctx, tmp, u, k3);
-	for (i = 0; i < n; i++)
-		tmp[i] = x[i] + h * k3[i];
-	f(ctx, tmp, u, k4);
-	for (i = 0; i < n; i++)
-		x[i] += h / 6.0 * (k1[i] + 2.0 * k2[i] + 2.0 * k3[i] + k4[i]);
-}
-```
-
-回路本体在 `c/apps/ch01.c` 里，核心几行：
-
-```c
-	for (k = 0; k < data.nrows; k++) {
-		const double *row = &data.data[k * data.ncols];
-		pl_real r = row[cr];
-		pl_real y, err, d_term, u, u_in;
-		pl_real inputs[PL_GIMBAL_AXIS_M] = { 0 };
-		double *out = &rows[k * NCOLS];
-
-		y = (c->speed ? pl_motor_speed_output(x) :
-				pl_gimbal_axis_output(x)) + row[cn];
-		err = r - y;
-		d_term = pid.primed ?
-			 c->kd * (err - pid.prev_err) / TS : 0.0;
-		u = pl_pid_basic_update(&pid, r, y);
-		u = pl_clamp(u, -u_max, u_max);
-
-		out[0] = row[ct];
-		out[1] = r;
-		out[2] = y;
-		out[3] = u;
-		out[4] = c->kp * err;
-		out[5] = c->ki * pid.integral;
-		out[6] = d_term;
-
-		u_in = pl_delay_push(&delay, u);
-		inputs[0] = u_in;
-		inputs[1] = row[cd];
-		if (c->speed) {
-			pl_advance(pl_motor_speed_deriv, &motor, x, inputs,
-				   PL_MOTOR_SPEED_N, TS, SUBSTEPS);
-		} else {
-			pl_advance(pl_gimbal_axis_deriv, &gimbal, x, inputs,
-				   PL_GIMBAL_AXIS_N, TS, SUBSTEPS);
-		}
-	}
-```
-
-对象的 `deriv` 函数签名统一成 `(ctx, x, u, dx)`，`ctx` 指向参数结构体，所以同一个 `pl_advance` 能积分任何对象。
-
-<details>
-<summary>完整源码：c/include/pl/pid_basic.h、c/src/pid_basic.c、c/include/pl/sim.h、c/src/sim.c、c/include/pl/plants.h、c/src/plants.c</summary>
-
-```c
-/* SPDX-License-Identifier: MIT OR Apache-2.0 */
-/* Competition-style positional PID, the baseline of chapter 1. */
-#ifndef PL_PID_BASIC_H
-#define PL_PID_BASIC_H
-
-#include <stdbool.h>
-
-#include "pl/real.h"
-
-struct pl_pid_basic {
-	pl_real kp, ki, kd, i_limit, out_limit, ts;
-	pl_real integral, prev_err;
-	bool primed;
-};
-
-void pl_pid_basic_init(struct pl_pid_basic *pid, pl_real kp, pl_real ki,
-		       pl_real kd, pl_real ts, pl_real i_limit,
-		       pl_real out_limit);
-
-/* u = kp e + ki * integral(e) + kd (e - e_prev) / ts, then clamped. */
-pl_real pl_pid_basic_update(struct pl_pid_basic *pid, pl_real ref,
-			    pl_real meas);
-
-#endif /* PL_PID_BASIC_H */
-```
-
-```c
-// SPDX-License-Identifier: MIT OR Apache-2.0
-#include "pl/pid_basic.h"
-
-void pl_pid_basic_init(struct pl_pid_basic *pid, pl_real kp, pl_real ki,
-		       pl_real kd, pl_real ts, pl_real i_limit,
-		       pl_real out_limit)
-{
-	pid->kp = kp;
-	pid->ki = ki;
-	pid->kd = kd;
-	pid->ts = ts;
-	pid->i_limit = i_limit;
-	pid->out_limit = out_limit;
-	pid->integral = 0.0;
-	pid->prev_err = 0.0;
-	pid->primed = false;
-}
-
-pl_real pl_pid_basic_update(struct pl_pid_basic *pid, pl_real ref,
-			    pl_real meas)
-{
-	pl_real err = ref - meas;
-	pl_real d = 0.0;
-	pl_real out;
-
-	pid->integral += err * pid->ts;
-	pid->integral = pl_clamp(pid->integral, -pid->i_limit, pid->i_limit);
-	if (pid->primed)
-		d = (err - pid->prev_err) / pid->ts;
-	pid->prev_err = err;
-	pid->primed = true;
-	out = pid->kp * err + pid->ki * pid->integral + pid->kd * d;
-	return pl_clamp(out, -pid->out_limit, pid->out_limit);
-}
-```
-
-```c
-/* SPDX-License-Identifier: MIT OR Apache-2.0 */
-/* Fixed-step RK4 integrator and an integer-sample delay line. */
-#ifndef PL_SIM_H
-#define PL_SIM_H
-
-#include "pl/real.h"
-
-#define PL_MAX_STATES 8
-#define PL_MAX_DELAY 256
-
-/* One RK4 step of dx/dt = f(ctx, x, u) with u held constant. */
-/* Needs n <= PL_MAX_STATES. */
-void pl_rk4_step(void (*f)(const void *ctx, const pl_real *x,
-			   const pl_real *u, pl_real *dx),
-		 const void *ctx, pl_real *x, const pl_real *u, int n,
-		 pl_real h);
-
-/* Hold u for one controller period ts: substeps RK4 steps of ts / substeps. */
-void pl_advance(void (*f)(const void *ctx, const pl_real *x,
-			  const pl_real *u, pl_real *dx),
-		const void *ctx, pl_real *x, const pl_real *u, int n,
-		pl_real ts, int substeps);
-
-/* Ring buffer holding the last `delay` commands. */
-struct pl_delay_line {
-	pl_real buf[PL_MAX_DELAY];
-	int delay;
-	int head;
-};
-
-/* Returns 0, or -EINVAL unless 0 <= delay <= PL_MAX_DELAY. */
-int pl_delay_init(struct pl_delay_line *d, int delay, pl_real init);
-
-/* Stores u and returns the value pushed `delay` calls ago. */
-pl_real pl_delay_push(struct pl_delay_line *d, pl_real u);
-
-#endif /* PL_SIM_H */
-```
-
-```c
-// SPDX-License-Identifier: MIT OR Apache-2.0
-#include "pl/sim.h"
-
-#include <errno.h>
-
-void pl_rk4_step(void (*f)(const void *ctx, const pl_real *x,
-			   const pl_real *u, pl_real *dx),
-		 const void *ctx, pl_real *x, const pl_real *u, int n,
-		 pl_real h)
-{
-	pl_real k1[PL_MAX_STATES], k2[PL_MAX_STATES];
-	pl_real k3[PL_MAX_STATES], k4[PL_MAX_STATES];
-	pl_real tmp[PL_MAX_STATES];
-	int i;
-
-	f(ctx, x, u, k1);
-	for (i = 0; i < n; i++)
-		tmp[i] = x[i] + 0.5 * h * k1[i];
-	f(ctx, tmp, u, k2);
-	for (i = 0; i < n; i++)
-		tmp[i] = x[i] + 0.5 * h * k2[i];
-	f(ctx, tmp, u, k3);
-	for (i = 0; i < n; i++)
-		tmp[i] = x[i] + h * k3[i];
-	f(ctx, tmp, u, k4);
-	for (i = 0; i < n; i++)
-		x[i] += h / 6.0 * (k1[i] + 2.0 * k2[i] + 2.0 * k3[i] + k4[i]);
-}
-
-void pl_advance(void (*f)(const void *ctx, const pl_real *x,
-			  const pl_real *u, pl_real *dx),
-		const void *ctx, pl_real *x, const pl_real *u, int n,
-		pl_real ts, int substeps)
-{
-	pl_real h = ts / substeps;
-	int s;
-
-	for (s = 0; s < substeps; s++)
-		pl_rk4_step(f, ctx, x, u, n, h);
-}
-
-int pl_delay_init(struct pl_delay_line *d, int delay, pl_real init)
-{
-	int i;
-
-	if (delay < 0 || delay > PL_MAX_DELAY)
-		return -EINVAL;
-	d->delay = delay;
-	d->head = 0;
-	for (i = 0; i < delay; i++)
-		d->buf[i] = init;
-	return 0;
-}
-
-pl_real pl_delay_push(struct pl_delay_line *d, pl_real u)
-{
-	pl_real out;
-
-	if (d->delay == 0)
-		return u;
-	out = d->buf[d->head];
-	d->buf[d->head] = u;
-	d->head = (d->head + 1) % d->delay;
-	return out;
-}
-```
-
-```c
-/* SPDX-License-Identifier: MIT OR Apache-2.0 */
-/* RoboMaster plants. Inputs are u = [command, disturbances...], */
-/* so a disturbance is just one more entry the data file can drive. */
-#ifndef PL_PLANTS_H
-#define PL_PLANTS_H
-
-#include "pl/real.h"
-
-/* M3508 wheel, output shaft: J dw/dt = Kt i - b w - tau_d. */
-#define PL_MOTOR_SPEED_N 1 /* x = [w] */
-#define PL_MOTOR_SPEED_M 2 /* u = [i_cmd, tau_d] */
-
-struct pl_motor_speed {
-	pl_real kt, j, b;
-	pl_real u_max; /* current limit, A */
-};
-
-void pl_motor_speed_init(struct pl_motor_speed *p);
-void pl_motor_speed_deriv(const void *ctx, const pl_real *x, const pl_real *u,
-			  pl_real *dx);
-pl_real pl_motor_speed_output(const pl_real *x);
-
-/* GM6020 yaw: J psi'' = tau - tau_d - b psi' - bf (psi' - w_c). */
-#define PL_GIMBAL_AXIS_N 2 /* x = [psi, psi'] */
-#define PL_GIMBAL_AXIS_M 3 /* u = [tau, tau_d, w_c] */
-
-struct pl_gimbal_axis {
-	pl_real j, b, bf;
-	pl_real u_max; /* torque limit, N*m */
-};
-
-void pl_gimbal_axis_init(struct pl_gimbal_axis *p);
-void pl_gimbal_axis_deriv(const void *ctx, const pl_real *x, const pl_real *u,
-			  pl_real *dx);
-pl_real pl_gimbal_axis_output(const pl_real *x);
-
-#endif /* PL_PLANTS_H */
-```
-
-```c
-// SPDX-License-Identifier: MIT OR Apache-2.0
-#include "pl/plants.h"
-
-void pl_motor_speed_init(struct pl_motor_speed *p)
-{
-	p->kt = 0.3;
-	p->j = 0.03;
-	p->b = 0.01;
-	p->u_max = 20.0;
-}
-
 void pl_motor_speed_deriv(const void *ctx, const pl_real *x, const pl_real *u,
 			  pl_real *dx)
 {
@@ -754,54 +326,30 @@ void pl_motor_speed_deriv(const void *ctx, const pl_real *x, const pl_real *u,
 
 	dx[0] = (p->kt * u[0] - p->b * x[0] - u[1]) / p->j;
 }
-
-pl_real pl_motor_speed_output(const pl_real *x)
-{
-	return x[0];
-}
-
-void pl_gimbal_axis_init(struct pl_gimbal_axis *p)
-{
-	p->j = 0.02;
-	p->b = 0.002;
-	p->bf = 0.02;
-	p->u_max = 1.0;
-}
-
-void pl_gimbal_axis_deriv(const void *ctx, const pl_real *x, const pl_real *u,
-			  pl_real *dx)
-{
-	const struct pl_gimbal_axis *p = ctx;
-
-	dx[0] = x[1];
-	dx[1] = (u[0] - u[1] - p->b * x[1] - p->bf * (x[1] - u[2])) / p->j;
-}
-
-pl_real pl_gimbal_axis_output(const pl_real *x)
-{
-	return x[0];
-}
 ```
 
-</details>
+RK4 一步，`k1` 到 `k4` 放在栈上的固定数组里，`n` 不能超过 `PL_MAX_STATES`（调用者的责任）：
 
-驱动：[`c/apps/ch01.c`](https://github.com/bfmhno3/pid-lab/tree/tutorial-v1/c/apps/ch01.c)。
+```c
+	pl_real k1[PL_MAX_STATES], k2[PL_MAX_STATES];
+	pl_real k3[PL_MAX_STATES], k4[PL_MAX_STATES];
+	pl_real tmp[PL_MAX_STATES];
+	int i;
+
+	f(ctx, x, u, k1);
+	for (i = 0; i < n; i++)
+		tmp[i] = x[i] + 0.5 * h * k1[i];
+	f(ctx, tmp, u, k2);
+	/* ... k3, k4 the same way, then x[i] += h / 6.0 * (...) */
+```
+
+回路本体和七步顺序一一对应，在 [`c/apps/ch01.c`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/c/apps/ch01.c) 里：转速环和云台是两个分支，各自调 `pl_advance`，维数用 `PL_MOTOR_SPEED_N` 和 `PL_GIMBAL_AXIS_N` 传进去。
 
 ### C++
 
-C++ 是 Google 风格：2 空格缩进，`PascalCase` 函数，`snake_case_` 成员，纯头文件，全部在 `namespace pidlab` 里。`PidBasic` 是一个类，成员私有，状态用访问器读：
+C++ 是 Google 风格：2 空格缩进，`PascalCase` 函数，`snake_case_` 成员，纯头文件，全部在 `namespace pidlab` 里。`PidBasic` 是一个类，成员私有，状态用访问器读（`integral()`、`prev_err()`、`primed()`）：
 
 ```cpp
-class PidBasic {
- public:
-  PidBasic(T kp, T ki, T kd, T ts, T i_limit, T out_limit)
-      : kp_(kp),
-        ki_(ki),
-        kd_(kd),
-        ts_(ts),
-        i_limit_(i_limit),
-        out_limit_(out_limit) {}
-
   // u = kp e + ki * integral(e) + kd (e - e_prev) / ts, then clamped.
   T Update(T ref, T meas) {
     const T err = ref - meas;
@@ -813,227 +361,25 @@ class PidBasic {
     const T out = kp_ * err + ki_ * integral_ + kd_ * d;
     return std::clamp(out, -out_limit_, out_limit_);
   }
-
-  T integral() const { return integral_; }
-  T prev_err() const { return prev_err_; }
-  bool primed() const { return primed_; }
-
- private:
-  T kp_, ki_, kd_, ts_, i_limit_, out_limit_;
-  T integral_ = T(0);
-  T prev_err_ = T(0);
-  bool primed_ = false;
-};
 ```
 
 RK4 是函数模板，`N`、`M` 是编译期维数，`f` 是任何能被调用的东西，返回 `std::array<T, N>`：
 
 ```cpp
-
-// One RK4 step of dx/dt = f(x, u) with u held constant. `f` returns
-// std::array<T, N>.
 template <class T, std::size_t N, std::size_t M, class F>
 void Rk4Step(F&& f, std::array<T, N>& x, const std::array<T, M>& u, T h) {
   std::array<T, N> tmp;
   const std::array<T, N> k1 = f(x, u);
   for (std::size_t i = 0; i < N; ++i) tmp[i] = x[i] + T(0.5) * h * k1[i];
   const std::array<T, N> k2 = f(tmp, u);
-  for (std::size_t i = 0; i < N; ++i) tmp[i] = x[i] + T(0.5) * h * k2[i];
-  const std::array<T, N> k3 = f(tmp, u);
-  for (std::size_t i = 0; i < N; ++i) tmp[i] = x[i] + h * k3[i];
-  const std::array<T, N> k4 = f(tmp, u);
+  // ... k3, k4 the same way
   for (std::size_t i = 0; i < N; ++i) {
     x[i] += h / T(6) * (k1[i] + T(2) * k2[i] + T(2) * k3[i] + k4[i]);
   }
 }
 ```
 
-和 C 的区别：对象是带 `Deriv` 和 `Output` 方法的小 struct；驱动写成 `RunLoop<Plant>` 模板，用 `Plant::kN`、`Plant::kM` 当数组尺寸，转速环和云台共用同一份回路代码，C 版里这里是两个分支。
-
-<details>
-<summary>完整源码：cpp/include/pidlab/pid_basic.h、cpp/include/pidlab/sim.h、cpp/include/pidlab/plants.h</summary>
-
-```cpp
-// Competition-style positional PID, the baseline of chapter 1.
-#ifndef PIDLAB_PID_BASIC_H_
-#define PIDLAB_PID_BASIC_H_
-
-#include <algorithm>
-
-namespace pidlab {
-
-template <class T = double>
-class PidBasic {
- public:
-  PidBasic(T kp, T ki, T kd, T ts, T i_limit, T out_limit)
-      : kp_(kp),
-        ki_(ki),
-        kd_(kd),
-        ts_(ts),
-        i_limit_(i_limit),
-        out_limit_(out_limit) {}
-
-  // u = kp e + ki * integral(e) + kd (e - e_prev) / ts, then clamped.
-  T Update(T ref, T meas) {
-    const T err = ref - meas;
-    integral_ += err * ts_;
-    integral_ = std::clamp(integral_, -i_limit_, i_limit_);
-    const T d = primed_ ? (err - prev_err_) / ts_ : T(0);
-    prev_err_ = err;
-    primed_ = true;
-    const T out = kp_ * err + ki_ * integral_ + kd_ * d;
-    return std::clamp(out, -out_limit_, out_limit_);
-  }
-
-  T integral() const { return integral_; }
-  T prev_err() const { return prev_err_; }
-  bool primed() const { return primed_; }
-
- private:
-  T kp_, ki_, kd_, ts_, i_limit_, out_limit_;
-  T integral_ = T(0);
-  T prev_err_ = T(0);
-  bool primed_ = false;
-};
-
-}  // namespace pidlab
-
-#endif  // PIDLAB_PID_BASIC_H_
-```
-
-```cpp
-// Fixed-step RK4 integrator and an integer-sample delay line.
-#ifndef PIDLAB_SIM_H_
-#define PIDLAB_SIM_H_
-
-#include <array>
-#include <cstddef>
-#include <optional>
-
-namespace pidlab {
-
-inline constexpr int kMaxDelay = 256;
-
-// One RK4 step of dx/dt = f(x, u) with u held constant. `f` returns
-// std::array<T, N>.
-template <class T, std::size_t N, std::size_t M, class F>
-void Rk4Step(F&& f, std::array<T, N>& x, const std::array<T, M>& u, T h) {
-  std::array<T, N> tmp;
-  const std::array<T, N> k1 = f(x, u);
-  for (std::size_t i = 0; i < N; ++i) tmp[i] = x[i] + T(0.5) * h * k1[i];
-  const std::array<T, N> k2 = f(tmp, u);
-  for (std::size_t i = 0; i < N; ++i) tmp[i] = x[i] + T(0.5) * h * k2[i];
-  const std::array<T, N> k3 = f(tmp, u);
-  for (std::size_t i = 0; i < N; ++i) tmp[i] = x[i] + h * k3[i];
-  const std::array<T, N> k4 = f(tmp, u);
-  for (std::size_t i = 0; i < N; ++i) {
-    x[i] += h / T(6) * (k1[i] + T(2) * k2[i] + T(2) * k3[i] + k4[i]);
-  }
-}
-
-// Holds u for one controller period ts: `substeps` RK4 steps of
-// ts / substeps.
-template <class T, std::size_t N, std::size_t M, class F>
-void Advance(F&& f, std::array<T, N>& x, const std::array<T, M>& u, T ts,
-             int substeps) {
-  const T h = ts / T(substeps);
-  for (int s = 0; s < substeps; ++s) Rk4Step(f, x, u, h);
-}
-
-// Ring buffer holding the last `delay` commands.
-template <class T = double>
-class DelayLine {
- public:
-  // Returns std::nullopt unless 0 <= delay <= kMaxDelay.
-  static std::optional<DelayLine> Create(int delay, T init = T(0)) {
-    if (delay < 0 || delay > kMaxDelay) return std::nullopt;
-    DelayLine d;
-    d.delay_ = delay;
-    for (int i = 0; i < delay; ++i) d.buf_[i] = init;
-    return d;
-  }
-
-  // Stores u and returns the value pushed `delay` calls ago.
-  T Push(T u) {
-    if (delay_ == 0) return u;
-    const T out = buf_[head_];
-    buf_[head_] = u;
-    head_ = (head_ + 1) % delay_;
-    return out;
-  }
-
- private:
-  DelayLine() = default;
-
-  std::array<T, kMaxDelay> buf_{};
-  int delay_ = 0;
-  int head_ = 0;
-};
-
-}  // namespace pidlab
-
-#endif  // PIDLAB_SIM_H_
-```
-
-```cpp
-// RoboMaster plants. Inputs are u = [command, disturbances...], so a
-// disturbance is just one more entry the data file can drive.
-#ifndef PIDLAB_PLANTS_H_
-#define PIDLAB_PLANTS_H_
-
-#include <array>
-#include <cstddef>
-
-namespace pidlab {
-
-// M3508 wheel, output shaft: J dw/dt = Kt i - b w - tau_d.
-// x = [w], u = [i_cmd, tau_d].
-template <class T = double>
-struct MotorSpeed {
-  static constexpr std::size_t kN = 1;
-  static constexpr std::size_t kM = 2;
-
-  T kt = T(0.3);
-  T j = T(0.03);
-  T b = T(0.01);
-  T u_max = T(20);  // current limit, A
-
-  std::array<T, kN> Deriv(const std::array<T, kN>& x,
-                          const std::array<T, kM>& u) const {
-    return {(kt * u[0] - b * x[0] - u[1]) / j};
-  }
-
-  T Output(const std::array<T, kN>& x) const { return x[0]; }
-};
-
-// GM6020 yaw: J psi'' = tau - tau_d - b psi' - bf (psi' - w_c).
-// x = [psi, psi'], u = [tau, tau_d, w_c].
-template <class T = double>
-struct GimbalAxis {
-  static constexpr std::size_t kN = 2;
-  static constexpr std::size_t kM = 3;
-
-  T j = T(0.02);
-  T b = T(0.002);
-  T bf = T(0.02);
-  T u_max = T(1);  // torque limit, N*m
-
-  std::array<T, kN> Deriv(const std::array<T, kN>& x,
-                          const std::array<T, kM>& u) const {
-    return {x[1], (u[0] - u[1] - b * x[1] - bf * (x[1] - u[2])) / j};
-  }
-
-  T Output(const std::array<T, kN>& x) const { return x[0]; }
-};
-
-}  // namespace pidlab
-
-#endif  // PIDLAB_PLANTS_H_
-```
-
-</details>
-
-驱动：[`cpp/apps/ch01.cc`](https://github.com/bfmhno3/pid-lab/tree/tutorial-v1/cpp/apps/ch01.cc)。
+和 C 的区别：对象是带 `Deriv` 和 `Output` 方法的小 struct，维数写成 `static constexpr std::size_t kN`、`kM`；驱动写成 `RunLoop<Plant>` 模板，用 `Plant::kN`、`Plant::kM` 当数组尺寸，转速环和云台共用同一份回路代码，C 版里这里是两个分支。`DelayLine::Create` 返回 `std::optional`，因为本库不用异常。驱动：[`cpp/apps/ch01.cc`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/cpp/apps/ch01.cc)。
 
 ### Rust
 
@@ -1060,7 +406,6 @@ Rust 是 edition 2024，`rustfmt` 默认格式，库是 `no_std` 兼容的（`io
 RK4 用 const generics 把维数放进类型里，积分器签名里的 `impl Fn` 接闭包：
 
 ```rust
-/// One RK4 step of `dx/dt = f(x, u)` with `u` held constant.
 pub fn rk4_step<const N: usize, const M: usize>(
     f: impl Fn(&[Real; N], &[Real; M]) -> [Real; N],
     x: &mut [Real; N],
@@ -1073,249 +418,11 @@ pub fn rk4_step<const N: usize, const M: usize>(
         tmp[i] = x[i] + 0.5 * h * k1[i];
     }
     let k2 = f(&tmp, u);
-    for i in 0..N {
-        tmp[i] = x[i] + 0.5 * h * k2[i];
-    }
-    let k3 = f(&tmp, u);
-    for i in 0..N {
-        tmp[i] = x[i] + h * k3[i];
-    }
-    let k4 = f(&tmp, u);
-    for i in 0..N {
-        x[i] += h / 6.0 * (k1[i] + 2.0 * k2[i] + 2.0 * k3[i] + k4[i]);
-    }
+    // ... k3, k4 the same way
 }
 ```
 
-和 C、C++ 的区别：数组越界在 Rust 里是 panic 而不是未定义行为，`clamp` 是 `f64` 自带的方法，不用自己写。驱动里的 `run_loop<const N, const M>` 和 C++ 的 `RunLoop<Plant>` 是同一个想法。
-
-<details>
-<summary>完整源码：rust/src/pid_basic.rs、rust/src/sim.rs、rust/src/plants.rs</summary>
-
-```rust
-//! Competition-style positional PID, the baseline of chapter 1.
-
-use crate::real::Real;
-
-pub struct PidBasic {
-    pub kp: Real,
-    pub ki: Real,
-    pub kd: Real,
-    pub ts: Real,
-    pub i_limit: Real,
-    pub out_limit: Real,
-    pub integral: Real,
-    pub prev_err: Real,
-    pub primed: bool,
-}
-
-impl PidBasic {
-    pub fn new(kp: Real, ki: Real, kd: Real, ts: Real, i_limit: Real, out_limit: Real) -> Self {
-        Self {
-            kp,
-            ki,
-            kd,
-            ts,
-            i_limit,
-            out_limit,
-            integral: 0.0,
-            prev_err: 0.0,
-            primed: false,
-        }
-    }
-
-    /// `u = kp e + ki * integral(e) + kd (e - e_prev) / ts`, then clamped.
-    pub fn update(&mut self, r: Real, y: Real) -> Real {
-        let err = r - y;
-        self.integral += err * self.ts;
-        self.integral = self.integral.clamp(-self.i_limit, self.i_limit);
-        let d = if self.primed {
-            (err - self.prev_err) / self.ts
-        } else {
-            0.0
-        };
-        self.prev_err = err;
-        self.primed = true;
-        let out = self.kp * err + self.ki * self.integral + self.kd * d;
-        out.clamp(-self.out_limit, self.out_limit)
-    }
-}
-```
-
-```rust
-//! Fixed-step RK4 integrator and an integer-sample delay line.
-
-use crate::real::Real;
-
-pub const MAX_DELAY: usize = 256;
-
-/// One RK4 step of `dx/dt = f(x, u)` with `u` held constant.
-pub fn rk4_step<const N: usize, const M: usize>(
-    f: impl Fn(&[Real; N], &[Real; M]) -> [Real; N],
-    x: &mut [Real; N],
-    u: &[Real; M],
-    h: Real,
-) {
-    let k1 = f(x, u);
-    let mut tmp = [0.0; N];
-    for i in 0..N {
-        tmp[i] = x[i] + 0.5 * h * k1[i];
-    }
-    let k2 = f(&tmp, u);
-    for i in 0..N {
-        tmp[i] = x[i] + 0.5 * h * k2[i];
-    }
-    let k3 = f(&tmp, u);
-    for i in 0..N {
-        tmp[i] = x[i] + h * k3[i];
-    }
-    let k4 = f(&tmp, u);
-    for i in 0..N {
-        x[i] += h / 6.0 * (k1[i] + 2.0 * k2[i] + 2.0 * k3[i] + k4[i]);
-    }
-}
-
-/// Hold `u` for one controller period `ts`: `substeps` RK4 steps of
-/// `ts / substeps`.
-pub fn advance<const N: usize, const M: usize>(
-    f: impl Fn(&[Real; N], &[Real; M]) -> [Real; N],
-    x: &mut [Real; N],
-    u: &[Real; M],
-    ts: Real,
-    substeps: usize,
-) {
-    let h = ts / substeps as Real;
-    for _ in 0..substeps {
-        rk4_step(&f, x, u, h);
-    }
-}
-
-/// Ring buffer holding the last `delay` commands.
-pub struct DelayLine {
-    buf: [Real; MAX_DELAY],
-    delay: usize,
-    head: usize,
-}
-
-impl DelayLine {
-    /// Returns `None` if `delay > MAX_DELAY`.
-    pub fn new(delay: usize, init: Real) -> Option<Self> {
-        if delay > MAX_DELAY {
-            return None;
-        }
-        let mut buf = [0.0; MAX_DELAY];
-        buf[..delay].fill(init);
-        Some(Self {
-            buf,
-            delay,
-            head: 0,
-        })
-    }
-
-    /// Stores `u` and returns the value pushed `delay` calls ago.
-    pub fn push(&mut self, u: Real) -> Real {
-        if self.delay == 0 {
-            return u;
-        }
-        let out = self.buf[self.head];
-        self.buf[self.head] = u;
-        self.head = (self.head + 1) % self.delay;
-        out
-    }
-}
-```
-
-```rust
-//! RoboMaster plants. Inputs are `u = [command, disturbances...]`, so a
-//! disturbance is just one more entry the data file can drive.
-
-use crate::real::Real;
-
-/// M3508 wheel, output shaft: `J dw/dt = Kt i - b w - tau_d`.
-/// `x = [w]`, `u = [i_cmd, tau_d]`.
-pub struct MotorSpeed {
-    pub kt: Real,
-    pub j: Real,
-    pub b: Real,
-    /// Current limit, A.
-    pub u_max: Real,
-}
-
-impl MotorSpeed {
-    pub const N: usize = 1;
-    pub const M: usize = 2;
-
-    pub fn new() -> Self {
-        Self {
-            kt: 0.3,
-            j: 0.03,
-            b: 0.01,
-            u_max: 20.0,
-        }
-    }
-
-    pub fn deriv(&self, x: &[Real; 1], u: &[Real; 2]) -> [Real; 1] {
-        [(self.kt * u[0] - self.b * x[0] - u[1]) / self.j]
-    }
-
-    pub fn output(&self, x: &[Real; 1]) -> Real {
-        x[0]
-    }
-}
-
-impl Default for MotorSpeed {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-/// GM6020 yaw: `J psi'' = tau - tau_d - b psi' - bf (psi' - w_c)`.
-/// `x = [psi, psi']`, `u = [tau, tau_d, w_c]`.
-pub struct GimbalAxis {
-    pub j: Real,
-    pub b: Real,
-    pub bf: Real,
-    /// Torque limit, N*m.
-    pub u_max: Real,
-}
-
-impl GimbalAxis {
-    pub const N: usize = 2;
-    pub const M: usize = 3;
-
-    pub fn new() -> Self {
-        Self {
-            j: 0.02,
-            b: 0.002,
-            bf: 0.02,
-            u_max: 1.0,
-        }
-    }
-
-    pub fn deriv(&self, x: &[Real; 2], u: &[Real; 3]) -> [Real; 2] {
-        [
-            x[1],
-            (u[0] - u[1] - self.b * x[1] - self.bf * (x[1] - u[2])) / self.j,
-        ]
-    }
-
-    pub fn output(&self, x: &[Real; 2]) -> Real {
-        x[0]
-    }
-}
-
-impl Default for GimbalAxis {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-```
-
-</details>
-
-驱动：[`rust/src/bin/ch01.rs`](https://github.com/bfmhno3/pid-lab/tree/tutorial-v1/rust/src/bin/ch01.rs)。
-
-### 编译和风格检查
+和 C、C++ 的区别：数组越界在 Rust 里是 panic 而不是未定义行为，`clamp` 是 `f64` 自带的方法，不用自己写。驱动里的 `run_loop<const N, const M>` 和 C++ 的 `RunLoop<Plant>` 是同一个想法，对象的 `deriv` 和 `output` 以闭包的形式传进去（`|x, u| p.deriv(x, u)`）。驱动：[`rust/src/bin/ch01.rs`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/rust/src/bin/ch01.rs)。
 
 编译参数：C 是 `gcc -std=c11 -O2 -Wall -Wextra -Wpedantic -Werror`，C++ 是 `g++ -std=c++20` 加同样的警告，Rust 是 `cargo build --release` 加 `cargo clippy -- -D warnings`。代码风格我用工具检查，不靠自觉：C 用内核的 `checkpatch.pl --no-tree`（0 errors，0 warnings），C++ 用 `clang-format --style=Google`（21.1.8），Python 用 `ruff format --line-length 79` 和 `ruff check`（0.15.14），Rust 用 `cargo fmt --check`。`checkpatch.pl` 我加了 `--ignore SPDX_LICENSE_TAG,NEW_TYPEDEFS`：前者是它对许可证标识的检查，这个库的许可证是 MIT OR Apache-2.0，我没有去迁就内核的写法，后者因为整个库里我只保留了 `pl_real` 这一个标量 typedef（做 float/double 开关），结构体一概不 typedef。
 
@@ -1431,6 +538,44 @@ PID：负载之后的静差是 0.0007 rad，I 把它清掉了。但它的超调�
 最上面是 P，设定值跳变那一拍是 $5\times 0.1 = 0.5$ N·m，之后随误差衰减，负载期间只剩一点点。第二张是 I，起步时被推到 0.147 N·m，之后降下来，负载加上去后爬到 0.0993 N·m（2.0 s 末），接近 $\tau_d = 0.1$ N·m，积分器学到了负载的大小。
 
 第三张是 D，我最想让你看一眼的一张：D 项在 0.05 s 有一个 **30 N·m** 的尖峰，对应输出里 `max D term 30.0`，$K_d\cdot r/t_s = 0.3\times 0.1/0.001 = 30$。因为设定值是阶跃，误差在一个采样周期内跳了 0.1 rad，后向差分把它除以 1 ms。控制器的输出限幅是 1 N·m，所以实际送给电机的只有 1 N·m 的一拍（总输出图上最前面那一根针），尖峰被限幅削掉了，但它还是白白占用了一拍的力矩。这是“微分冲击”（derivative kick）。这一篇我故意不处理它，让它留在数据里；第 5 篇会用 $c = 0$（微分只作用在测量上）来消掉它。
+
+## 检查点
+
+在仓库根目录、`nix develop` 里运行：
+
+```bash
+make -s ch01
+```
+
+我的输出见上面的“结果”一节：27 行 `ok`，最大差值全是 `0.000e+00`，然后是三张指标表，`report` 里的断言（$e_{ss}$ 公式与仿真相差小于 $10^{-3}$ rad/s）全部通过，最后画出 4 张图。三种原生语言各写 9 个 CSV，加上 Python 的 9 个，共 36 个文件在 `out/ch01/`。
+
+### 实验清单
+
+这一篇新增的文件，Python 侧（命令都在仓库根目录运行）：
+
+| 文件 | 命令 | 结果 |
+| --- | --- | --- |
+| [`python/pidlab/sim.py`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/python/pidlab/sim.py) | 随 `make -s ch01` 运行 | RK4 和 `DelayLine`，是所有语言的参考 |
+| [`python/pidlab/plants.py`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/python/pidlab/plants.py) | 同上 | `MotorSpeed`、`GimbalAxis` |
+| [`python/pidlab/pid_basic.py`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/python/pidlab/pid_basic.py) | 同上 | 位置式 PID |
+| [`python/ch01_p_i_d.py`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/python/ch01_p_i_d.py) | `python3 python/ch01_p_i_d.py ref` 然后 `report` | `ref` 生成 9 个数据文件和 9 个 `_py.csv`；`report` 对比、打印三张表、画 4 张图 |
+| [`python/compare.py`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/python/compare.py)、[`python/pidlab/io.py`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/python/pidlab/io.py)、[`python/pidlab/plotting.py`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/python/pidlab/plotting.py) | 同上 | 逐列对比（容差 $10^{-9}$）、CSV 读写、画图辅助，后面每一篇都用 |
+
+C、C++、Rust 侧，`make -s ch01` 会依次编译并运行三个驱动，各写 9 个 CSV 到 `out/ch01/`：
+
+| 文件 | 命令 | 结果 |
+| --- | --- | --- |
+| [`c/include/pl/real.h`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/c/include/pl/real.h)、[`c/include/pl/csv.h`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/c/include/pl/csv.h)、[`c/src/csv.c`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/c/src/csv.c) | 随 `make -s ch01` 编译 | `pl_real` 标量开关；C 里唯一用堆的 CSV 读写 |
+| [`c/include/pl/sim.h`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/c/include/pl/sim.h)、[`c/src/sim.c`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/c/src/sim.c) | 同上 | `pl_rk4_step`、`pl_advance`、`struct pl_delay_line` |
+| [`c/include/pl/plants.h`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/c/include/pl/plants.h)、[`c/src/plants.c`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/c/src/plants.c) | 同上 | `struct pl_motor_speed`、`struct pl_gimbal_axis` |
+| [`c/include/pl/pid_basic.h`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/c/include/pl/pid_basic.h)、[`c/src/pid_basic.c`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/c/src/pid_basic.c) | 同上 | `struct pl_pid_basic` |
+| [`c/apps/ch01.c`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/c/apps/ch01.c) | 同上 | `ch01: C wrote 9 cases to out/ch01` |
+| [`cpp/include/pidlab/sim.h`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/cpp/include/pidlab/sim.h)、[`plants.h`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/cpp/include/pidlab/plants.h)、[`pid_basic.h`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/cpp/include/pidlab/pid_basic.h)、[`csv.h`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/cpp/include/pidlab/csv.h) | 同上 | `Rk4Step`、`DelayLine<T>`、`MotorSpeed<T>`、`GimbalAxis<T>`、`PidBasic<T>` |
+| [`cpp/apps/ch01.cc`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/cpp/apps/ch01.cc) | 同上 | `ch01: C++ wrote 9 cases to out/ch01` |
+| [`rust/src/real.rs`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/rust/src/real.rs)、[`sim.rs`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/rust/src/sim.rs)、[`plants.rs`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/rust/src/plants.rs)、[`pid_basic.rs`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/rust/src/pid_basic.rs)、[`lib.rs`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/rust/src/lib.rs) | 同上 | `Real`、`rk4_step`、`DelayLine`、`MotorSpeed`、`GimbalAxis`、`PidBasic` |
+| [`rust/src/bin/ch01.rs`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/rust/src/bin/ch01.rs) | 同上 | `ch01: Rust wrote 9 cases to out/ch01` |
+
+构建和辅助文件：[`Makefile`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/Makefile)（`make ch01` 的规则）、[`c/Makefile`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/c/Makefile)、[`cpp/Makefile`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/cpp/Makefile)、[`flake.nix`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/flake.nix)、[`scripts/sync-figures.sh`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/scripts/sync-figures.sh)（把 `figures/ch01/` 里的 4 张 SVG 复制到本站）。
 
 ## 下一篇
 

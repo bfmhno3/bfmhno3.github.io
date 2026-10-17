@@ -135,44 +135,15 @@ $$
 
 这是[维基百科 Bode's sensitivity integral 词条](https://en.wikipedia.org/wiki/Bode%27s_sensitivity_integral)里的表述，它还给出了有右半平面极点时的一般式 $\pi\sum\text{Re}(p_k) - \frac{\pi}{2}\lim_{s\to\infty}sL(s)$。常被叫做“水床效应”：压下去一块，另一块就鼓起来。我的 $L$ 有一个原点处的极点，不在开右半平面里；相对阶数是 3 减 1 等于 2；延迟项 $e^{-s\theta}$ 在高频不影响收敛。条件看起来都满足，但我没有去查带积分器和延迟的情形是否被原始证明覆盖，所以下面我直接做数值检验，而不是把它当作已知。
 
-## Python 实现
+## 把公式写成代码
 
-### 频率响应和裕度
+数学写完了，剩下的是两件容易写错的事：相位怎么展开，穿越点怎么找。我先写 Python，再逐行翻成 C、C++、Rust。
 
-`pidlab/freq.py` 117 行。多项式用第 2 篇的 `poly_eval`（Horner，复数点），$L(j\omega)$ 就是分子除以分母再乘延迟。几个细节值得说：
+### 频率响应和相位展开
+
+$L(j\omega)$ 就是分子除以分母再乘延迟。多项式求值用第 2 篇的 `poly_eval`（Horner，复数点），所以 `loop_eval` 只有三行：
 
 ```python
-"""Frequency response of a rational loop times a pure delay.
-
-L(jw) = num(jw) / den(jw) * exp(-jw theta). Phase is unwrapped one grid
-step at a time and the crossings are bisected, so the C, C++ and Rust
-versions can repeat the exact same arithmetic.
-"""
-
-import math
-from collections.abc import Sequence
-from typing import NamedTuple
-
-from pidlab.poly import poly_eval
-
-BISECT_STEPS = 60
-
-
-class Margins(NamedTuple):
-    """Gain crossover wc and phase margin, phase crossover w180 and gain
-    margin, peak sensitivity ms and delay margin dm (seconds).
-
-    A crossover that the grid does not contain is NaN.
-    """
-
-    wc: float
-    pm_deg: float
-    w180: float
-    gm_db: float
-    ms: float
-    dm: float
-
-
 def loop_eval(
     num: Sequence[float], den: Sequence[float], theta: float, w: float
 ) -> complex:
@@ -180,8 +151,13 @@ def loop_eval(
     s = complex(0.0, w)
     lag = complex(math.cos(w * theta), -math.sin(w * theta))
     return poly_eval(num, s) / poly_eval(den, s) * lag
+```
 
+延迟项我写成 $\cos\omega\theta - j\sin\omega\theta$，不调 `cmath.exp`，这样四种语言用的是同样的几个初等函数。
 
+`atan2` 返回的辐角在 $(-\pi, \pi]$ 里，曲线转过 $-180°$ 的时候会从 $-\pi$ 跳到 $+\pi$。我的办法是逐点展开：把相邻两个采样点的辐角差折回 $(-\pi, \pi]$，再累加。
+
+```python
 def wrap(d: float) -> float:
     """Fold a phase difference of (-2 pi, 2 pi) into (-pi, pi]."""
     if d > math.pi:
@@ -209,31 +185,15 @@ def bode(
         mag.append(20.0 * math.log10(abs(lw)))
         phase.append(math.degrees(ph))
     return mag, phase
+```
 
+**这要求相邻两点之间相位变化小于 $\pi$。** 网格是 2000 个点、$[0.1, 10^4]$ rad/s 对数均匀，相邻两点的比值是 $10^{5/1999} = 1.0058$；延迟项在 $10^4$ rad/s 处的相位是 $\omega\theta = 15$ rad，相邻两点的差是 $15 \times 0.0058 = 0.09$ rad，离 $\pi$ 差得远。
 
-def _phase_at(num, den, theta, w, l0, ph0) -> float:
-    """Unwrapped phase at w, continuing from the known point l0."""
-    lw = loop_eval(num, den, theta, w)
-    d = math.atan2(lw.imag, lw.real) - math.atan2(l0.imag, l0.real)
-    return ph0 + wrap(d)
+### 穿越点：网格定区间，二分求精
 
+网格只告诉我 $|L|$ 在哪个区间从 $\ge 1$ 变成 $< 1$。区间宽度大约 $0.006\,\omega$，直接用端点会差 0.3%。所以我在区间里做 60 次二分，区间缩到比 `float64` 的分辨率还小。四种语言取同一个区间、同一个判据、同一个步数，就会收敛到同一个浮点数（最后几位除外）。`margins` 里增益穿越这一段是：
 
-def margins(
-    num: Sequence[float],
-    den: Sequence[float],
-    theta: float,
-    ws: Sequence[float],
-) -> Margins:
-    """Margins from the first down-crossings on the grid ws (one pass)."""
-    nan = math.nan
-    wc = w180 = pm = gm_db = dm = nan
-    prev = loop_eval(num, den, theta, ws[0])
-    ph = math.atan2(prev.imag, prev.real)
-    ms = 1.0 / abs(1.0 + prev)
-    for i in range(1, len(ws)):
-        cur = loop_eval(num, den, theta, ws[i])
-        ph_new = _phase_at(num, den, theta, ws[i], prev, ph)
-        ms = max(ms, 1.0 / abs(1.0 + cur))
+```python
         if math.isnan(wc) and abs(prev) >= 1.0 > abs(cur):
             lo, hi = ws[i - 1], ws[i]
             for _ in range(BISECT_STEPS):
@@ -246,30 +206,15 @@ def margins(
             ph_c = _phase_at(num, den, theta, wc, prev, ph)
             pm = math.pi + ph_c
             dm = pm / wc
-        if math.isnan(w180) and ph > -math.pi >= ph_new:
-            lo, hi = ws[i - 1], ws[i]
-            for _ in range(BISECT_STEPS):
-                mid = 0.5 * (lo + hi)
-                p = _phase_at(num, den, theta, mid, prev, ph)
-                if p > -math.pi:
-                    lo = mid
-                else:
-                    hi = mid
-            w180 = 0.5 * (lo + hi)
-            gm_db = -20.0 * math.log10(abs(loop_eval(num, den, theta, w180)))
-        prev, ph = cur, ph_new
-    return Margins(wc, math.degrees(pm), w180, gm_db, ms, dm)
 ```
 
-**相位展开是逐步做的。** `atan2` 返回的辐角在 $(-\pi, \pi]$ 里，曲线转过 $-180°$ 的时候会从 $-\pi$ 跳到 $+\pi$。`wrap` 把相邻两个采样点的辐角差折回 $(-\pi, \pi]$，累加起来就是连续的相位。这要求相邻两点之间相位变化小于 $\pi$。网格是 2000 个点、$[0.1, 10^4]$ rad/s 对数均匀，相邻两点的比值是 $10^{5/1999} = 1.0058$；延迟项在 $10^4$ rad/s 处的相位是 $\omega\theta = 15$ rad，相邻两点的差是 $15 \times 0.0058 = 0.09$ rad，离 $\pi$ 差得远。
+`_phase_at` 是“从已知点 `prev` 把相位延拓到 `wc`”，相位裕度 `pm` 和延迟裕度 `dm = pm / wc` 都从它来。$\omega_{180}$ 是同一个结构，判据换成展开后的相位 $> -\pi$，然后 $\text{GM} = -20\log_{10}|L(j\omega_{180})|$。
 
-**穿越频率用二分求精。** 网格只告诉我 $|L|$ 在哪个区间从 $\ge 1$ 变成 $< 1$。区间宽度大约 $0.006 \times \omega$，直接用端点会差 0.3%。我在区间里做 60 次二分，区间缩到比 `float64` 的分辨率还小，结果是确定的，这样四种语言取同一个区间、同一个判据、同一个步数，就会收敛到同一个浮点数（最后几位除外）。$\omega_{180}$ 同理，判据是展开后的相位 $> -\pi$。
+**`margins` 是一遍扫完的。** 它不存数组，边走边记上一个点的复数值和展开相位，穿越时就地二分，并持续更新 $M_s = \max 1/|1 + L|$，所以 C 版本不需要大缓冲区。网格里没有穿越点时，对应字段是 NaN，不是 0：0 会被误读成“零裕度”。
 
-**一遍扫完。** `margins` 不存数组，边走边记：上一个点的复数值、展开相位，穿越时就地二分，并持续更新 $M_s = \max 1/|1 + L|$。C 版本因此不需要大缓冲区。网格里没有穿越点时，对应字段是 NaN，不是 0：0 会被误读成“零裕度”。
+### 回路和延迟仿真
 
-### 驱动：回路、延迟仿真和精确的采样模型
-
-驱动 `python/ch03_frequency_domain.py` 里有这几个核心函数：
+驱动 `python/ch03_frequency_domain.py` 先把第 2 篇的 PI 设计和 $L(s)$ 的分子分母拼出来：
 
 ```python
 def design() -> tuple[MotorSpeedLag, float, float]:
@@ -285,16 +230,17 @@ def loop_polys(m: MotorSpeedLag, kp: float, ki: float):
     num = poly_scale([kp, ki], m.kt)
     den = poly_mul([1.0, 0.0], poly_mul([m.j, m.b], [m.tau_c, 1.0]))
     return num, den
+```
 
+`THETA = (TRANSPORT + 0.5) * TS` 就是上面的 1.5 拍。检验延迟裕度的闭环仿真是第 2 篇的循环顺序：测量、控制器、限幅、进 `DelayLine`、`advance` 十步 RK4。唯一的区别是延迟线的长度，我可以拿 `extra` 去逐拍调：
 
+```python
 def run_delay(extra: int) -> dict[str, np.ndarray]:
     """Closed loop with `extra` more samples of command delay."""
     m, kp, ki = design()
     data = read_csv(DATA / "ch03_step.csv")
     delay = DelayLine(TRANSPORT + extra)
-    x = [0.0] * m.n
-    integ = 0.0
-    rows = []
+    # ...
     for k in range(STEPS):
         r = data["r"][k]
         y = m.output(x) + data["n"][k]
@@ -304,12 +250,11 @@ def run_delay(extra: int) -> dict[str, np.ndarray]:
         rows.append([data["t"][k], r, y, u])
         integ += ki * TS * e
         x = advance(m.deriv, x, [delay.push(u), data["d"][k]], TS, SUBSTEPS)
-    return dict(zip(("t", "r", "y", "u"), np.array(rows).T))
 ```
 
-`loop_polys` 把 $L(s)$ 的分子分母拼出来，`THETA = (TRANSPORT + 0.5) * TS` 就是上面的 1.5 拍。`run_delay` 是第 2 篇的循环顺序：测量、控制器、限幅、进 `DelayLine`、`advance` 十步 RK4。唯一的区别是 `DelayLine(TRANSPORT + extra)`，我可以拿 `extra` 去逐拍调。
+### 精确的采样模型：用来当裁判
 
-“精确的采样模型”是我对照用的。ZOH 离散化之后，闭环是线性定常的离散系统，状态是 $[\omega, i, z, u_{k-1}, \dots, u_{k-D}]$（积分器状态和还在延迟线里的 $D$ 个指令），谱半径小于 1 就稳定：
+0.9 倍和 1.1 倍的仿真只说“这两个点一个稳一个不稳”，我还想知道真正的边界在哪一拍。ZOH 离散化之后，闭环是线性定常的离散系统，状态是 $[\omega, i, z, u_{k-1}, \dots, u_{k-D}]$（积分器状态和还在延迟线里的 $D$ 个指令），谱半径小于 1 就稳定：
 
 ```python
 def sampled_radius(extra: int) -> float:
@@ -334,46 +279,13 @@ def sampled_radius(extra: int) -> float:
     for q in range(1, d):
         f[3 + q, 2 + q] = 1.0
     return float(np.abs(np.linalg.eigvals(f)).max())
-
-
-def sampled_critical_extra() -> int:
-    """Largest extra delay (samples) whose exact sampled loop is stable."""
-    lo, hi = 0, 200
-    for _ in range(12):
-        mid = (lo + hi) // 2
-        if sampled_radius(mid) < 1.0:
-            lo = mid
-        else:
-            hi = mid
-    return lo
 ```
 
-这个模型不含任何频域近似，只有 `expm` 和矩阵，我拿它做裁判。仿真里的增长率用偏差包络的峰值取对数、回归斜率来量：
+这个模型不含任何频域近似，只有 `expm` 和矩阵。`sampled_critical_extra` 在 $[0, 200]$ 里对额外拍数做 12 步二分，找最大的稳定拍数。
 
-```python
-def envelope(o: dict) -> tuple[np.ndarray, np.ndarray]:
-    """Peaks of |y - r| (time, value) from 0.3 s until the current clamp
-    first bites, so the fit below only sees the linear regime."""
-    dev = np.abs(o["y"] - R_STEP)
-    sat = np.flatnonzero(np.abs(o["u"]) >= 20.0)
-    end = int(sat[0]) if sat.size else STEPS - 1
-    idx = [
-        k
-        for k in range(300, end)
-        if dev[k] > dev[k - 1] and dev[k] >= dev[k + 1]
-    ]
-    return o["t"][idx], dev[idx]
+仿真里的增长率用偏差包络量：取 $|y - r|$ 的局部峰值，只取到电流限幅第一次起作用为止（之后是极限环，不再是线性增长），对峰值取对数做线性回归，斜率就是增长率（1/s）。这是 `ch03_frequency_domain.py` 里的 `envelope` 和 `measured_growth`。
 
-
-def measured_growth(o: dict) -> float:
-    """Slope (1/s) of ln of the envelope peaks."""
-    t, peaks = envelope(o)
-    return float(np.polyfit(t, np.log(peaks), 1)[0])
-```
-
-`envelope` 只取到电流限幅第一次起作用为止，因为之后的响应是极限环，不再是线性增长了。`report` 里的对比、灵敏度积分、D 项增益表和 5 张图见 [`python/ch03_frequency_domain.py`](https://github.com/bfmhno3/pid-lab/tree/tutorial-v1/python/ch03_frequency_domain.py)。
-
-## C、C++、Rust 实现
+## C、C++、Rust
 
 三个版本是同一份结构：`Loop`（分子、分母、延迟）、`bode`、`margins`，加一个驱动。区别主要在这几处：
 
@@ -385,7 +297,7 @@ def measured_growth(o: dict) -> float:
 
 ### C
 
-`struct pl_loop` 和 `pl_margins` 是 Python 版的逐行翻译，一遍扫完，不开缓冲区：
+`struct pl_loop` 和 `pl_margins` 是 Python 版的逐行翻译，一遍扫完，不开缓冲区。回路是固定容量的数组，没有 `malloc`：
 
 ```c
 /* Polynomials are highest degree first, at most PL_MAX_POLY coefficients. */
@@ -396,27 +308,15 @@ struct pl_loop {
 	int nden;
 	pl_real theta; /* pure delay, seconds */
 };
+```
 
-/* A crossover that the grid does not contain leaves its fields NaN. */
-struct pl_margins {
-	pl_real wc, pm_deg; /* gain crossover and phase margin */
-	pl_real w180, gm_db; /* phase crossover and gain margin */
-	pl_real ms; /* max |1 / (1 + L)| over the grid */
-	pl_real dm; /* delay margin, seconds */
-};
+`pl_margins` 的主循环：
 
-/* L(jw). */
-pl_cplx pl_loop_eval(const struct pl_loop *l, pl_real w);
-
+```c
 int pl_margins(const struct pl_loop *l, const pl_real *w, int n,
 	       struct pl_margins *m)
 {
-	pl_cplx prev, cur;
-	pl_real ph, ph_new, pm;
-	int i;
-
-	if (n < 2)
-		return -EINVAL;
+	/* ... */
 	m->wc = m->pm_deg = m->w180 = m->gm_db = m->dm = NAN;
 	prev = pl_loop_eval(l, w[0]);
 	ph = arg_of(prev);
@@ -432,11 +332,7 @@ int pl_margins(const struct pl_loop *l, const pl_real *w, int n,
 			m->pm_deg = pm * (180.0 / PL_PI);
 			m->dm = pm / m->wc;
 		}
-		if (isnan(m->w180) && ph > -PL_PI && ph_new <= -PL_PI) {
-			m->w180 = bisect_phase(l, w[i - 1], w[i], prev, ph);
-			m->gm_db = -20.0 * PL_LOG10(PL_CABS(
-						   pl_loop_eval(l, m->w180)));
-		}
+		/* ... the w180 crossing, same shape ... */
 		prev = cur;
 		ph = ph_new;
 	}
@@ -444,184 +340,9 @@ int pl_margins(const struct pl_loop *l, const pl_real *w, int n,
 }
 ```
 
-`pl_loop_eval` 里 `w * I` 是一个复数，`pl_poly_eval` 是第 2 篇的 Horner。`phase_at` 把“从已知点往前延拓相位”单独拎出来，`pl_margins` 里的穿越点和二分都靠它，`wrap` 则是它和 `pl_bode` 共用的。
+`pl_loop_eval` 里 `w * I` 是一个复数，`pl_poly_eval` 是第 2 篇的 Horner。`phase_at` 把“从已知点往前延拓相位”单独拎出来，`pl_margins` 里的穿越点和二分都靠它，`wrap` 则是它和 `pl_bode` 共用的。输出是调用者给的 `struct pl_margins *`，函数只返回 0 或 `-EINVAL`（网格少于两个点）。
 
-<details>
-<summary>完整源码：c/include/pl/freq.h、c/src/freq.c</summary>
-
-```c
-/* SPDX-License-Identifier: MIT OR Apache-2.0 */
-/* Frequency response of num(s) / den(s) * exp(-s theta) and its margins. */
-#ifndef PL_FREQ_H
-#define PL_FREQ_H
-
-#include "pl/poly.h"
-#include "pl/real.h"
-
-/* Polynomials are highest degree first, at most PL_MAX_POLY coefficients. */
-struct pl_loop {
-	pl_real num[PL_MAX_POLY];
-	pl_real den[PL_MAX_POLY];
-	int nnum;
-	int nden;
-	pl_real theta; /* pure delay, seconds */
-};
-
-/* A crossover that the grid does not contain leaves its fields NaN. */
-struct pl_margins {
-	pl_real wc, pm_deg; /* gain crossover and phase margin */
-	pl_real w180, gm_db; /* phase crossover and gain margin */
-	pl_real ms; /* max |1 / (1 + L)| over the grid */
-	pl_real dm; /* delay margin, seconds */
-};
-
-/* L(jw). */
-pl_cplx pl_loop_eval(const struct pl_loop *l, pl_real w);
-
-/* Magnitude in dB and phase in degrees, unwrapped one grid step at a */
-/* time, on the n frequencies in w. Returns 0 or -EINVAL for n < 1. */
-int pl_bode(const struct pl_loop *l, const pl_real *w, int n, pl_real *mag_db,
-	    pl_real *phase_deg);
-
-/* Margins from the first down-crossings on the grid w (ascending, n >= 2), */
-/* each refined by 60 bisection steps. Returns 0 or -EINVAL for n < 2. */
-int pl_margins(const struct pl_loop *l, const pl_real *w, int n,
-	       struct pl_margins *m);
-
-#endif /* PL_FREQ_H */
-```
-
-```c
-// SPDX-License-Identifier: MIT OR Apache-2.0
-#include "pl/freq.h"
-
-#include <errno.h>
-#include <stdbool.h>
-
-#define PL_PI 3.14159265358979323846
-#define BISECT_STEPS 60
-
-pl_cplx pl_loop_eval(const struct pl_loop *l, pl_real w)
-{
-	pl_cplx s = w * I;
-	pl_cplx lag = PL_COS(w * l->theta) - I * PL_SIN(w * l->theta);
-
-	return pl_poly_eval(l->num, l->nnum, s) /
-	       pl_poly_eval(l->den, l->nden, s) * lag;
-}
-
-static pl_real arg_of(pl_cplx z)
-{
-	return PL_ATAN2(PL_CIMAG(z), PL_CREAL(z));
-}
-
-/* Fold a phase difference of (-2 pi, 2 pi) into (-pi, pi]. */
-static pl_real wrap(pl_real d)
-{
-	if (d > PL_PI)
-		return d - 2.0 * PL_PI;
-	if (d <= -PL_PI)
-		return d + 2.0 * PL_PI;
-	return d;
-}
-
-/* Unwrapped phase at w, continuing from the known point (l0, ph0). */
-static pl_real phase_at(const struct pl_loop *l, pl_real w, pl_cplx l0,
-			pl_real ph0)
-{
-	return ph0 + wrap(arg_of(pl_loop_eval(l, w)) - arg_of(l0));
-}
-
-int pl_bode(const struct pl_loop *l, const pl_real *w, int n, pl_real *mag_db,
-	    pl_real *phase_deg)
-{
-	pl_real ph = 0.0, prev = 0.0, a;
-	pl_cplx lw;
-	int i;
-
-	if (n < 1)
-		return -EINVAL;
-	for (i = 0; i < n; i++) {
-		lw = pl_loop_eval(l, w[i]);
-		a = arg_of(lw);
-		ph = i == 0 ? a : ph + wrap(a - prev);
-		prev = a;
-		mag_db[i] = 20.0 * PL_LOG10(PL_CABS(lw));
-		phase_deg[i] = ph * (180.0 / PL_PI);
-	}
-	return 0;
-}
-
-static pl_real bisect_gain(const struct pl_loop *l, pl_real lo, pl_real hi)
-{
-	pl_real mid;
-	int i;
-
-	for (i = 0; i < BISECT_STEPS; i++) {
-		mid = 0.5 * (lo + hi);
-		if (PL_CABS(pl_loop_eval(l, mid)) >= 1.0)
-			lo = mid;
-		else
-			hi = mid;
-	}
-	return 0.5 * (lo + hi);
-}
-
-static pl_real bisect_phase(const struct pl_loop *l, pl_real lo, pl_real hi,
-			    pl_cplx l0, pl_real ph0)
-{
-	pl_real mid;
-	int i;
-
-	for (i = 0; i < BISECT_STEPS; i++) {
-		mid = 0.5 * (lo + hi);
-		if (phase_at(l, mid, l0, ph0) > -PL_PI)
-			lo = mid;
-		else
-			hi = mid;
-	}
-	return 0.5 * (lo + hi);
-}
-
-int pl_margins(const struct pl_loop *l, const pl_real *w, int n,
-	       struct pl_margins *m)
-{
-	pl_cplx prev, cur;
-	pl_real ph, ph_new, pm;
-	int i;
-
-	if (n < 2)
-		return -EINVAL;
-	m->wc = m->pm_deg = m->w180 = m->gm_db = m->dm = NAN;
-	prev = pl_loop_eval(l, w[0]);
-	ph = arg_of(prev);
-	m->ms = 1.0 / PL_CABS(1.0 + prev);
-	for (i = 1; i < n; i++) {
-		cur = pl_loop_eval(l, w[i]);
-		ph_new = phase_at(l, w[i], prev, ph);
-		if (1.0 / PL_CABS(1.0 + cur) > m->ms)
-			m->ms = 1.0 / PL_CABS(1.0 + cur);
-		if (isnan(m->wc) && PL_CABS(prev) >= 1.0 && PL_CABS(cur) < 1.0) {
-			m->wc = bisect_gain(l, w[i - 1], w[i]);
-			pm = PL_PI + phase_at(l, m->wc, prev, ph);
-			m->pm_deg = pm * (180.0 / PL_PI);
-			m->dm = pm / m->wc;
-		}
-		if (isnan(m->w180) && ph > -PL_PI && ph_new <= -PL_PI) {
-			m->w180 = bisect_phase(l, w[i - 1], w[i], prev, ph);
-			m->gm_db = -20.0 * PL_LOG10(PL_CABS(
-						   pl_loop_eval(l, m->w180)));
-		}
-		prev = cur;
-		ph = ph_new;
-	}
-	return 0;
-}
-```
-
-</details>
-
-驱动：[`c/apps/ch03.c`](https://github.com/bfmhno3/pid-lab/tree/tutorial-v1/c/apps/ch03.c)。它从 `data/ch03_w.csv` 读频率网格，从 `data/ch03_step.csv` 读设定值，自己用 `pl_poly_mul` 拼出分母，调 `pl_bode` 和 `pl_margins`，再 `lround` 出延迟拍数。
+驱动 [`c/apps/ch03.c`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/c/apps/ch03.c) 从 `data/ch03_w.csv` 读频率网格，从 `data/ch03_step.csv` 读设定值，自己用 `pl_poly_mul` 拼出分母，调 `pl_bode` 和 `pl_margins`，再 `lround` 出延迟拍数。
 
 ### C++
 
@@ -641,166 +362,12 @@ struct Loop {
     return PolyEval(num, s) / PolyEval(den, s) * lag;
   }
 };
-
-// Margins from the first down-crossings on the grid w (ascending, at least
-// two points), each refined by 60 bisection steps. The result is empty
-// (all NaN, ms = 0) for fewer than two points.
-template <class T, std::size_t NN, std::size_t ND>
-Margins<T> ComputeMargins(const Loop<T, NN, ND>& l, std::span<const T> w) {
-  using internal::PhaseAt;
-  constexpr T kPi = internal::Pi<T>();
-  Margins<T> m;
-  if (w.size() < 2) return m;
-  std::complex<T> prev = l.Eval(w[0]);
-  T ph = internal::ArgOf(prev);
-  m.ms = T(1) / std::abs(T(1) + prev);
-  for (std::size_t i = 1; i < w.size(); ++i) {
-    const std::complex<T> cur = l.Eval(w[i]);
-    const T ph_new = PhaseAt(l, w[i], prev, ph);
-    m.ms = std::max(m.ms, T(1) / std::abs(T(1) + cur));
-    if (std::isnan(m.wc) && std::abs(prev) >= T(1) && std::abs(cur) < T(1)) {
-      T lo = w[i - 1], hi = w[i];
-      for (int s = 0; s < internal::kBisectSteps; ++s) {
-        const T mid = T(0.5) * (lo + hi);
-        if (std::abs(l.Eval(mid)) >= T(1)) {
-          lo = mid;
-        } else {
-          hi = mid;
-        }
-      }
-      m.wc = T(0.5) * (lo + hi);
-      const T pm = kPi + PhaseAt(l, m.wc, prev, ph);
-      m.pm_deg = pm * (T(180) / kPi);
-      m.dm = pm / m.wc;
-    }
-    if (std::isnan(m.w180) && ph > -kPi && ph_new <= -kPi) {
-      T lo = w[i - 1], hi = w[i];
-      for (int s = 0; s < internal::kBisectSteps; ++s) {
-        const T mid = T(0.5) * (lo + hi);
-        if (PhaseAt(l, mid, prev, ph) > -kPi) {
-          lo = mid;
-        } else {
-          hi = mid;
-        }
-      }
-      m.w180 = T(0.5) * (lo + hi);
-      m.gm_db = -T(20) * std::log10(std::abs(l.Eval(m.w180)));
-    }
-    prev = cur;
-    ph = ph_new;
-  }
-  return m;
-}
 ```
 
-`Bode` 接受 `std::span`，调用者传 `std::vector` 或数组都行，长度不一致返回 `false`，不抛异常。`ComputeMargins` 对不足两个点的网格返回默认构造的结果（全 NaN、`ms = 0`）。
-
-<details>
-<summary>完整源码：cpp/include/pidlab/freq.h</summary>
+`ComputeMargins` 的主循环（增益穿越一段；$\omega_{180}$ 那段省略）：
 
 ```cpp
-// Frequency response of num(s) / den(s) * exp(-s theta) and its margins.
-#ifndef PIDLAB_FREQ_H_
-#define PIDLAB_FREQ_H_
-
-#include <algorithm>
-#include <array>
-#include <cmath>
-#include <complex>
-#include <cstddef>
-#include <limits>
-#include <span>
-
-#include "pidlab/poly.h"
-
-namespace pidlab {
-
-// Polynomials are std::arrays, highest degree first.
-template <class T, std::size_t NN, std::size_t ND>
-struct Loop {
-  std::array<T, NN> num;
-  std::array<T, ND> den;
-  T theta;  // pure delay, seconds
-
-  // L(jw).
-  std::complex<T> Eval(T w) const {
-    const std::complex<T> s(T(0), w);
-    const std::complex<T> lag(std::cos(w * theta), -std::sin(w * theta));
-    return PolyEval(num, s) / PolyEval(den, s) * lag;
-  }
-};
-
-// A crossover that the grid does not contain leaves its fields NaN.
-template <class T>
-struct Margins {
-  static constexpr T kNan = std::numeric_limits<T>::quiet_NaN();
-
-  T wc = kNan, pm_deg = kNan;   // gain crossover and phase margin
-  T w180 = kNan, gm_db = kNan;  // phase crossover and gain margin
-  T ms = 0;                     // max |1 / (1 + L)| over the grid
-  T dm = kNan;                  // delay margin, seconds
-};
-
-namespace internal {
-
-inline constexpr int kBisectSteps = 60;
-
-template <class T>
-constexpr T Pi() {
-  return T(3.14159265358979323846);
-}
-
-template <class T>
-T ArgOf(std::complex<T> z) {
-  return std::atan2(z.imag(), z.real());
-}
-
-// Fold a phase difference of (-2 pi, 2 pi) into (-pi, pi].
-template <class T>
-T Wrap(T d) {
-  if (d > Pi<T>()) return d - T(2) * Pi<T>();
-  if (d <= -Pi<T>()) return d + T(2) * Pi<T>();
-  return d;
-}
-
-// Unwrapped phase at w, continuing from the known point (l0, ph0).
-template <class T, std::size_t NN, std::size_t ND>
-T PhaseAt(const Loop<T, NN, ND>& l, T w, std::complex<T> l0, T ph0) {
-  return ph0 + Wrap(ArgOf(l.Eval(w)) - ArgOf(l0));
-}
-
-}  // namespace internal
-
-// Magnitude in dB and phase in degrees, unwrapped one grid step at a time.
-// Returns false when the three spans differ in size.
-template <class T, std::size_t NN, std::size_t ND>
-bool Bode(const Loop<T, NN, ND>& l, std::span<const T> w, std::span<T> mag_db,
-          std::span<T> phase_deg) {
-  if (mag_db.size() != w.size() || phase_deg.size() != w.size()) return false;
-  T ph = 0, prev = 0;
-  for (std::size_t i = 0; i < w.size(); ++i) {
-    const std::complex<T> lw = l.Eval(w[i]);
-    const T a = internal::ArgOf(lw);
-    ph = i == 0 ? a : ph + internal::Wrap(a - prev);
-    prev = a;
-    mag_db[i] = T(20) * std::log10(std::abs(lw));
-    phase_deg[i] = ph * (T(180) / internal::Pi<T>());
-  }
-  return true;
-}
-
-// Margins from the first down-crossings on the grid w (ascending, at least
-// two points), each refined by 60 bisection steps. The result is empty
-// (all NaN, ms = 0) for fewer than two points.
-template <class T, std::size_t NN, std::size_t ND>
-Margins<T> ComputeMargins(const Loop<T, NN, ND>& l, std::span<const T> w) {
-  using internal::PhaseAt;
-  constexpr T kPi = internal::Pi<T>();
-  Margins<T> m;
-  if (w.size() < 2) return m;
-  std::complex<T> prev = l.Eval(w[0]);
-  T ph = internal::ArgOf(prev);
-  m.ms = T(1) / std::abs(T(1) + prev);
+  // ...
   for (std::size_t i = 1; i < w.size(); ++i) {
     const std::complex<T> cur = l.Eval(w[i]);
     const T ph_new = PhaseAt(l, w[i], prev, ph);
@@ -820,33 +387,13 @@ Margins<T> ComputeMargins(const Loop<T, NN, ND>& l, std::span<const T> w) {
       m.pm_deg = pm * (T(180) / kPi);
       m.dm = pm / m.wc;
     }
-    if (std::isnan(m.w180) && ph > -kPi && ph_new <= -kPi) {
-      T lo = w[i - 1], hi = w[i];
-      for (int s = 0; s < internal::kBisectSteps; ++s) {
-        const T mid = T(0.5) * (lo + hi);
-        if (PhaseAt(l, mid, prev, ph) > -kPi) {
-          lo = mid;
-        } else {
-          hi = mid;
-        }
-      }
-      m.w180 = T(0.5) * (lo + hi);
-      m.gm_db = -T(20) * std::log10(std::abs(l.Eval(m.w180)));
-    }
+    // ... the w180 crossing, same shape ...
     prev = cur;
     ph = ph_new;
   }
-  return m;
-}
-
-}  // namespace pidlab
-
-#endif  // PIDLAB_FREQ_H_
 ```
 
-</details>
-
-驱动：[`cpp/apps/ch03.cc`](https://github.com/bfmhno3/pid-lab/tree/tutorial-v1/cpp/apps/ch03.cc)。
+`Bode` 接受 `std::span`，调用者传 `std::vector` 或数组都行，长度不一致返回 `false`，不抛异常。`ComputeMargins` 对不足两个点的网格返回默认构造的结果（全 NaN、`ms = 0`）。驱动：[`cpp/apps/ch03.cc`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/cpp/apps/ch03.cc)。
 
 ### Rust
 
@@ -855,14 +402,7 @@ pub fn margins(l: &Loop, w: &[Real]) -> Option<Margins> {
     if w.len() < 2 {
         return None;
     }
-    let mut m = Margins {
-        wc: Real::NAN,
-        pm_deg: Real::NAN,
-        w180: Real::NAN,
-        gm_db: Real::NAN,
-        ms: 0.0,
-        dm: Real::NAN,
-    };
+    // ...
     let dist = |z: Complex| Complex::new(1.0 + z.re, z.im).abs();
     let mut prev = l.eval(w[0]);
     let mut ph = arg(prev);
@@ -886,19 +426,7 @@ pub fn margins(l: &Loop, w: &[Real]) -> Option<Margins> {
             m.pm_deg = pm * (180.0 / PI);
             m.dm = pm / m.wc;
         }
-        if m.w180.is_nan() && ph > -PI && ph_new <= -PI {
-            let (mut lo, mut hi) = (w[i - 1], w[i]);
-            for _ in 0..BISECT_STEPS {
-                let mid = 0.5 * (lo + hi);
-                if l.phase_at(mid, prev, ph) > -PI {
-                    lo = mid;
-                } else {
-                    hi = mid;
-                }
-            }
-            m.w180 = 0.5 * (lo + hi);
-            m.gm_db = -20.0 * real::log10(l.eval(m.w180).abs());
-        }
+        // ... the w180 crossing, same shape ...
         prev = cur;
         ph = ph_new;
     }
@@ -906,151 +434,7 @@ pub fn margins(l: &Loop, w: &[Real]) -> Option<Margins> {
 }
 ```
 
-`Loop<'a>` 借用分子分母的切片，`margins` 返回 `Option<Margins>`，网格短于两个点时是 `None`。复数的除法是第 2 篇写的朴素公式 $(a\bar b)/|b|^2$，C 和 C++ 走编译器和标准库的实现，这是下面 `bode_rs.csv` 比另外两个多出 $5.684\times 10^{-13}$ 的一个可能原因，另一个是 `libm` 的 `sin`、`cos`、`atan2` 和 glibc 末位舍入不同。我没有去追究到底是哪一个，$10^{-9}$ 的阈值留了四个数量级的余地。
-
-<details>
-<summary>完整源码：rust/src/freq.rs</summary>
-
-```rust
-//! Frequency response of `num(s) / den(s) * exp(-s theta)` and its margins.
-
-use core::f64::consts::PI as PI64;
-
-use crate::complex::Complex;
-use crate::poly::poly_eval;
-use crate::real::{self, Real};
-
-const BISECT_STEPS: usize = 60;
-const PI: Real = PI64 as Real;
-
-/// Polynomials are slices, highest degree first.
-pub struct Loop<'a> {
-    pub num: &'a [Real],
-    pub den: &'a [Real],
-    /// Pure delay, seconds.
-    pub theta: Real,
-}
-
-/// A crossover that the grid does not contain leaves its fields NaN.
-#[derive(Debug, Clone, Copy)]
-pub struct Margins {
-    /// Gain crossover, rad/s.
-    pub wc: Real,
-    pub pm_deg: Real,
-    /// Phase crossover, rad/s.
-    pub w180: Real,
-    pub gm_db: Real,
-    /// Max `|1 / (1 + L)|` over the grid.
-    pub ms: Real,
-    /// Delay margin, seconds.
-    pub dm: Real,
-}
-
-impl Loop<'_> {
-    /// `L(jw)`.
-    pub fn eval(&self, w: Real) -> Complex {
-        let s = Complex::new(0.0, w);
-        let lag = Complex::new(real::cos(w * self.theta), -real::sin(w * self.theta));
-        poly_eval(self.num, s) / poly_eval(self.den, s) * lag
-    }
-
-    /// Unwrapped phase at `w`, continuing from the known point `(l0, ph0)`.
-    fn phase_at(&self, w: Real, l0: Complex, ph0: Real) -> Real {
-        ph0 + wrap(arg(self.eval(w)) - arg(l0))
-    }
-}
-
-fn arg(z: Complex) -> Real {
-    real::atan2(z.im, z.re)
-}
-
-/// Fold a phase difference of `(-2 pi, 2 pi)` into `(-pi, pi]`.
-fn wrap(d: Real) -> Real {
-    if d > PI {
-        d - 2.0 * PI
-    } else if d <= -PI {
-        d + 2.0 * PI
-    } else {
-        d
-    }
-}
-
-/// Magnitude in dB and phase in degrees, unwrapped one grid step at a time.
-/// The three slices must have the same length.
-pub fn bode(l: &Loop, w: &[Real], mag_db: &mut [Real], phase_deg: &mut [Real]) {
-    let mut ph = 0.0;
-    let mut prev = 0.0;
-    for (i, &wi) in w.iter().enumerate() {
-        let lw = l.eval(wi);
-        let a = arg(lw);
-        ph = if i == 0 { a } else { ph + wrap(a - prev) };
-        prev = a;
-        mag_db[i] = 20.0 * real::log10(lw.abs());
-        phase_deg[i] = ph * (180.0 / PI);
-    }
-}
-
-/// Margins from the first down-crossings on the grid `w` (ascending, at
-/// least two points), each refined by 60 bisection steps. Returns `None`
-/// for fewer than two points.
-pub fn margins(l: &Loop, w: &[Real]) -> Option<Margins> {
-    if w.len() < 2 {
-        return None;
-    }
-    let mut m = Margins {
-        wc: Real::NAN,
-        pm_deg: Real::NAN,
-        w180: Real::NAN,
-        gm_db: Real::NAN,
-        ms: 0.0,
-        dm: Real::NAN,
-    };
-    let dist = |z: Complex| Complex::new(1.0 + z.re, z.im).abs();
-    let mut prev = l.eval(w[0]);
-    let mut ph = arg(prev);
-    m.ms = 1.0 / dist(prev);
-    for i in 1..w.len() {
-        let cur = l.eval(w[i]);
-        let ph_new = l.phase_at(w[i], prev, ph);
-        m.ms = m.ms.max(1.0 / dist(cur));
-        if m.wc.is_nan() && prev.abs() >= 1.0 && cur.abs() < 1.0 {
-            let (mut lo, mut hi) = (w[i - 1], w[i]);
-            for _ in 0..BISECT_STEPS {
-                let mid = 0.5 * (lo + hi);
-                if l.eval(mid).abs() >= 1.0 {
-                    lo = mid;
-                } else {
-                    hi = mid;
-                }
-            }
-            m.wc = 0.5 * (lo + hi);
-            let pm = PI + l.phase_at(m.wc, prev, ph);
-            m.pm_deg = pm * (180.0 / PI);
-            m.dm = pm / m.wc;
-        }
-        if m.w180.is_nan() && ph > -PI && ph_new <= -PI {
-            let (mut lo, mut hi) = (w[i - 1], w[i]);
-            for _ in 0..BISECT_STEPS {
-                let mid = 0.5 * (lo + hi);
-                if l.phase_at(mid, prev, ph) > -PI {
-                    lo = mid;
-                } else {
-                    hi = mid;
-                }
-            }
-            m.w180 = 0.5 * (lo + hi);
-            m.gm_db = -20.0 * real::log10(l.eval(m.w180).abs());
-        }
-        prev = cur;
-        ph = ph_new;
-    }
-    Some(m)
-}
-```
-
-</details>
-
-驱动：[`rust/src/bin/ch03.rs`](https://github.com/bfmhno3/pid-lab/tree/tutorial-v1/rust/src/bin/ch03.rs)。
+`Loop<'a>` 借用分子分母的切片，`margins` 返回 `Option<Margins>`，网格短于两个点时是 `None`。复数的除法是第 2 篇写的朴素公式 $(a\bar b)/|b|^2$，C 和 C++ 走编译器和标准库的实现，这是下面 `bode_rs.csv` 比另外两个多出 $5.684\times 10^{-13}$ 的一个可能原因，另一个是 `libm` 的 `sin`、`cos`、`atan2` 和 glibc 末位舍入不同。我没有去追究到底是哪一个，$10^{-9}$ 的容差留了四个数量级的余地。驱动：[`rust/src/bin/ch03.rs`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/rust/src/bin/ch03.rs)。
 
 ### 编译和风格检查
 
@@ -1176,6 +560,37 @@ PID 的幅频特性在高频由 $k_d$ 决定。我拿同一个 PI 加 $k_d = 0.0
 - $t_f = 0.02$：1.5003、11.02°，奈奎斯特处 2.366。
 
 **噪声增益从 62.8 降到 20.4（3.1 倍），在穿越频率处的相位超前只动了 0.04°。** 原因是 $\omega_c = 15$ rad/s 比 $1/t_f = 1000$ rad/s 低得多，滤波器在穿越点附近几乎没有相位代价。我猜这是实际调 D 项最容易被忽视的免费午餐：只要 $1/t_f$ 比 $\omega_c$ 高一个数量级以上，滤波不会伤到相位裕度。$t_f$ 增大到 0.02 s（$1/t_f = 50$ rad/s，离 $\omega_c$ 只有 3 倍）时超前降到 11.02°，开始比 0.005 s 时低，但变化仍然很小；这里的 $k_d$ 本来就小，相位超前只有 11° 的量级，D 项在这个回路上不是主角。
+
+## 检查点
+
+在 pid-lab 根目录（`nix develop` 里）运行：
+
+```bash
+make -s ch03
+```
+
+输出见上一节：12 个 `ok` 对比行（`bode`、`margins`、`delay_0.9`、`delay_1.1` 各对 C、C++、Rust），最大差值 0 到 $5.684\times 10^{-13}$，容差 $10^{-9}$；然后是裕度表（$\omega_c = 15.1683$，PM 63.334°，GM 35.14 dB，$M_s = 1.0357$，$D_m = 72.875$ ms）、延迟检验（0.9 倍斜率 $-1.063$/s，1.1 倍 $+0.806$/s）、灵敏度积分和 D 项增益表，最后一行是 `ch03 OK`。`report` 里的断言（0.9 倍衰减且没碰限幅，1.1 倍增长且碰限幅，Bode 积分为零，精确采样模型的边界落在 72 和 73 拍之间）有任何一条不成立都会退出 1。
+
+**本篇新增的文件**（tag `tutorial-v1`，本篇还会用到第 1、2 篇的 `sim`、`plants`、`poly`、`complex`，它们没有变化）：
+
+| 文件 | 命令 | 结果 |
+| --- | --- | --- |
+| [`python/pidlab/freq.py`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/python/pidlab/freq.py) | `make -s ch03` | 频率响应、相位展开、`margins`；对 `scipy.signal.freqresp` 幅值差 $1.42\times 10^{-14}$ dB |
+| [`c/include/pl/freq.h`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/c/include/pl/freq.h)、[`c/src/freq.c`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/c/src/freq.c) | `make -s ch03` | `bode_c.csv`、`margins_c.csv`、两个延迟文件与 Python 最大差 0 |
+| [`c/include/pl/real.h`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/c/include/pl/real.h) | 同上 | 多了 `PL_LOG10` |
+| [`cpp/include/pidlab/freq.h`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/cpp/include/pidlab/freq.h) | `make -s ch03` | `*_cpp.csv` 与 Python 最大差 0 |
+| [`rust/src/freq.rs`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/rust/src/freq.rs)、[`rust/src/real.rs`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/rust/src/real.rs) | `make -s ch03` | `bode_rs.csv` 差 $5.684\times 10^{-13}$，`margins_rs.csv` 差 $3.553\times 10^{-15}$；`real.rs` 多了 `log10` |
+
+驱动和应用：
+
+| 文件 | 命令 | 结果 |
+| --- | --- | --- |
+| [`python/ch03_frequency_domain.py`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/python/ch03_frequency_domain.py) | `python3 python/ch03_frequency_domain.py ref` 或 `report` | `ref` 写数据和 Python 参考输出；`report` 比对、打印表、断言、画 5 张图 |
+| [`c/apps/ch03.c`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/c/apps/ch03.c) | `make -s ch03` | `ch03: C wrote bode, margins and 2 delay runs to out/ch03` |
+| [`cpp/apps/ch03.cc`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/cpp/apps/ch03.cc) | `make -s ch03` | `ch03: C++ wrote ...` |
+| [`rust/src/bin/ch03.rs`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/rust/src/bin/ch03.rs) | `make -s ch03` | `ch03: Rust wrote ...` |
+
+`figures/ch03/` 下是 `bode`、`nyquist`、`delay-margin-check`、`sensitivity`、`d-term-noise-gain` 5 张 SVG，它们是 `report` 在本地生成的（`figures/` 不进仓库）。
 
 ## 下一篇
 

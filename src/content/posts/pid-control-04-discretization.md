@@ -161,18 +161,13 @@ $$
 
 连续的 $k_i$ 的量纲是 $k_p$ 除以时间，$k_d$ 是 $k_p$ 乘时间。离散化之后每拍加的是 $k_i T_s e_k$，微分是 $k_d (e_k - e_{k-1})/T_s$。据我所知，不少 RM 开源代码把 $T_s$ 直接折进增益里：`ki_code = ki * ts`、`kd_code = kd / ts`，循环里只写 `integral += ki_code * e`。这在固定采样率下完全正确，但这样做之后，**$T_s$ 变了代码里的增益不会跟着变**。比如 $k_i = 90$，从 1 ms 改到 5 ms，如果 `ki_code` 还是 $90 \times 0.001$，等效积分增益就是 $0.09/0.005 = 18$，只剩 1/5。我没有逐个翻那些仓库，这一条是从常见写法推的，不是审计结论。我自己的做法是把 `ts` 放进配置、让 `update` 每拍用 `ts` 乘，这样改采样率只改一个数。
 
-## Python 实现
+## 写进代码
 
-模块 `pidlab/pid_discrete.py`，完整代码：
+### Python：一个 `update`，三个开关
+
+模块是 [`pidlab/pid_discrete.py`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/python/pidlab/pid_discrete.py)。我先把上面的三个选择做成配置里的三个独立字段，而不是十二个类：
 
 ```python
-"""Discrete PID: positional and incremental forms, three s-to-z maps."""
-
-import math
-from dataclasses import dataclass
-from enum import Enum
-
-
 class Form(Enum):
     POSITIONAL = 0
     INCREMENTAL = 1
@@ -186,12 +181,7 @@ class Method(Enum):
 
 @dataclass
 class DiscreteConfig:
-    """Parallel gains in physical units: u = kp e + ki int e + kd de/dt.
-
-    The derivative is filtered, D(s) = kd s / (tf s + 1). u_min and u_max
-    clamp the output (positional) or the accumulator (incremental).
-    """
-
+    # ...
     kp: float
     ki: float
     kd: float
@@ -202,32 +192,22 @@ class DiscreteConfig:
     form: Form = Form.POSITIONAL
     i_method: Method = Method.BACKWARD
     d_method: Method = Method.BACKWARD
+```
 
+三种积分、两种微分、两种形式，一共 12 个组合，每个组合是 `update` 里的一个分支。构造函数拒绝五种配置：`ts <= 0`、`tf < 0`、`u_min > u_max`，还有两条针对微分的：
 
-def clamp(x: float, lo: float, hi: float) -> float:
-    return lo if x < lo else (hi if x > hi else x)
-
-
-class PidDiscrete:
-    """Discrete PID on the error e = r - y.
-
-    No priming: e_prev starts at 0, so the first sample sees a step from
-    zero. That keeps the two forms identical from sample 0.
-    """
-
-    def __init__(self, cfg: DiscreteConfig) -> None:
-        if cfg.ts <= 0.0 or cfg.tf < 0.0 or cfg.u_min > cfg.u_max:
-            raise ValueError("need ts > 0, tf >= 0, u_min <= u_max")
+```python
         if cfg.d_method is Method.FORWARD:
             raise ValueError("derivative has no forward method")
         if cfg.d_method is Method.TUSTIN and cfg.tf <= 0.0:
             raise ValueError("Tustin derivative needs tf > 0")
-        self.cfg = cfg
-        self.integral = 0.0  # positional form only
-        self.u_prev = 0.0  # incremental accumulator
-        self.d_state = 0.0
-        self.e_prev = 0.0
+```
 
+前者是上面算出来的 $z = -9$，后者是 $t_f = 0$ 时 Tustin 的极点落在 $-1$，每拍翻符号永不衰减。
+
+核心是 `update`。**先算微分的递推，再算积分增量 `di`，最后按形式拼出输出：**
+
+```python
     def update(self, r: float, y: float) -> float:
         c = self.cfg
         e = r - y
@@ -256,64 +236,16 @@ class PidDiscrete:
         return u
 ```
 
-**配置里 `form`、`i_method`、`d_method` 是三个独立的开关。** 三种积分、两种微分、两种形式，一共 12 个组合，每个组合是 `update` 里的一个分支，不是 12 个类。构造函数拒绝五种配置：`ts <= 0`、`tf < 0`、`u_min > u_max`，还有两条针对微分的：前向欧拉微分（上面说了它不稳定）和 `tf = 0` 的 Tustin 微分（极点在 $-1$，每拍翻符号永不衰减）。
+这段和数学一节的公式是一一对应的：`d_state` 是 $d_k$，`di` 是前面表里右边的增量，两个分支就是位置式和增量式。注意两处：
 
-**`u_min` 和 `u_max` 的含义随形式而变。** 位置式里它们夹的是输出 `v`，`integral` 不受影响；增量式里 `u_prev` 存的就是夹过的输出，所以夹的是累加器。`update` 末尾的 `self.u_prev = u` 在位置式里没有用到，但写上它让两种形式共用一个出口。
+- **`u_min`、`u_max` 的含义随形式而变。** 位置式里它们夹的是输出 `v`，`integral` 不受影响；增量式里 `u_prev` 存的就是夹过的输出，所以夹的是累加器。`self.u_prev = u` 在位置式里没有用到，写上它是为了让两种形式共用一个出口。
+- **没有“第一拍不算微分”。** 第 1 篇的 `PidBasic` 有 `primed` 标志，第一拍的微分为 0。这里 `e_prev` 从 0 开始，第一拍看到的是一个从 0 跳到 $e_0$ 的阶跃，微分会踢一脚（后面 Tustin 的算例里这一脚是 11.1 A）。我这么做是为了让位置式和增量式从第 0 拍起逐位一致；第 5 篇的 PID 会处理微分冲击。
 
-**没有“第一拍不算微分”。** 第 1 篇的 `PidBasic` 有 `primed` 标志，第一拍的微分为 0。这里 `e_prev` 从 0 开始，第一拍看到的是一个从 0 跳到 $e_0$ 的阶跃，微分会踢一脚（后面 Tustin 的算例里这一脚是 11.1 A）。我这么做是为了让位置式和增量式从第 0 拍起逐位一致；第 5 篇的 PID 会处理微分冲击。
+### 仿真循环和精确的采样模型
 
-驱动 `python/ch04_discretization.py` 里有这几个核心函数。算例表：
-
-```python
-def make_cases() -> list[Case]:
-    kp, ki = speed_gains()
-    cases = []
-    for ms in TS_LIST_MS:
-        cfg = DiscreteConfig(kp, ki, 0.0, ms * 1e-3)
-        cases.append(Case(f"ts_{ms}ms", f"ch04_ts_{ms}ms", "speed", cfg, 20.0))
-    for name, form in (
-        ("form_pos", Form.POSITIONAL),
-        ("form_inc", Form.INCREMENTAL),
-    ):
-        cfg = DiscreteConfig(kp, ki, 0.02, 1e-3, tf=0.005, form=form)
-        cases.append(Case(name, "ch04_form", "speed", cfg, INF))
-    for name, form, lim in (
-        ("sat_pos", Form.POSITIONAL, SAT_LIMIT),
-        ("sat_inc", Form.INCREMENTAL, SAT_LIMIT),
-        ("sat_inc_raw", Form.INCREMENTAL, INF),
-    ):
-        cfg = DiscreteConfig(
-            kp, ki, 0.0, 1e-3, u_min=-lim, u_max=lim, form=form
-        )
-        cases.append(Case(name, "ch04_sat", "speed", cfg, SAT_LIMIT))
-    kpd, kdd = dial_gains()
-    for name, method in (
-        ("d_backward", Method.BACKWARD),
-        ("d_tustin", Method.TUSTIN),
-    ):
-        cfg = DiscreteConfig(
-            kpd, 0.0, kdd, 1e-3, D_TF_RATIO * 1e-3, d_method=method
-        )
-        cases.append(Case(name, "ch04_dnoise", "dial", cfg, 20.0))
-    return cases
-```
-
-仿真循环和第 3 篇的差别只有两处：控制器换成 `PidDiscrete`，以及多了一个 `back_calc` 开关，只在 `report` 里验证“限幅增量式等价于反算”时使用：
+驱动 [`python/ch04_discretization.py`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/python/ch04_discretization.py) 的仿真循环和第 3 篇的差别只有两处：控制器换成 `PidDiscrete`，以及一个只在 `report` 里用的 `back_calc` 开关，用来验证“限幅增量式等价于反算”：
 
 ```python
-def run_case(case: Case, back_calc: bool = False) -> dict[str, np.ndarray]:
-    """One closed loop. Columns t, r, y, u (controller), ua (applied), d.
-
-    back_calc feeds the clamp error back into the positional integral
-    (tracking time constant ts); the check in report_sat uses it.
-    """
-    plant = MotorSpeedLag() if case.plant == "speed" else DialPosition()
-    data = read_csv(DATA / f"{case.data}.csv")
-    ts = case.cfg.ts
-    pid = PidDiscrete(case.cfg)
-    delay = DelayLine(TRANSPORT)
-    x = [0.0] * plant.n
-    rows = []
     for k in range(len(data["t"])):
         r = data["r"][k]
         y = plant.output(x) + data["n"][k]
@@ -325,27 +257,13 @@ def run_case(case: Case, back_calc: bool = False) -> dict[str, np.ndarray]:
         x = advance(
             plant.deriv, x, [delay.push(ua), data["d"][k]], ts, SUBSTEPS
         )
-    names = ("t", "r", "y", "u", "ua", "d")
-    return dict(zip(names, np.array(rows).T))
 ```
 
-`u` 是控制器的输出，`ua` 是夹过执行器限幅后真正发给电机的命令，两列都写进 CSV，后面的图要同时用到。
+`u` 是控制器的输出，`ua` 是夹过执行器限幅后真正发给电机的命令，两列都写进 CSV。`back_calc` 那一行就是教科书的反算：把被夹掉的 `ua - u` 加回积分。
 
-**精确的采样模型。** 要回答“相位裕度到底掉了多少”，只用连续模型加延迟是近似。`sampled_pm` 把电机（连同电流环）用 `scipy.linalg.expm` 做精确的 ZOH 离散化，控制器用 $C(z) = k_p + k_i T_s z/(z-1)$（后向积分），再乘一拍延迟 $z^{-1}$，在 $[1, 0.999\pi/T_s]$ 上扫频率找穿越点：
+要回答“相位裕度到底掉了多少”，只用连续模型加延迟是近似。`sampled_pm` 把电机（连同电流环）用 `scipy.linalg.expm` 做精确的 ZOH 离散化，控制器用 $C(z) = k_p + k_i T_s z/(z-1)$（后向积分），再乘一拍延迟 $z^{-1}$：
 
 ```python
-def sampled_pm(ts: float, kp: float, ki: float) -> tuple[float, float]:
-    """(wc, PM in degrees) of the exact sampled loop at period ts.
-
-    C(z) = kp + ki ts z / (z - 1) (backward I), the ZOH discretization of
-    the plant with its current lag, and one sample of transport delay.
-    Returns (nan, nan) if |L| never crosses 1 below the Nyquist frequency.
-    """
-    from scipy.linalg import expm
-
-    m = MotorSpeedLag()
-    a = np.array([[-m.b / m.j, m.kt / m.j], [0.0, -1.0 / m.tau_c]])
-    bv = np.array([0.0, 1.0 / m.tau_c])
     em = np.zeros((3, 3))
     em[:2, :2] = a
     em[:2, 2] = bv
@@ -357,76 +275,26 @@ def sampled_pm(ts: float, kp: float, ki: float) -> tuple[float, float]:
     for i, zi in enumerate(z):
         g[i] = np.linalg.solve(zi * np.eye(2) - ad, bd)[0]
     lz = (kp + ki * ts * z / (z - 1.0)) * g / z**TRANSPORT
-    mag = np.abs(lz)
-    idx = np.flatnonzero((mag[:-1] >= 1.0) & (mag[1:] < 1.0))
-    if idx.size == 0:
-        return math.nan, math.nan
-    i = int(idx[0])
-    f = (mag[i] - 1.0) / (mag[i] - mag[i + 1])
-    wc = w[i] + f * (w[i + 1] - w[i])
-    ph = np.unwrap(np.angle(lz))
-    pm = 180.0 + math.degrees(ph[i] + f * (ph[i + 1] - ph[i]))
-    return float(wc), float(pm)
 ```
 
-`sampled_radius` 是同一个回路的闭环特征值的谱半径，大于 1 就是不稳定：
+`expm` 作用在增广矩阵 $\begin{bmatrix}A & B\\0 & 0\end{bmatrix}T_s$ 上，左上角是 $A_d = e^{AT_s}$，右上角是 $B_d$，这是 ZOH 离散化的标准技巧。然后在 $[1,\ 0.999\pi/T_s]$ 上扫频率，在 $|L|$ 穿过 1 的那个区间里线性插值出 $\omega_c$ 和相位裕度。另一个函数 `sampled_radius` 把同一个回路写成四维状态（角速度、电流、积分器、在途的命令）的离散状态矩阵，取特征值的最大模，大于 1 就是不稳定。
 
-```python
-def sampled_radius(ts: float, kp: float, ki: float) -> float:
-    """Spectral radius of the exact sampled loop (backward I, 1 delay)."""
-    from scipy.linalg import expm
+这两个函数是分析用的，不是被检验的对象：它们只用 scipy 的 `expm` 和 numpy 的特征值，C、C++、Rust 不需要重写。`report` 里的对比表、抗饱和等价性验证、D 项统计和 4 张图都在同一个驱动里。
 
-    m = MotorSpeedLag()
-    a = np.array([[-m.b / m.j, m.kt / m.j], [0.0, -1.0 / m.tau_c]])
-    em = np.zeros((3, 3))
-    em[:2, :2] = a
-    em[:2, 2] = [0.0, 1.0 / m.tau_c]
-    e = expm(em * ts)
-    # state: w, i, integral, command in flight
-    f = np.zeros((4, 4))
-    f[:2, :2] = e[:2, :2]
-    f[:2, 3] = e[:2, 2]
-    # u_k = kp e + I, I += ki ts e (backward): I_{k+1} = I_k + ki ts e_k
-    f[2, 0] = -ki * ts
-    f[2, 2] = 1.0
-    f[3, 0] = -kp - ki * ts
-    f[3, 2] = 1.0
-    return float(np.abs(np.linalg.eigvals(f)).max())
-```
+### C、C++、Rust：逐行翻译，差别在边角
 
-这两个函数是分析用的，不是被检验的对象：它们只用 scipy 的 `expm` 和 numpy 的特征值，C、C++、Rust 不需要重写。`report` 里的对比表、抗饱和等价性验证、D 项统计和 4 张图见 [`python/ch04_discretization.py`](https://github.com/bfmhno3/pid-lab/tree/tutorial-v1/python/ch04_discretization.py)。
-
-## C、C++、Rust 实现
-
-三个版本都是 Python 版的逐行翻译，`update` 里的算术顺序也和 Python 一致。区别在这几处：
+三个版本是 Python 版的逐行翻译，`update` 里的算术顺序也和 Python 一致，所以后面才能逐位对上。差别在这几处：
 
 - **枚举和配置。** C 是 `enum pl_form`、`enum pl_method` 加 `struct pl_pid_discrete_config`，没有 `typedef`；C++ 是 `enum class Form`、`enum class Method` 和模板结构体 `PidDiscreteConfig<T>`；Rust 是 `enum Form`、`enum Method` 和 `PidDiscreteConfig`，另外给了一个 `PidDiscreteConfig::new(kp, ki, kd, ts)` 填上默认值（不限幅、后向积分、后向微分），算例里只改需要改的字段。
 - **构造的失败方式。** C 的 `pl_pid_discrete_init` 返回 0 或 `-EINVAL`；C++ 的 `PidDiscrete<T>::Create` 返回 `std::optional`，失败是 `std::nullopt`，没有异常；Rust 的 `PidDiscrete::new` 返回 `Result<Self, PidDiscreteError>`。
 - **无穷。** 不限幅的 `u_min`、`u_max` 在 C 里是 `-INFINITY` 和 `INFINITY`（`<math.h>`），C++ 是 `std::numeric_limits<T>::infinity()`，Rust 是 `Real::INFINITY`；Python 是 `math.inf`。`clamp` 对无穷边界没有特殊处理，`x < -inf` 永远为假。
-- **内存。** 三种语言里控制器都是栈上的值：C 的 `struct pl_pid_discrete` 把配置拷贝进来，C++ 和 Rust 的对象也是值语义。没有堆分配。
+- **内存。** 三种语言里控制器都是栈上的值：C 的 `struct pl_pid_discrete` 把配置拷贝进来，C++ 和 Rust 的对象也是值语义，没有堆分配。
 
-### C
+#### C
 
-`pl_pid_discrete_update` 是 Python `update` 的逐行翻译。函数开头一次取出 `c = &pid->cfg`，后面都走它：
+文件是 [`c/include/pl/pid_discrete.h`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/c/include/pl/pid_discrete.h) 和 [`c/src/pid_discrete.c`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/c/src/pid_discrete.c)。`pl_pid_discrete_update` 开头一次取出 `c = &pid->cfg`，后面都走它。积分增量和两种形式这一段是这样的：
 
 ```c
-pl_real pl_pid_discrete_update(struct pl_pid_discrete *pid, pl_real r,
-			       pl_real y)
-{
-	const struct pl_pid_discrete_config *c = &pid->cfg;
-	pl_real e = r - y;
-	pl_real de = e - pid->e_prev;
-	pl_real d_old = pid->d_state;
-	pl_real a, di, v, u;
-
-	if (c->d_method == PL_METHOD_BACKWARD) {
-		a = c->tf / (c->tf + c->ts);
-		pid->d_state = a * d_old + c->kd / (c->tf + c->ts) * de;
-	} else {
-		a = (2.0 * c->tf - c->ts) / (2.0 * c->tf + c->ts);
-		pid->d_state =
-			a * d_old + 2.0 * c->kd / (2.0 * c->tf + c->ts) * de;
-	}
 	if (c->i_method == PL_METHOD_FORWARD)
 		di = c->ki * c->ts * pid->e_prev;
 	else if (c->i_method == PL_METHOD_BACKWARD)
@@ -440,138 +308,15 @@ pl_real pl_pid_discrete_update(struct pl_pid_discrete *pid, pl_real r,
 		v = pid->u_prev + c->kp * de + di + (pid->d_state - d_old);
 	}
 	u = pl_clamp(v, c->u_min, c->u_max);
-	pid->u_prev = u;
-	pid->e_prev = e;
-	return u;
-}
 ```
 
-状态是四个 `pl_real`（`integral`、`u_prev`、`d_state`、`e_prev`），`struct pl_pid_discrete` 里还嵌着一份配置，所以复制一个控制器就是一次结构体赋值。
+状态是四个 `pl_real`（`integral`、`u_prev`、`d_state`、`e_prev`），`struct pl_pid_discrete` 里还嵌着一份配置，所以复制一个控制器就是一次结构体赋值。驱动是 [`c/apps/ch04.c`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/c/apps/ch04.c)：11 个算例放在一个 `struct sim_case` 数组里，`run_case` 读对应的数据文件，按 `dial` 标志选 `MotorSpeedLag` 还是 `DialPosition`，写 `out/ch04/<case>_c.csv`。
 
-<details>
-<summary>完整源码：c/include/pl/pid_discrete.h、c/src/pid_discrete.c</summary>
+#### C++
 
-```c
-/* SPDX-License-Identifier: MIT OR Apache-2.0 */
-/* Discrete PID: positional and incremental forms, three s-to-z maps. */
-#ifndef PL_PID_DISCRETE_H
-#define PL_PID_DISCRETE_H
-
-#include "pl/real.h"
-
-enum pl_form {
-	PL_FORM_POSITIONAL,
-	PL_FORM_INCREMENTAL,
-};
-
-enum pl_method {
-	PL_METHOD_FORWARD,
-	PL_METHOD_BACKWARD,
-	PL_METHOD_TUSTIN,
-};
-
-/* Parallel gains in physical units: u = kp e + ki int e + kd de/dt. */
-/* The derivative is filtered, D(s) = kd s / (tf s + 1). u_min and u_max */
-/* clamp the output (positional) or the accumulator (incremental). */
-struct pl_pid_discrete_config {
-	pl_real kp, ki, kd, ts, tf;
-	pl_real u_min, u_max;
-	enum pl_form form;
-	enum pl_method i_method, d_method;
-};
-
-/* No priming: e_prev starts at 0, so the first sample sees a step from */
-/* zero. That keeps the two forms identical from sample 0. */
-struct pl_pid_discrete {
-	struct pl_pid_discrete_config cfg;
-	pl_real integral; /* positional form only */
-	pl_real u_prev; /* incremental accumulator */
-	pl_real d_state;
-	pl_real e_prev;
-};
-
-/* Returns 0, or -EINVAL unless ts > 0, tf >= 0, u_min <= u_max, the */
-/* derivative method is not FORWARD, and a TUSTIN derivative has tf > 0. */
-int pl_pid_discrete_init(struct pl_pid_discrete *pid,
-			 const struct pl_pid_discrete_config *cfg);
-
-/* One sample on the error e = r - y. */
-pl_real pl_pid_discrete_update(struct pl_pid_discrete *pid, pl_real r,
-			       pl_real y);
-
-#endif /* PL_PID_DISCRETE_H */
-```
-
-```c
-// SPDX-License-Identifier: MIT OR Apache-2.0
-#include <errno.h>
-
-#include "pl/pid_discrete.h"
-
-int pl_pid_discrete_init(struct pl_pid_discrete *pid,
-			 const struct pl_pid_discrete_config *cfg)
-{
-	if (cfg->ts <= 0.0 || cfg->tf < 0.0 || cfg->u_min > cfg->u_max)
-		return -EINVAL;
-	if (cfg->d_method == PL_METHOD_FORWARD)
-		return -EINVAL;
-	if (cfg->d_method == PL_METHOD_TUSTIN && cfg->tf <= 0.0)
-		return -EINVAL;
-	pid->cfg = *cfg;
-	pid->integral = 0.0;
-	pid->u_prev = 0.0;
-	pid->d_state = 0.0;
-	pid->e_prev = 0.0;
-	return 0;
-}
-
-pl_real pl_pid_discrete_update(struct pl_pid_discrete *pid, pl_real r,
-			       pl_real y)
-{
-	const struct pl_pid_discrete_config *c = &pid->cfg;
-	pl_real e = r - y;
-	pl_real de = e - pid->e_prev;
-	pl_real d_old = pid->d_state;
-	pl_real a, di, v, u;
-
-	if (c->d_method == PL_METHOD_BACKWARD) {
-		a = c->tf / (c->tf + c->ts);
-		pid->d_state = a * d_old + c->kd / (c->tf + c->ts) * de;
-	} else {
-		a = (2.0 * c->tf - c->ts) / (2.0 * c->tf + c->ts);
-		pid->d_state =
-			a * d_old + 2.0 * c->kd / (2.0 * c->tf + c->ts) * de;
-	}
-	if (c->i_method == PL_METHOD_FORWARD)
-		di = c->ki * c->ts * pid->e_prev;
-	else if (c->i_method == PL_METHOD_BACKWARD)
-		di = c->ki * c->ts * e;
-	else
-		di = 0.5 * c->ki * c->ts * (e + pid->e_prev);
-	if (c->form == PL_FORM_POSITIONAL) {
-		pid->integral += di;
-		v = c->kp * e + pid->integral + pid->d_state;
-	} else {
-		v = pid->u_prev + c->kp * de + di + (pid->d_state - d_old);
-	}
-	u = pl_clamp(v, c->u_min, c->u_max);
-	pid->u_prev = u;
-	pid->e_prev = e;
-	return u;
-}
-```
-
-</details>
-
-驱动：[`c/apps/ch04.c`](https://github.com/bfmhno3/pid-lab/tree/tutorial-v1/c/apps/ch04.c)。11 个算例放在一个 `struct sim_case` 数组里，`run_case` 读对应的数据文件，按 `dial` 标志选 `MotorSpeedLag` 还是 `DialPosition`，写 `out/ch04/<case>_c.csv`。
-
-### C++
-
-构造用 `Create`，失败返回 `std::nullopt`；`Update` 里的常数写成 `T(2)`、`T(0.5)`，让它们跟着标量类型走：
+文件是 [`cpp/include/pidlab/pid_discrete.h`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/cpp/include/pidlab/pid_discrete.h)。构造用 `Create`，失败返回 `std::nullopt`：
 
 ```cpp
-  // Returns std::nullopt unless ts > 0, tf >= 0, u_min <= u_max, the
-  // derivative method is not kForward, and a kTustin derivative has tf > 0.
   static std::optional<PidDiscrete> Create(const PidDiscreteConfig<T>& cfg) {
     if (cfg.ts <= T(0) || cfg.tf < T(0) || cfg.u_min > cfg.u_max) {
       return std::nullopt;
@@ -584,193 +329,20 @@ pl_real pl_pid_discrete_update(struct pl_pid_discrete *pid, pl_real r,
   }
 ```
 
-```cpp
-  // One sample on the error e = r - y.
-  T Update(T r, T y) {
-    const T e = r - y;
-    const T de = e - e_prev_;
-    const T d_old = d_state_;
-    if (cfg_.d_method == Method::kBackward) {
-      const T a = cfg_.tf / (cfg_.tf + cfg_.ts);
-      d_state_ = a * d_old + cfg_.kd / (cfg_.tf + cfg_.ts) * de;
-    } else {
-      const T a = (T(2) * cfg_.tf - cfg_.ts) / (T(2) * cfg_.tf + cfg_.ts);
-      d_state_ = a * d_old + T(2) * cfg_.kd / (T(2) * cfg_.tf + cfg_.ts) * de;
-    }
-    T di;
-    if (cfg_.i_method == Method::kForward) {
-      di = cfg_.ki * cfg_.ts * e_prev_;
-    } else if (cfg_.i_method == Method::kBackward) {
-      di = cfg_.ki * cfg_.ts * e;
-    } else {
-      di = T(0.5) * cfg_.ki * cfg_.ts * (e + e_prev_);
-    }
-    T v;
-    if (cfg_.form == Form::kPositional) {
-      integral_ += di;
-      v = cfg_.kp * e + integral_ + d_state_;
-    } else {
-      v = u_prev_ + cfg_.kp * de + di + (d_state_ - d_old);
-    }
-    const T u = std::clamp(v, cfg_.u_min, cfg_.u_max);
-    u_prev_ = u;
-    e_prev_ = e;
-    return u;
-  }
-```
-
-构造函数是私有的，`Create` 是唯一的入口，所以拿到一个 `PidDiscrete` 就意味着它通过了校验。代价是对象只能通过 `std::optional` 取出来，驱动里用 `pid->Update(...)`。
-
-<details>
-<summary>完整源码：cpp/include/pidlab/pid_discrete.h</summary>
+真正的构造函数是私有的，`Create` 是唯一的入口，所以拿到一个 `PidDiscrete` 就意味着它通过了校验。代价是对象只能通过 `std::optional` 取出来，驱动里用 `pid->Update(...)`。`Update` 里的常数写成 `T(2)`、`T(0.5)`，让它们跟着标量类型走，第 10 篇换成 `float` 时不用改这里：
 
 ```cpp
-// Discrete PID: positional and incremental forms, three s-to-z maps.
-#ifndef PIDLAB_PID_DISCRETE_H_
-#define PIDLAB_PID_DISCRETE_H_
-
-#include <algorithm>
-#include <limits>
-#include <optional>
-
-namespace pidlab {
-
-enum class Form { kPositional, kIncremental };
-enum class Method { kForward, kBackward, kTustin };
-
-// Parallel gains in physical units: u = kp e + ki int e + kd de/dt. The
-// derivative is filtered, D(s) = kd s / (tf s + 1). u_min and u_max clamp
-// the output (positional) or the accumulator (incremental).
-template <class T = double>
-struct PidDiscreteConfig {
-  T kp, ki, kd, ts;
-  T tf = T(0);
-  T u_min = -std::numeric_limits<T>::infinity();
-  T u_max = std::numeric_limits<T>::infinity();
-  Form form = Form::kPositional;
-  Method i_method = Method::kBackward;
-  Method d_method = Method::kBackward;
-};
-
-// No priming: e_prev starts at 0, so the first sample sees a step from
-// zero. That keeps the two forms identical from sample 0.
-template <class T = double>
-class PidDiscrete {
- public:
-  // Returns std::nullopt unless ts > 0, tf >= 0, u_min <= u_max, the
-  // derivative method is not kForward, and a kTustin derivative has tf > 0.
-  static std::optional<PidDiscrete> Create(const PidDiscreteConfig<T>& cfg) {
-    if (cfg.ts <= T(0) || cfg.tf < T(0) || cfg.u_min > cfg.u_max) {
-      return std::nullopt;
-    }
-    if (cfg.d_method == Method::kForward) return std::nullopt;
-    if (cfg.d_method == Method::kTustin && cfg.tf <= T(0)) {
-      return std::nullopt;
-    }
-    return PidDiscrete(cfg);
-  }
-
-  // One sample on the error e = r - y.
-  T Update(T r, T y) {
-    const T e = r - y;
-    const T de = e - e_prev_;
-    const T d_old = d_state_;
-    if (cfg_.d_method == Method::kBackward) {
-      const T a = cfg_.tf / (cfg_.tf + cfg_.ts);
-      d_state_ = a * d_old + cfg_.kd / (cfg_.tf + cfg_.ts) * de;
-    } else {
       const T a = (T(2) * cfg_.tf - cfg_.ts) / (T(2) * cfg_.tf + cfg_.ts);
       d_state_ = a * d_old + T(2) * cfg_.kd / (T(2) * cfg_.tf + cfg_.ts) * de;
-    }
-    T di;
-    if (cfg_.i_method == Method::kForward) {
-      di = cfg_.ki * cfg_.ts * e_prev_;
-    } else if (cfg_.i_method == Method::kBackward) {
-      di = cfg_.ki * cfg_.ts * e;
-    } else {
-      di = T(0.5) * cfg_.ki * cfg_.ts * (e + e_prev_);
-    }
-    T v;
-    if (cfg_.form == Form::kPositional) {
-      integral_ += di;
-      v = cfg_.kp * e + integral_ + d_state_;
-    } else {
-      v = u_prev_ + cfg_.kp * de + di + (d_state_ - d_old);
-    }
-    const T u = std::clamp(v, cfg_.u_min, cfg_.u_max);
-    u_prev_ = u;
-    e_prev_ = e;
-    return u;
-  }
-
-  T d_state() const { return d_state_; }
-
- private:
-  explicit PidDiscrete(const PidDiscreteConfig<T>& cfg) : cfg_(cfg) {}
-
-  PidDiscreteConfig<T> cfg_;
-  T integral_ = T(0);  // positional form only
-  T u_prev_ = T(0);    // incremental accumulator
-  T d_state_ = T(0);
-  T e_prev_ = T(0);
-};
-
-}  // namespace pidlab
-
-#endif  // PIDLAB_PID_DISCRETE_H_
 ```
 
-</details>
+驱动是 [`cpp/apps/ch04.cc`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/cpp/apps/ch04.cc)。`RunLoop<P>` 是以植物类型为模板参数的一个函数，`DialPosition` 和 `MotorSpeedLag` 各实例化一份。
 
-驱动：[`cpp/apps/ch04.cc`](https://github.com/bfmhno3/pid-lab/tree/tutorial-v1/cpp/apps/ch04.cc)。`RunLoop<P>` 是以植物类型为模板参数的一个函数，`DialPosition` 和 `MotorSpeedLag` 各实例化一份。
+#### Rust
 
-### Rust
-
-Rust 的 `match` 把三种积分方法写成一个表达式，并且编译器检查是否穷尽：
+文件是 [`rust/src/pid_discrete.rs`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/rust/src/pid_discrete.rs)。`match` 把三种积分方法写成一个表达式，编译器检查是否穷尽：
 
 ```rust
-    /// Fails unless `ts > 0`, `tf >= 0`, `u_min <= u_max`, the derivative
-    /// method is not `Forward`, and a `Tustin` derivative has `tf > 0`.
-    pub fn new(cfg: PidDiscreteConfig) -> Result<Self, PidDiscreteError> {
-        if cfg.ts <= 0.0 || cfg.tf < 0.0 || cfg.u_min > cfg.u_max {
-            return Err(PidDiscreteError::InvalidConfig(
-                "need ts > 0, tf >= 0, u_min <= u_max",
-            ));
-        }
-        if cfg.d_method == Method::Forward {
-            return Err(PidDiscreteError::InvalidConfig(
-                "derivative has no forward method",
-            ));
-        }
-        if cfg.d_method == Method::Tustin && cfg.tf <= 0.0 {
-            return Err(PidDiscreteError::InvalidConfig(
-                "Tustin derivative needs tf > 0",
-            ));
-        }
-        Ok(Self {
-            cfg,
-            integral: 0.0,
-            u_prev: 0.0,
-            d_state: 0.0,
-            e_prev: 0.0,
-        })
-    }
-```
-
-```rust
-    /// One sample on the error `e = r - y`.
-    pub fn update(&mut self, r: Real, y: Real) -> Real {
-        let c = &self.cfg;
-        let e = r - y;
-        let de = e - self.e_prev;
-        let d_old = self.d_state;
-        self.d_state = if c.d_method == Method::Backward {
-            let a = c.tf / (c.tf + c.ts);
-            a * d_old + c.kd / (c.tf + c.ts) * de
-        } else {
-            let a = (2.0 * c.tf - c.ts) / (2.0 * c.tf + c.ts);
-            a * d_old + 2.0 * c.kd / (2.0 * c.tf + c.ts) * de
-        };
         let di = match c.i_method {
             Method::Forward => c.ki * c.ts * self.e_prev,
             Method::Backward => c.ki * c.ts * e,
@@ -783,160 +355,17 @@ Rust 的 `match` 把三种积分方法写成一个表达式，并且编译器检
             self.u_prev + c.kp * de + di + (self.d_state - d_old)
         };
         let u = v.clamp(c.u_min, c.u_max);
-        self.u_prev = u;
-        self.e_prev = e;
-        u
-    }
 ```
 
-`update` 里 `let c = &self.cfg;` 之后又修改 `self.d_state`，借用检查没有抱怨：`c` 只借了 `self.cfg` 这一个字段，Rust 认为字段之间是不相交的借用。
+这段前面有一句 `let c = &self.cfg;`，之后又修改 `self.d_state`，借用检查没有抱怨：`c` 只借了 `self.cfg` 这一个字段，Rust 认为字段之间是不相交的借用。Python 版的 `ValueError` 在这里对应 `PidDiscreteError::InvalidConfig(&'static str)`，错误信息是静态字符串，不需要分配。驱动是 [`rust/src/bin/ch04.rs`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/rust/src/bin/ch04.rs)：`run_loop<const N: usize>` 接受两个闭包，一个取输出、一个取导数，两个植物的状态维数不同（2 和 3）正好用常量泛型表示。
 
-<details>
-<summary>完整源码：rust/src/pid_discrete.rs</summary>
-
-```rust
-//! Discrete PID: positional and incremental forms, three s-to-z maps.
-
-use crate::real::Real;
-
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum Form {
-    Positional,
-    Incremental,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum Method {
-    Forward,
-    Backward,
-    Tustin,
-}
-
-#[derive(Debug, PartialEq, Eq)]
-pub enum PidDiscreteError {
-    InvalidConfig(&'static str),
-}
-
-/// Parallel gains in physical units: `u = kp e + ki int e + kd de/dt`.
-/// The derivative is filtered, `D(s) = kd s / (tf s + 1)`. `u_min` and
-/// `u_max` clamp the output (positional) or the accumulator (incremental).
-#[derive(Clone, Copy, Debug)]
-pub struct PidDiscreteConfig {
-    pub kp: Real,
-    pub ki: Real,
-    pub kd: Real,
-    pub ts: Real,
-    pub tf: Real,
-    pub u_min: Real,
-    pub u_max: Real,
-    pub form: Form,
-    pub i_method: Method,
-    pub d_method: Method,
-}
-
-impl PidDiscreteConfig {
-    /// Unclamped positional PID with backward integral and derivative.
-    pub fn new(kp: Real, ki: Real, kd: Real, ts: Real) -> Self {
-        Self {
-            kp,
-            ki,
-            kd,
-            ts,
-            tf: 0.0,
-            u_min: Real::NEG_INFINITY,
-            u_max: Real::INFINITY,
-            form: Form::Positional,
-            i_method: Method::Backward,
-            d_method: Method::Backward,
-        }
-    }
-}
-
-/// No priming: `e_prev` starts at 0, so the first sample sees a step from
-/// zero. That keeps the two forms identical from sample 0.
-pub struct PidDiscrete {
-    cfg: PidDiscreteConfig,
-    integral: Real, // positional form only
-    u_prev: Real,   // incremental accumulator
-    d_state: Real,
-    e_prev: Real,
-}
-
-impl PidDiscrete {
-    /// Fails unless `ts > 0`, `tf >= 0`, `u_min <= u_max`, the derivative
-    /// method is not `Forward`, and a `Tustin` derivative has `tf > 0`.
-    pub fn new(cfg: PidDiscreteConfig) -> Result<Self, PidDiscreteError> {
-        if cfg.ts <= 0.0 || cfg.tf < 0.0 || cfg.u_min > cfg.u_max {
-            return Err(PidDiscreteError::InvalidConfig(
-                "need ts > 0, tf >= 0, u_min <= u_max",
-            ));
-        }
-        if cfg.d_method == Method::Forward {
-            return Err(PidDiscreteError::InvalidConfig(
-                "derivative has no forward method",
-            ));
-        }
-        if cfg.d_method == Method::Tustin && cfg.tf <= 0.0 {
-            return Err(PidDiscreteError::InvalidConfig(
-                "Tustin derivative needs tf > 0",
-            ));
-        }
-        Ok(Self {
-            cfg,
-            integral: 0.0,
-            u_prev: 0.0,
-            d_state: 0.0,
-            e_prev: 0.0,
-        })
-    }
-
-    /// One sample on the error `e = r - y`.
-    pub fn update(&mut self, r: Real, y: Real) -> Real {
-        let c = &self.cfg;
-        let e = r - y;
-        let de = e - self.e_prev;
-        let d_old = self.d_state;
-        self.d_state = if c.d_method == Method::Backward {
-            let a = c.tf / (c.tf + c.ts);
-            a * d_old + c.kd / (c.tf + c.ts) * de
-        } else {
-            let a = (2.0 * c.tf - c.ts) / (2.0 * c.tf + c.ts);
-            a * d_old + 2.0 * c.kd / (2.0 * c.tf + c.ts) * de
-        };
-        let di = match c.i_method {
-            Method::Forward => c.ki * c.ts * self.e_prev,
-            Method::Backward => c.ki * c.ts * e,
-            Method::Tustin => 0.5 * c.ki * c.ts * (e + self.e_prev),
-        };
-        let v = if c.form == Form::Positional {
-            self.integral += di;
-            c.kp * e + self.integral + self.d_state
-        } else {
-            self.u_prev + c.kp * de + di + (self.d_state - d_old)
-        };
-        let u = v.clamp(c.u_min, c.u_max);
-        self.u_prev = u;
-        self.e_prev = e;
-        u
-    }
-
-    pub fn d_state(&self) -> Real {
-        self.d_state
-    }
-}
-```
-
-</details>
-
-驱动：[`rust/src/bin/ch04.rs`](https://github.com/bfmhno3/pid-lab/tree/tutorial-v1/rust/src/bin/ch04.rs)。`run_loop<const N: usize>` 接受两个闭包，一个取输出、一个取导数，两个植物的状态维数不同（2 和 3）正好用常量泛型表示。
-
-### 编译和风格检查
+#### 编译和风格检查
 
 编译参数和前几篇一样：C 是 `gcc -std=c11 -O2 -Wall -Wextra -Wpedantic -Werror`（15.3.0），C++ 是 `g++ -std=c++20` 加同样的警告（15.3.0），Rust 是 rustc 1.95.0、edition 2024，`cargo clippy --release -- -D warnings`（0.1.95）。风格检查：C 用内核的 `checkpatch.pl --no-tree --ignore SPDX_LICENSE_TAG,NEW_TYPEDEFS`，全部文件 0 errors、0 warnings；C++ 用 `clang-format --style=Google`（21.1.8）；Python 用 `ruff format --line-length 79` 和 `ruff check`（0.15.14）；Rust 用 `cargo fmt --check`。
 
 ## 结果
 
-`make ch04` 一次跑完。11 个算例乘三种语言，33 个对比文件，下面是完整输出：
+`make ch04` 一次跑完。11 个算例乘三种语言，33 个对比文件，输出很长，我只留头尾和每组的一个例子（中间 30 行 `ok` 的最大差值同样全是 `0.000e+00`，省略）：
 
 ```text
 $ make -s ch04
@@ -946,33 +375,7 @@ ch04: Rust wrote 11 cases to out/ch04
 ok   d_backward_c.csv: max diff 0.000e+00 <= 1.0e-09
 ok   d_backward_cpp.csv: max diff 0.000e+00 <= 1.0e-09
 ok   d_backward_rs.csv: max diff 0.000e+00 <= 1.0e-09
-ok   d_tustin_c.csv: max diff 0.000e+00 <= 1.0e-09
-ok   d_tustin_cpp.csv: max diff 0.000e+00 <= 1.0e-09
-ok   d_tustin_rs.csv: max diff 0.000e+00 <= 1.0e-09
-ok   form_inc_c.csv: max diff 0.000e+00 <= 1.0e-09
-ok   form_inc_cpp.csv: max diff 0.000e+00 <= 1.0e-09
-ok   form_inc_rs.csv: max diff 0.000e+00 <= 1.0e-09
-ok   form_pos_c.csv: max diff 0.000e+00 <= 1.0e-09
-ok   form_pos_cpp.csv: max diff 0.000e+00 <= 1.0e-09
-ok   form_pos_rs.csv: max diff 0.000e+00 <= 1.0e-09
-ok   sat_inc_c.csv: max diff 0.000e+00 <= 1.0e-09
-ok   sat_inc_cpp.csv: max diff 0.000e+00 <= 1.0e-09
-ok   sat_inc_rs.csv: max diff 0.000e+00 <= 1.0e-09
-ok   sat_inc_raw_c.csv: max diff 0.000e+00 <= 1.0e-09
-ok   sat_inc_raw_cpp.csv: max diff 0.000e+00 <= 1.0e-09
-ok   sat_inc_raw_rs.csv: max diff 0.000e+00 <= 1.0e-09
-ok   sat_pos_c.csv: max diff 0.000e+00 <= 1.0e-09
-ok   sat_pos_cpp.csv: max diff 0.000e+00 <= 1.0e-09
-ok   sat_pos_rs.csv: max diff 0.000e+00 <= 1.0e-09
-ok   ts_10ms_c.csv: max diff 0.000e+00 <= 1.0e-09
-ok   ts_10ms_cpp.csv: max diff 0.000e+00 <= 1.0e-09
-ok   ts_10ms_rs.csv: max diff 0.000e+00 <= 1.0e-09
-ok   ts_1ms_c.csv: max diff 0.000e+00 <= 1.0e-09
-ok   ts_1ms_cpp.csv: max diff 0.000e+00 <= 1.0e-09
-ok   ts_1ms_rs.csv: max diff 0.000e+00 <= 1.0e-09
-ok   ts_20ms_c.csv: max diff 0.000e+00 <= 1.0e-09
-ok   ts_20ms_cpp.csv: max diff 0.000e+00 <= 1.0e-09
-ok   ts_20ms_rs.csv: max diff 0.000e+00 <= 1.0e-09
+...
 ok   ts_5ms_c.csv: max diff 0.000e+00 <= 1.0e-09
 ok   ts_5ms_cpp.csv: max diff 0.000e+00 <= 1.0e-09
 ok   ts_5ms_rs.csv: max diff 0.000e+00 <= 1.0e-09
@@ -1010,6 +413,7 @@ ch04 OK
 ```
 
 33 个文件和 Python 的最大差值全部是 `0.000e+00`，逐位一致。这一章只有加减乘除和比较，没有 `atan2`、没有复数、没有 `exp`，三种语言的 `double` 运算顺序又完全一致，这个结果在意料之中。唯一值得提一句的是积分器卷绕到 1328 A 的两个算例：数值大不代表舍入误差大，位置式和 `sat_inc_raw` 之间的差只有 $1.1\times 10^{-13}$。
+
 
 ### 采样率：预测对了一半
 
@@ -1099,12 +503,30 @@ max|y_inc - y_positional_backcalc(tt = ts)| = 3.553e-15 (clamped accumulator is 
 
 **但我没能从输出里看到它对轮子的影响。** 两行最后一列的 rms 跟踪误差都是 $1.04\times 10^{-3}$ rad，和噪声 $\sigma = 10^{-3}$ 几乎一样，因为记录的 $y$ 是含测量噪声的读数，不是真实角度。这个指标被噪声底限住了，区分不出两者。D 项振铃的代价是在 $u$ 上：电流指令的 rms 高 3.3 倍，在每拍 $\pm$ 几安培的翻转里；M3508 的电流环带宽比 1 kHz 低得多，所以我猜电机本身不会跟着抖，但发热和 CAN 上的指令噪声是真实的代价。这是推测，我没有在真电机上测。
 
-### 对不上的地方
+## 检查点
 
-- 估计公式 $\omega_c \cdot 1.5T_s$ 在 20 ms 上差了 5.3°，因为穿越频率本身被改变了。
-- 表里 20 ms 的“超调”是极限环，不是线性超调。
-- 1 ms 的算例有 7 拍碰到限幅，不是纯线性。
-- D 项的区别只在 $u$ 上看得见，输出被噪声底盖住了。
+在 pid-lab 仓库根目录、`nix develop` 里运行：
+
+```bash
+make -s ch04
+```
+
+输出就是上一节那一大块：最后一行是 `ch04 OK`，前面是 33 行 `ok`（11 个算例乘 C、C++、Rust，容差 $10^{-9}$，实际最大差全是 `0.000e+00`）和四张表。`out/ch04/` 下有 44 个 CSV（11 个算例乘 Python、C、C++、Rust），`figures/ch04/` 下有 4 张 SVG。
+
+### 实验清单
+
+这一篇新增的是 `pid_discrete` 模块和 `ch04` 驱动；仿真循环、植物和 CSV 比对沿用前几篇。链接指向 tag `tutorial-v1`。
+
+| 文件 | 命令 | 结果 |
+| --- | --- | --- |
+| [`python/pidlab/pid_discrete.py`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/python/pidlab/pid_discrete.py) | `make -s ch04` | 参考实现，`form_pos` 与 `form_inc` 的 `max\|du\| = 4.00e-15` |
+| [`c/include/pl/pid_discrete.h`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/c/include/pl/pid_discrete.h)、[`c/src/pid_discrete.c`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/c/src/pid_discrete.c) | `make -s ch04` | 11 行 `ok ..._c.csv`，最大差 `0.000e+00` |
+| [`cpp/include/pidlab/pid_discrete.h`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/cpp/include/pidlab/pid_discrete.h) | `make -s ch04` | 11 行 `ok ..._cpp.csv`，最大差 `0.000e+00` |
+| [`rust/src/pid_discrete.rs`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/rust/src/pid_discrete.rs) | `make -s ch04` | 11 行 `ok ..._rs.csv`，最大差 `0.000e+00` |
+| [`python/ch04_discretization.py`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/python/ch04_discretization.py) | `python3 python/ch04_discretization.py report`（`ref` 之后） | 采样率表、限幅表、D 项表，4 张图，最后一行 `ch04 OK` |
+| [`c/apps/ch04.c`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/c/apps/ch04.c)、[`cpp/apps/ch04.cc`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/cpp/apps/ch04.cc)、[`rust/src/bin/ch04.rs`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/rust/src/bin/ch04.rs) | `make -s ch04` | 各写 11 个算例：`ch04: C wrote 11 cases to out/ch04`，C++、Rust 同理 |
+| [`python/pidlab/plants.py`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/python/pidlab/plants.py)、[`python/pidlab/sim.py`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/python/pidlab/sim.py) | `make -s ch04` | 沿用：`MotorSpeedLag`、`DialPosition`、`DelayLine` |
+| `figures/ch04/`（生成物，不进仓库） | `ls figures/ch04` | `s-to-z.svg`、`sample-rate.svg`、`positional-vs-incremental.svg`、`tustin-ringing.svg`，由 `report` 写出 |
 
 ## 下一篇
 

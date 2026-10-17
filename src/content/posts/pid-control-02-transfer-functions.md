@@ -19,7 +19,7 @@ slug: pid-control-02-transfer-functions
 上一篇留下了两笔债。第一笔：PI 速度环的超调实测 28.02%，二阶公式预测 15.0%，我当时只能说“大概是零点”。第二笔：$K_p$、$K_i$、$K_d$ 全是靠手感试出来的。这一篇还这两笔债，工具是拉普拉斯变换。同一组 $K_p = 1$、$K_i = 10$，把比例项改成只作用在 $-y$ 上之后，超调从 28.29% 降到 15.30%，而二阶公式预测的是 15.02%；反过来把闭环零点算进公式，预测是 27.94%。债还清之后，$K_p$ 和 $K_i$ 就不用试了，给定 $\omega_n$ 和 $\zeta$ 直接算。
 
 > [!NOTE] 本篇检查点
-> 这一篇结束时你会有：`make ch02` 通过，`out/ch02/` 下 68 个 CSV（14 组仿真、一份 `metrics`、两条根轨迹，每组 Python、C、C++、Rust 各一份），`figures/ch02/` 下 4 张图；以及拉普拉斯变换、二阶原型、极点配置、Routh 判据、根轨迹的完整推导。
+> 这一篇结束时你会有：`make ch02` 通过，`out/ch02/` 下 68 个 CSV（14 组仿真、一份 `metrics`、两条根轨迹，每组 Python、C、C++、Rust 各一份），`figures/ch02/` 下 4 张图；以及拉普拉斯变换、二阶原型、极点配置、Routh 判据、根轨迹的完整推导，和一个对着 `numpy.roots` 验证过的手写求根器。
 > 新增模块：Python 是 `pidlab/poly.py`（多项式与求根）、`pidlab/metrics.py`（阶跃指标），`pidlab/plants.py` 里多了 `MotorSpeedLag` 和 `DialPosition`；C 是 `pl/poly.h`、`pl/metrics.h` 及对应的 `.c`，`pl/plants.h` 里多了两个对象，`pl/real.h` 多了复数类型 `pl_cplx`；C++ 是 `pidlab/poly.h`、`pidlab/metrics.h`，`pidlab/plants.h` 里多了两个对象；Rust 是 `complex.rs`、`poly.rs`、`metrics.rs`，`plants.rs` 里多了两个对象。
 > 前置：[第 1 篇](/posts/pid-control-01-p-i-d/)。需要的数学：复数、一元多项式、一阶和二阶常微分方程，会解一元二次方程。
 
@@ -211,7 +211,7 @@ $$
 
 之后做 3 步 Newton 抛光。重根附近 $p'$ 接近零，Newton 一步可能飞出去，所以我加了保护：只在 $|p|$ 变小时才接受这一步。最后做两件事保证四种语言的输出可以逐列对比：虚部小于 $10^{-9}\max(1, |z|)$ 的根强制成实数；然后按实部从小到大排序，实部相差小于 $10^{-9}(1 + \max|\mathrm{Re}|)$ 的当作并列，并列的按虚部从小到大。共轭对因此永远是“负虚部在前”。
 
-我原先担心重根附近 Durand–Kerner 的精度只有 $\sqrt\epsilon \approx 10^{-8}$ 量级，四种语言在根轨迹的分叉点附近会差出一点，所以给这两个文件预留了 $10^{-6}$ 的容差。结果下面会看到：我没用上。
+我原先担心重根附近 Durand–Kerner 的精度只有 $\sqrt\epsilon \approx 10^{-8}$ 量级，四种语言在根轨迹的分叉点附近会差出一点，打算给这两个文件把容差放宽到 $10^{-6}$。结果下面会看到：没用上。
 
 ### 阶跃响应指标
 
@@ -223,36 +223,16 @@ $$
 - **2% 调节时间：** 最后一次 $|z - 1| > 0.02$ 的采样点之后的第一个时刻。
 - **IAE：** $\sum|r - y_i|\,t_s$，矩形积分。
 
-## Python 实现
 
-### 多项式与求根
+## 把它们写成代码
 
-多项式就是系数列表，最高次在前，和 `numpy.roots` 同一个约定。完整文件：
+数学部分到此为止，下面是实现。我先写 Python，再把同一套算法搬到 C、C++、Rust。每个模块只贴承载解释的那几行，完整文件在最后的检查点里逐个链接。
+
+### 多项式
+
+多项式就是系数列表，最高次在前，和 `numpy.roots` 同一个约定。需要的运算很少：乘、加、数乘、求值。`poly_add` 要把常数项对齐，这样“三阶特征多项式加上一个常数 $KK_t$”可以直接写成 `poly_add(plant, [k * kt])`：
 
 ```python
-"""Polynomials as coefficient lists, highest degree first, and roots.
-
-Roots come from Durand-Kerner with a few Newton polish steps, so the C,
-C++ and Rust versions can repeat the exact same algorithm.
-"""
-
-from collections.abc import Sequence
-
-MAX_ITER = 1000
-DK_TOL = 1e-14
-NEWTON_STEPS = 3
-REAL_TOL = 1e-9
-
-
-def poly_mul(a: Sequence[float], b: Sequence[float]) -> list[float]:
-    """Product of two polynomials."""
-    out = [0.0] * (len(a) + len(b) - 1)
-    for i, ai in enumerate(a):
-        for j, bj in enumerate(b):
-            out[i + j] += ai * bj
-    return out
-
-
 def poly_add(a: Sequence[float], b: Sequence[float]) -> list[float]:
     """Sum of two polynomials; the constant terms line up."""
     n = max(len(a), len(b))
@@ -264,63 +244,21 @@ def poly_add(a: Sequence[float], b: Sequence[float]) -> list[float]:
     return out
 
 
-def poly_scale(a: Sequence[float], s: float) -> list[float]:
-    """Multiply every coefficient by s."""
-    return [s * ai for ai in a]
-
-
 def poly_eval(a: Sequence[float], z: complex) -> complex:
     """Horner evaluation at a complex point."""
     acc = complex(0.0, 0.0)
     for ai in a:
         acc = acc * z + ai
     return acc
+```
 
+求值用 Horner 法，输入点是复数，因为求根的时候每个猜测都是复数。`poly_mul` 是两层循环的卷积，`poly_scale` 是列表推导，没什么好解释的。
 
-def _deriv(a: Sequence[float]) -> list[float]:
-    n = len(a) - 1
-    return [a[i] * (n - i) for i in range(n)]
+### Durand–Kerner 求根
 
+上一节的算法翻译成 Python，主体就是两个嵌套循环加一步 Newton。先看 Durand–Kerner 的那一段：
 
-def _newton(a: Sequence[float], da: Sequence[float], z: complex) -> complex:
-    """One safeguarded Newton step: keep it only if |p| shrinks."""
-    p = poly_eval(a, z)
-    dp = poly_eval(da, z)
-    if dp == 0:
-        return z
-    z_new = z - p / dp
-    return z_new if abs(poly_eval(a, z_new)) < abs(p) else z
-
-
-def _after(a: complex, b: complex, tie: float) -> bool:
-    """True when a must come after b."""
-    if abs(a.real - b.real) <= tie:
-        return a.imag > b.imag
-    return a.real > b.real
-
-
-def canonical_sort(z: Sequence[complex]) -> list[complex]:
-    """Order by real part, near ties by imaginary part (insertion sort)."""
-    tie = REAL_TOL * (1.0 + max((abs(w.real) for w in z), default=0.0))
-    out = list(z)
-    for i in range(1, len(out)):
-        cur = out[i]
-        j = i - 1
-        while j >= 0 and _after(out[j], cur, tie):
-            out[j + 1] = out[j]
-            j -= 1
-        out[j + 1] = cur
-    return out
-
-
-def poly_roots(a: Sequence[float]) -> list[complex]:
-    """Roots of a[0] x^n + ... + a[n], canonically ordered.
-
-    Raises ValueError for a zero leading coefficient or degree < 1.
-    """
-    n = len(a) - 1
-    if n < 1 or a[0] == 0.0:
-        raise ValueError("need degree >= 1 and a nonzero leading term")
+```python
     c = [ai / a[0] for ai in a]
     radius = 1.0 + max(abs(ci) for ci in c[1:])
     seed = complex(0.4, 0.9)
@@ -340,52 +278,40 @@ def poly_roots(a: Sequence[float]) -> list[complex]:
                 done = False
         if done:
             break
-    dc = _deriv(c)
-    for i in range(n):
-        for _ in range(NEWTON_STEPS):
-            z[i] = _newton(c, dc, z[i])
-        if abs(z[i].imag) < REAL_TOL * max(1.0, abs(z[i])):
-            z[i] = complex(z[i].real, 0.0)
-    return canonical_sort(z)
 ```
 
-`poly_add` 把常数项对齐，所以 `[...三阶, 0] + [K*Kt]` 这样的写法能直接用。Python 的 `complex` 内置，`seed**k` 就是螺线上的第 $k$ 个点。`_newton` 里那个 `abs(poly_eval(a, z_new)) < abs(p)` 就是上面说的保护。
+这里的 `n` 是次数。`seed**k` 就是螺线上的第 $k$ 个点；`z[i] -= step` 在循环里原地更新，所以后面的根用到的是已经更新过的 `z[j]`，和上一节写的“用最新的 $z_j$”一致。
+
+重根附近 $p'$ 接近零，Newton 抛光那一步我只在 $|p|$ 变小时才接受：
+
+```python
+def _newton(a: Sequence[float], da: Sequence[float], z: complex) -> complex:
+    """One safeguarded Newton step: keep it only if |p| shrinks."""
+    p = poly_eval(a, z)
+    dp = poly_eval(da, z)
+    if dp == 0:
+        return z
+    z_new = z - p / dp
+    return z_new if abs(poly_eval(a, z_new)) < abs(p) else z
+```
+
+最后的规范化也是几行：虚部够小的强制成实数，然后用插入排序按实部排（并列时按虚部）。我没有用 `sorted`，而是写了插入排序，四种语言可以写成同一个样子，比较函数带着这个容差：
+
+```python
+def _after(a: complex, b: complex, tie: float) -> bool:
+    """True when a must come after b."""
+    if abs(a.real - b.real) <= tie:
+        return a.imag > b.imag
+    return a.real > b.real
+```
+
+`poly_roots` 在首项为零或次数小于 1 时抛 `ValueError`。
 
 ### 阶跃指标
 
+`step_metrics` 把上面五条定义直接翻成代码。先把响应归一化，再找各个时刻：
+
 ```python
-"""Step-response metrics from sampled data."""
-
-import math
-from collections.abc import Sequence
-from dataclasses import dataclass
-
-PEAK_TOL = 1e-9  # a sample within this of the maximum counts as the peak
-BAND = 0.02  # settling band
-
-
-@dataclass
-class StepMetrics:
-    """All times in seconds, overshoot in percent, iae in unit*s."""
-
-    rise: float  # 10 % to 90 %
-    overshoot: float
-    peak: float
-    settle: float  # 2 % band
-    iae: float
-
-
-def step_metrics(
-    y: Sequence[float], ts: float, k0: int, r: float
-) -> StepMetrics:
-    """Metrics of a step applied at sample k0, from y[k0:].
-
-    The start value is y[k0]; r is the final target. Times count from k0.
-    Raises ValueError if k0 is out of range or the step has zero size.
-    """
-    n = len(y)
-    if not 0 <= k0 < n or r == y[k0]:
-        raise ValueError("no step at k0")
     y0 = y[k0]
     amp = r - y0
     z = [(y[i] - y0) / amp for i in range(k0, n)]
@@ -397,18 +323,11 @@ def step_metrics(
     for i, zi in enumerate(z):
         if abs(zi - 1.0) > BAND:
             last_out = i
-    iae = 0.0
-    for yi in y[k0:]:
-        iae += abs(r - yi) * ts
-    return StepMetrics(
-        rise=t90 - t10,
-        overshoot=max(0.0, zmax - 1.0) * 100.0,
-        peak=k_peak * ts,
-        settle=(last_out + 1) * ts,
-        iae=iae,
-    )
+```
 
+调节时间是 `(last_out + 1) * ts`，超调是 `max(0, zmax - 1) * 100`。线性插值的穿越时刻单独成一个函数：
 
+```python
 def _cross(z: Sequence[float], level: float, ts: float) -> float:
     """First time z reaches level, linearly interpolated; NaN if never."""
     for i in range(1, len(z)):
@@ -418,151 +337,62 @@ def _cross(z: Sequence[float], level: float, ts: float) -> float:
     return math.nan
 ```
 
-`step_metrics` 直接把上面五条定义翻成代码。`_cross` 返回 NaN 而不是抛异常，是为了让“没有穿过 0.9”这种情形也能写进 CSV，四种语言的 NaN 在对比时算相等。
+没有穿过的时候返回 NaN 而不是抛异常，这样“没有到达 0.9”也能写进 CSV，四种语言的 NaN 在对比时算相等。
 
 ### 两个新对象
 
+`MotorSpeedLag` 的状态是 $[\omega, i]$，`DialPosition` 的状态是 $[\theta, \omega, i]$。接口和第 1 篇的对象一样，`deriv(x, u)` 和 `output(x)`，输入是 `[指令, 负载]`：
+
 ```python
-@dataclass
-class MotorSpeedLag:
-    """MotorSpeed with a first-order current loop: tau_c di/dt = i_cmd - i.
-
-    State x = [w, i]; input u = [i_cmd, tau_d]; output w.
-    """
-
-    kt: float = 0.3
-    j: float = 0.03
-    b: float = 0.01
-    tau_c: float = 0.001
-    u_max: float = 20.0
-
-    n = 2
-    m = 2
-
-    def deriv(self, x, u):
-        return [
-            (self.kt * x[1] - self.b * x[0] - u[1]) / self.j,
-            (u[0] - x[1]) / self.tau_c,
-        ]
-
-    def output(self, x):
-        return x[0]
-
-
-@dataclass
-class DialPosition:
-    """M3508 on the 拨弹盘: angle, speed and current lag.
-
-    J w' = Kt i - b w - tau_d, tau_c i' = i_cmd - i.
-    State x = [theta, w, i]; input u = [i_cmd, tau_d]; output theta.
-    """
-
-    kt: float = 0.3
-    j: float = 0.005
-    b: float = 0.01
-    tau_c: float = 0.002
-    u_max: float = 20.0
-
-    n = 3
-    m = 2
-
     def deriv(self, x, u):
         return [
             x[1],
             (self.kt * x[2] - self.b * x[1] - u[1]) / self.j,
             (u[0] - x[2]) / self.tau_c,
         ]
-
-    def output(self, x):
-        return x[0]
 ```
 
-接口和第 1 篇的对象完全一样：`deriv(x, u)`、`output(x)`，输入是 `[指令, 负载]`。`MotorSpeedLag` 和 `MotorSpeed` 是两个类而不是一个带开关的类：状态维数在 C、C++、Rust 里是编译期常数，一个对象不能有时是 1 维有时是 2 维。
+这是 `DialPosition.deriv`：角度的导数是角速度，角速度按 $J\dot\omega = K_ti - b\omega - \tau_d$，电流按 $\tau_c\dot i = i_{cmd} - i$。`MotorSpeedLag.deriv` 去掉第一行。它们是两个类而不是一个带开关的类：状态维数在 C、C++、Rust 里是编译期常数，一个对象不能有时是 1 维有时是 2 维。
 
 ### 驱动：实验表、设计公式和回路
 
-驱动 `python/ch02_transfer_functions.py` 还是 `ref` 和 `report` 两个子命令。每个实验是一个 `Case`，`kind` 说明这是哪种控制器，`p1`、`p2` 的含义随 `kind` 变：
+驱动 `python/ch02_transfer_functions.py` 还是 `ref` 和 `report` 两个子命令。每个实验是一个 `Case`，`kind` 说明控制器的种类，`p1`、`p2` 的含义随 `kind` 变，`bw` 是比例项里设定值的权重（1 是 PI，0 是 I-P）：
 
 ```python
-PD, PI_PLACE, PI_GAINS, ROUTH = range(4)
-
-
-class Case(NamedTuple):
-    """One closed-loop run; p1 and p2 depend on the kind.
-
-    PD: zeta, wn. PI_PLACE: zeta, wn. PI_GAINS: kp, ki.
-    ROUTH: multiple of the critical gain (p2 unused).
-    bw weights the setpoint in the proportional term, tau_c is the
-    current lag of the speed plant, r is the step size.
-    """
-
-    kind: int
-    p1: float
-    p2: float
-    bw: float
-    tau_c: float
-    r: float
-
-
 CASES = {
     "pd_z0.2": Case(PD, 0.2, PD_WN, 1.0, 0.0, 0.05),
-    "pd_z0.4": Case(PD, 0.4, PD_WN, 1.0, 0.0, 0.05),
-    "pd_z0.7": Case(PD, 0.7, PD_WN, 1.0, 0.0, 0.05),
-    "pd_z1": Case(PD, 1.0, PD_WN, 1.0, 0.0, 0.05),
+    # ... pd_z0.4, pd_z0.7, pd_z1
     "pi_place_w10": Case(PI_PLACE, 0.7, 10.0, 1.0, 0.0, 5.0),
     "pi_place_w10_ip": Case(PI_PLACE, 0.7, 10.0, 0.0, 0.0, 5.0),
-    "pi_place_w30": Case(PI_PLACE, 0.7, 30.0, 1.0, 0.0, 5.0),
-    "pi_place_w30_ip": Case(PI_PLACE, 0.7, 30.0, 0.0, 0.0, 5.0),
-    "pi_place_w30_lag": Case(PI_PLACE, 0.7, 30.0, 1.0, 0.001, 5.0),
-    "pi_ch01": Case(PI_GAINS, 1.0, 10.0, 1.0, 0.0, 10.0),
-    "pi_ch01_ip": Case(PI_GAINS, 1.0, 10.0, 0.0, 0.0, 10.0),
+    # ... w30, w30_ip, w30_lag, pi_ch01, pi_ch01_ip
     "routh_0.7": Case(ROUTH, 0.7, 0.0, 1.0, 0.0, 0.05),
-    "routh_0.9": Case(ROUTH, 0.9, 0.0, 1.0, 0.0, 0.05),
-    "routh_1.1": Case(ROUTH, 1.1, 0.0, 1.0, 0.0, 0.05),
+    # ... routh_0.9, routh_1.1
 }
-STEP_CASES = [n for n, c in CASES.items() if c.kind != ROUTH]
-COLUMNS = ("t", "r", "y", "u")
-METRIC_COLUMNS = ("id", "zeta", "rise", "overshoot", "tpeak", "tsettle", "iae")
 ```
 
-下面是极点配置公式、Routh 临界增益和仿真回路。`design` 就是上一节推出的公式，`run_case` 的循环顺序和第 1 篇完全一样（测量、控制、限幅、延迟线、保持、记录）：
+一共 14 组。`design` 就是上一节推出的两组公式，外加 Routh 临界增益：
 
 ```python
-def design(c: Case):
-    """Plant and the two controller numbers (k1, k2) of a case."""
     if c.kind == PD:
         g = GimbalAxis()
         kp = g.j * c.p2 * c.p2
         kd = 2.0 * c.p1 * c.p2 * g.j - (g.b + g.bf)
         return g, kp, kd
-    if c.kind == ROUTH:
-        d = DialPosition()
-        return d, c.p1 * critical_gain(d), 0.0
-    m = MotorSpeedLag(tau_c=c.tau_c) if c.tau_c > 0.0 else MotorSpeed()
+    # ...
     if c.kind == PI_PLACE:
         kp = (2.0 * c.p1 * c.p2 * m.j - m.b) / m.kt
         ki = c.p2 * c.p2 * m.j / m.kt
         return m, kp, ki
-    return m, c.p1, c.p2
 
 
 def critical_gain(d: DialPosition) -> float:
     """Routh limit of P control on the dial: (J + b tc) b / (J tc Kt)."""
     return (d.j + d.b * d.tau_c) * d.b / (d.j * d.tau_c * d.kt)
+```
 
+`run_case` 的循环顺序和第 1 篇完全一样（测量、控制、限幅、延迟线、保持、记录），区别在控制律那几行：
 
-def run_case(name: str) -> dict[str, np.ndarray]:
-    """Simulate one case following the loop order of the series."""
-    c = CASES[name]
-    plant, k1, k2 = design(c)
-    delay = DelayLine(0)
-    data = read_csv(DATA / f"ch02_{name}.csv")
-    x = [0.0] * plant.n
-    integ = 0.0
-    rows = []
-    for k in range(STEPS):
-        r, load = data["r"][k], data["d"][k]
-        y = plant.output(x) + data["n"][k]
+```python
         e = r - y
         if c.kind == PD:
             u = k1 * e - k2 * x[1]  # rate feedback from the gyro
@@ -574,13 +404,9 @@ def run_case(name: str) -> dict[str, np.ndarray]:
         rows.append([data["t"][k], r, y, u])
         if c.kind in (PI_PLACE, PI_GAINS):
             integ += k2 * TS * e
-        u_in = delay.push(u)
-        inputs = [u_in, load, 0.0] if c.kind == PD else [u_in, load]
-        x = advance(plant.deriv, x, inputs, TS, SUBSTEPS)
-    return dict(zip(COLUMNS, np.array(rows).T))
 ```
 
-`PD` 用 `x[1]` 当“陀螺仪读数”，做角速度反馈；`PI` 分支里的 `c.bw * r - y` 就是 I-P 和 PI 的唯一区别（`bw = 0` 是 I-P）；积分在算完 `u` 之后才更新，这个顺序我会在结果里用到。根轨迹这边：
+`PD` 用 `x[1]` 当“陀螺仪读数”做角速度反馈；`c.bw * r - y` 就是 I-P 和 PI 的唯一区别；积分在算完 `u` 之后才更新，这个顺序我会在结果里用到。根轨迹那边，特征多项式就是用 `poly_mul`、`poly_add`、`poly_scale` 拼出来的，和上面的数学一一对应：
 
 ```python
 def locus_poly(pd_zero: bool, k: float) -> list[float]:
@@ -589,23 +415,13 @@ def locus_poly(pd_zero: bool, k: float) -> list[float]:
     plant = poly_mul(poly_mul([1.0, 0.0], [d.j, d.b]), [d.tau_c, 1.0])
     ctrl = [1.0 / PD_ZONE, 1.0] if pd_zero else [1.0]
     return poly_add(plant, poly_scale(ctrl, k * d.kt))
-
-
-def locus(pd_zero: bool) -> dict[str, np.ndarray]:
-    ks = read_csv(DATA / "ch02_rlocus.csv")["k"]
-    cols = {"k": ks}
-    rows = [poly_roots(locus_poly(pd_zero, k)) for k in ks]
-    for i in range(3):
-        cols[f"re{i}"] = np.array([r[i].real for r in rows])
-        cols[f"im{i}"] = np.array([r[i].imag for r in rows])
-    return cols
 ```
 
-特征多项式就是用 `poly_mul`、`poly_add`、`poly_scale` 拼出来的，和上面的数学一一对应。`report` 里的对比、指标表、断言和画图全文见 [`python/ch02_transfer_functions.py`](https://github.com/bfmhno3/pid-lab/tree/tutorial-v1/python/ch02_transfer_functions.py)。
+`report` 里的对比、指标表、断言和画图在驱动的 `report` 子命令里，下面“结果”一节引用的数字都来自它。
 
 ## C、C++、Rust 实现
 
-三个版本都是同一份结构：`poly`、`metrics`、两个新对象，加一个驱动。区别主要在这几处：
+三个版本是同一份结构：`poly`、`metrics`、两个新对象，加一个驱动。区别主要在这几处：
 
 - **复数。** C 用 C99 的 `_Complex`，但 `pl_real complex` 这种写法不合法（`pl_real` 是 typedef，不能再和 `complex` 组合），所以 `real.h` 里和 `pl_real` 一起多了一个 `pl_cplx`，同样由 `-DPL_USE_FLOAT` 切换，还有配套的 `PL_CABS`、`PL_CREAL`、`PL_CIMAG`。C++ 用 `std::complex<T>`。Rust 的 `no_std` 里没有复数，我写了一个 84 行的 `complex.rs`，只实现 `+ - * /`、模长和乘实数。
 - **多项式的存放。** C 用 `PL_MAX_POLY = 8` 的固定数组，调用者传长度；C++ 用 `std::array<T, N>`，`PolyMul` 的返回类型 `std::array<T, A + B - 1>` 让长度进入类型，不会越界；Rust 用切片加调用者给的输出缓冲区（稳定版 Rust 还不能写 `[T; N + M - 1]`）。三者都不分配内存。
@@ -614,31 +430,9 @@ def locus(pd_zero: bool) -> dict[str, np.ndarray]:
 
 ### C
 
-求根函数是 Python 版的逐行翻译。`pl_cplx` 的乘除由编译器处理，我没有手写：
+求根函数是 Python 版的逐行翻译。`pl_cplx` 的乘除由编译器处理，我没有手写。Durand–Kerner 循环：
 
 ```c
-int pl_poly_roots(const pl_real *a, int n, pl_cplx *roots)
-{
-	pl_real c[PL_MAX_POLY], dc[PL_MAX_POLY];
-	pl_cplx seed = 0.4 + 0.9 * I;
-	pl_cplx pw = 1.0;
-	pl_real radius = 0.0;
-	int deg = n - 1;
-	int i, j, it, s;
-
-	if (n < 2 || n > PL_MAX_POLY || a[0] == 0.0)
-		return -EINVAL;
-	for (i = 0; i < n; i++)
-		c[i] = a[i] / a[0];
-	for (i = 1; i < n; i++)
-		if (PL_FABS(c[i]) > radius)
-			radius = PL_FABS(c[i]);
-	radius += 1.0;
-	for (i = 0; i < deg; i++) {
-		roots[i] = radius * pw;
-		pw *= seed;
-	}
-
 	for (it = 0; it < MAX_ITER; it++) {
 		bool done = true;
 
@@ -659,343 +453,22 @@ int pl_poly_roots(const pl_real *a, int n, pl_cplx *roots)
 		if (done)
 			break;
 	}
-
-	for (i = 0; i < deg; i++)
-		dc[i] = c[i] * (deg - i);
-	for (i = 0; i < deg; i++) {
-		for (s = 0; s < NEWTON_STEPS; s++)
-			roots[i] = newton(c, n, dc, roots[i]);
-		if (PL_FABS(PL_CIMAG(roots[i])) <
-		    REAL_TOL * (PL_CABS(roots[i]) > 1.0 ?
-				PL_CABS(roots[i]) : 1.0))
-			roots[i] = PL_CREAL(roots[i]);
-	}
-	canonical_sort(roots, deg);
-	return 0;
-}
 ```
 
-C 里只有这一个地方用到复数，别处都是 `pl_real`。`PL_FABS(PL_CREAL(...))` 看着啰嗦，但它是 float 构建（`-DPL_USE_FLOAT`）下 `fabsf`、`crealf` 都匹配的最简单写法，我编译过 float 版确认没有警告（第 10 篇才会真的跑它）。
-
-<details>
-<summary>完整源码：c/include/pl/poly.h、c/src/poly.c、c/include/pl/metrics.h、c/src/metrics.c</summary>
-
-```c
-/* SPDX-License-Identifier: MIT OR Apache-2.0 */
-/* Polynomials: coefficients highest degree first, fixed capacity. */
-#ifndef PL_POLY_H
-#define PL_POLY_H
-
-#include "pl/real.h"
-
-#define PL_MAX_POLY 8 /* coefficients, so degree <= 7 */
-
-/* out = a * b, returns its length or -EINVAL if it exceeds PL_MAX_POLY. */
-int pl_poly_mul(const pl_real *a, int na, const pl_real *b, int nb,
-		pl_real *out);
-
-/* out = a + b with the constant terms aligned, returns the longer length. */
-int pl_poly_add(const pl_real *a, int na, const pl_real *b, int nb,
-		pl_real *out);
-
-/* a *= s */
-void pl_poly_scale(pl_real *a, int n, pl_real s);
-
-/* Horner evaluation at a complex point. */
-pl_cplx pl_poly_eval(const pl_real *a, int n, pl_cplx z);
-
-/* Roots of a[0] x^(n-1) + ... + a[n-1], written to roots[0..n-2] in the */
-/* canonical order: real part ascending, near ties by imaginary part. */
-/* Durand-Kerner plus three safeguarded Newton steps. */
-/* Returns 0, or -EINVAL for a zero leading term, n < 2 or n > PL_MAX_POLY. */
-int pl_poly_roots(const pl_real *a, int n, pl_cplx *roots);
-
-#endif /* PL_POLY_H */
-```
-
-```c
-// SPDX-License-Identifier: MIT OR Apache-2.0
-#include "pl/poly.h"
-
-#include <errno.h>
-#include <stdbool.h>
-
-#define MAX_ITER 1000
-#define DK_TOL 1e-14
-#define NEWTON_STEPS 3
-#define REAL_TOL 1e-9
-
-int pl_poly_mul(const pl_real *a, int na, const pl_real *b, int nb,
-		pl_real *out)
-{
-	int n = na + nb - 1;
-	int i, j;
-
-	if (na < 1 || nb < 1 || n > PL_MAX_POLY)
-		return -EINVAL;
-	for (i = 0; i < n; i++)
-		out[i] = 0.0;
-	for (i = 0; i < na; i++)
-		for (j = 0; j < nb; j++)
-			out[i + j] += a[i] * b[j];
-	return n;
-}
-
-int pl_poly_add(const pl_real *a, int na, const pl_real *b, int nb,
-		pl_real *out)
-{
-	int n = na > nb ? na : nb;
-	int i;
-
-	if (n > PL_MAX_POLY)
-		return -EINVAL;
-	for (i = 0; i < n; i++)
-		out[i] = 0.0;
-	for (i = 0; i < na; i++)
-		out[n - na + i] += a[i];
-	for (i = 0; i < nb; i++)
-		out[n - nb + i] += b[i];
-	return n;
-}
-
-void pl_poly_scale(pl_real *a, int n, pl_real s)
-{
-	int i;
-
-	for (i = 0; i < n; i++)
-		a[i] = s * a[i];
-}
-
-pl_cplx pl_poly_eval(const pl_real *a, int n, pl_cplx z)
-{
-	pl_cplx acc = 0.0;
-	int i;
-
-	for (i = 0; i < n; i++)
-		acc = acc * z + a[i];
-	return acc;
-}
-
-/* Keep the Newton step only if |p| shrinks. */
-static pl_cplx newton(const pl_real *a, int n, const pl_real *da,
-			      pl_cplx z)
-{
-	pl_cplx p = pl_poly_eval(a, n, z);
-	pl_cplx dp = pl_poly_eval(da, n - 1, z);
-	pl_cplx z_new;
-
-	if (dp == 0.0)
-		return z;
-	z_new = z - p / dp;
-	return PL_CABS(pl_poly_eval(a, n, z_new)) < PL_CABS(p) ? z_new : z;
-}
-
-/* True when a must come after b. */
-static bool after(pl_cplx a, pl_cplx b, pl_real tie)
-{
-	if (PL_FABS(PL_CREAL(a) - PL_CREAL(b)) <= tie)
-		return PL_CIMAG(a) > PL_CIMAG(b);
-	return PL_CREAL(a) > PL_CREAL(b);
-}
-
-static void canonical_sort(pl_cplx *z, int n)
-{
-	pl_real max_re = 0.0;
-	pl_real tie;
-	int i, j;
-
-	for (i = 0; i < n; i++)
-		if (PL_FABS(PL_CREAL(z[i])) > max_re)
-			max_re = PL_FABS(PL_CREAL(z[i]));
-	tie = REAL_TOL * (1.0 + max_re);
-	for (i = 1; i < n; i++) {
-		pl_cplx cur = z[i];
-
-		for (j = i - 1; j >= 0 && after(z[j], cur, tie); j--)
-			z[j + 1] = z[j];
-		z[j + 1] = cur;
-	}
-}
-
-int pl_poly_roots(const pl_real *a, int n, pl_cplx *roots)
-{
-	pl_real c[PL_MAX_POLY], dc[PL_MAX_POLY];
-	pl_cplx seed = 0.4 + 0.9 * I;
-	pl_cplx pw = 1.0;
-	pl_real radius = 0.0;
-	int deg = n - 1;
-	int i, j, it, s;
-
-	if (n < 2 || n > PL_MAX_POLY || a[0] == 0.0)
-		return -EINVAL;
-	for (i = 0; i < n; i++)
-		c[i] = a[i] / a[0];
-	for (i = 1; i < n; i++)
-		if (PL_FABS(c[i]) > radius)
-			radius = PL_FABS(c[i]);
-	radius += 1.0;
-	for (i = 0; i < deg; i++) {
-		roots[i] = radius * pw;
-		pw *= seed;
-	}
-
-	for (it = 0; it < MAX_ITER; it++) {
-		bool done = true;
-
-		for (i = 0; i < deg; i++) {
-			pl_cplx den = 1.0;
-			pl_cplx step;
-
-			for (j = 0; j < deg; j++)
-				if (j != i)
-					den *= roots[i] - roots[j];
-			if (den == 0.0)
-				continue;
-			step = pl_poly_eval(c, n, roots[i]) / den;
-			roots[i] -= step;
-			if (PL_CABS(step) > DK_TOL * (1.0 + PL_CABS(roots[i])))
-				done = false;
-		}
-		if (done)
-			break;
-	}
-
-	for (i = 0; i < deg; i++)
-		dc[i] = c[i] * (deg - i);
-	for (i = 0; i < deg; i++) {
-		for (s = 0; s < NEWTON_STEPS; s++)
-			roots[i] = newton(c, n, dc, roots[i]);
-		if (PL_FABS(PL_CIMAG(roots[i])) <
-		    REAL_TOL * (PL_CABS(roots[i]) > 1.0 ?
-				PL_CABS(roots[i]) : 1.0))
-			roots[i] = PL_CREAL(roots[i]);
-	}
-	canonical_sort(roots, deg);
-	return 0;
-}
-```
-
-```c
-/* SPDX-License-Identifier: MIT OR Apache-2.0 */
-/* Step-response metrics from sampled data. */
-#ifndef PL_METRICS_H
-#define PL_METRICS_H
-
-#include "pl/real.h"
-
-struct pl_step_metrics {
-	pl_real rise; /* 10 % to 90 %, s */
-	pl_real overshoot; /* percent */
-	pl_real peak; /* s */
-	pl_real settle; /* 2 % band, s */
-	pl_real iae; /* unit * s */
-};
-
-/* Metrics of a step applied at sample k0, from y[k0..n-1]. The start */
-/* value is y[k0], r is the final target, times count from k0. */
-/* Returns 0, or -EINVAL if k0 is out of range or the step has zero size. */
-int pl_step_metrics(const pl_real *y, long n, pl_real ts, long k0, pl_real r,
-		    struct pl_step_metrics *out);
-
-#endif /* PL_METRICS_H */
-```
-
-```c
-// SPDX-License-Identifier: MIT OR Apache-2.0
-#include "pl/metrics.h"
-
-#include <errno.h>
-
-#define PEAK_TOL 1e-9
-#define BAND 0.02
-
-/* First time the normalized response reaches level, interpolated. */
-static pl_real cross(const pl_real *y, long n, long k0, pl_real y0,
-		     pl_real amp, pl_real level, pl_real ts)
-{
-	long i;
-
-	for (i = 1; i < n - k0; i++) {
-		pl_real zi = (y[k0 + i] - y0) / amp;
-		pl_real zp, frac;
-
-		if (zi >= level) {
-			zp = (y[k0 + i - 1] - y0) / amp;
-			frac = (level - zp) / (zi - zp);
-			return (i - 1 + frac) * ts;
-		}
-	}
-	return NAN;
-}
-
-int pl_step_metrics(const pl_real *y, long n, pl_real ts, long k0, pl_real r,
-		    struct pl_step_metrics *out)
-{
-	pl_real y0, amp, zmax, iae = 0.0;
-	long i, k_peak = 0, last_out = -1;
-
-	if (k0 < 0 || k0 >= n || r == y[k0])
-		return -EINVAL;
-	y0 = y[k0];
-	amp = r - y0;
-	zmax = (y[k0] - y0) / amp;
-	for (i = 0; i < n - k0; i++) {
-		pl_real zi = (y[k0 + i] - y0) / amp;
-
-		if (zi > zmax)
-			zmax = zi;
-		if (PL_FABS(zi - 1) > BAND)
-			last_out = i;
-		iae += PL_FABS(r - y[k0 + i]) * ts;
-	}
-	for (i = 0; i < n - k0; i++) {
-		if ((y[k0 + i] - y0) / amp >= zmax - PEAK_TOL) {
-			k_peak = i;
-			break;
-		}
-	}
-	out->rise = cross(y, n, k0, y0, amp, 0.9, ts) -
-		    cross(y, n, k0, y0, amp, 0.1, ts);
-	out->overshoot = (zmax - 1.0 > 0.0 ? zmax - 1.0 : 0.0) * 100.0;
-	out->peak = k_peak * ts;
-	out->settle = (last_out + 1) * ts;
-	out->iae = iae;
-	return 0;
-}
-```
-
-</details>
-
-驱动：[`c/apps/ch02.c`](https://github.com/bfmhno3/pid-lab/tree/tutorial-v1/c/apps/ch02.c)。
+返回值和出错都是内核风格：`n < 2`、`n > PL_MAX_POLY` 或首项为零时返回 `-EINVAL`，结果写进调用者给的 `roots` 数组。C 里只有 `poly.c` 用到复数，别处都是 `pl_real`。`PL_FABS(PL_CREAL(...))` 看着啰嗦，但它是 float 构建（`-DPL_USE_FLOAT`）下 `fabsf`、`crealf` 都匹配的最简单写法，我编译过 float 版确认没有警告（第 10 篇才会真的跑它）。
 
 ### C++
 
 `PolyRoots` 是一个函数模板，`N` 是系数个数，返回 `std::optional<std::array<std::complex<T>, N - 1>>`，根的个数在类型里：
 
 ```cpp
-
-// Roots of a[0] x^(N-1) + ... + a[N-1] in the canonical order.
-// Returns std::nullopt for a zero leading term.
 template <class T, std::size_t N>
 std::optional<std::array<std::complex<T>, N - 1>> PolyRoots(
     const std::array<T, N>& a) {
   static_assert(N >= 2, "need degree >= 1");
   constexpr std::size_t kDeg = N - 1;
   if (a[0] == T(0)) return std::nullopt;
-  std::array<T, N> c;
-  for (std::size_t i = 0; i < N; ++i) c[i] = a[i] / a[0];
-  T radius = 0;
-  for (std::size_t i = 1; i < N; ++i) radius = std::max(radius, std::abs(c[i]));
-  radius += T(1);
-
-  const std::complex<T> seed(T(0.4), T(0.9));
-  std::complex<T> pw(1);
-  std::array<std::complex<T>, kDeg> z;
-  for (std::size_t i = 0; i < kDeg; ++i) {
-    z[i] = radius * pw;
-    pw *= seed;
-  }
-
+  // ... normalize, Cauchy radius, spiral start
   for (int it = 0; it < internal::kMaxIter; ++it) {
     bool done = true;
     for (std::size_t i = 0; i < kDeg; ++i) {
@@ -1012,404 +485,18 @@ std::optional<std::array<std::complex<T>, N - 1>> PolyRoots(
     }
     if (done) break;
   }
-
-  std::array<T, kDeg> dc;
-  for (std::size_t i = 0; i < kDeg; ++i) dc[i] = c[i] * T(kDeg - i);
-  for (std::size_t i = 0; i < kDeg; ++i) {
-    for (int s = 0; s < internal::kNewtonSteps; ++s) {
-      z[i] = internal::Newton(c, dc, z[i]);
-    }
-    if (std::abs(z[i].imag()) <
-        T(internal::kRealTol) * std::max(T(1), std::abs(z[i]))) {
-      z[i] = std::complex<T>(z[i].real(), T(0));
-    }
-  }
-  CanonicalSort(z);
+  // ... Newton polish, canonical sort
   return z;
 }
 ```
 
-`std::complex` 的运算符和 C 的 `_Complex` 行为一样，所以循环体几乎是逐字相同。`internal` 命名空间放 Newton 和比较函数，不对外。
-
-<details>
-<summary>完整源码：cpp/include/pidlab/poly.h、cpp/include/pidlab/metrics.h</summary>
-
-```cpp
-// Polynomials as std::array, coefficients highest degree first, and roots
-// by Durand-Kerner with a few safeguarded Newton steps.
-#ifndef PIDLAB_POLY_H_
-#define PIDLAB_POLY_H_
-
-#include <algorithm>
-#include <array>
-#include <cmath>
-#include <complex>
-#include <cstddef>
-#include <optional>
-
-namespace pidlab {
-
-namespace internal {
-
-inline constexpr int kMaxIter = 1000;
-inline constexpr int kNewtonSteps = 3;
-inline constexpr double kDkTol = 1e-14;
-inline constexpr double kRealTol = 1e-9;
-
-}  // namespace internal
-
-// a * b
-template <class T, std::size_t A, std::size_t B>
-std::array<T, A + B - 1> PolyMul(const std::array<T, A>& a,
-                                 const std::array<T, B>& b) {
-  std::array<T, A + B - 1> out{};
-  for (std::size_t i = 0; i < A; ++i) {
-    for (std::size_t j = 0; j < B; ++j) out[i + j] += a[i] * b[j];
-  }
-  return out;
-}
-
-// a + b with the constant terms aligned.
-template <class T, std::size_t A, std::size_t B>
-std::array<T, (A > B ? A : B)> PolyAdd(const std::array<T, A>& a,
-                                       const std::array<T, B>& b) {
-  constexpr std::size_t kN = A > B ? A : B;
-  std::array<T, kN> out{};
-  for (std::size_t i = 0; i < A; ++i) out[kN - A + i] += a[i];
-  for (std::size_t i = 0; i < B; ++i) out[kN - B + i] += b[i];
-  return out;
-}
-
-template <class T, std::size_t N>
-std::array<T, N> PolyScale(std::array<T, N> a, T s) {
-  for (T& c : a) c = s * c;
-  return a;
-}
-
-// Horner evaluation at a complex point.
-template <class T, std::size_t N>
-std::complex<T> PolyEval(const std::array<T, N>& a, std::complex<T> z) {
-  std::complex<T> acc(0);
-  for (const T& c : a) acc = acc * z + c;
-  return acc;
-}
-
-namespace internal {
-
-// Keep the Newton step only if |p| shrinks.
-template <class T, std::size_t N>
-std::complex<T> Newton(const std::array<T, N>& a,
-                       const std::array<T, N - 1>& da, std::complex<T> z) {
-  const std::complex<T> p = PolyEval(a, z);
-  const std::complex<T> dp = PolyEval(da, z);
-  if (dp == std::complex<T>(0)) return z;
-  const std::complex<T> z_new = z - p / dp;
-  return std::abs(PolyEval(a, z_new)) < std::abs(p) ? z_new : z;
-}
-
-// True when a must come after b.
-template <class T>
-bool After(std::complex<T> a, std::complex<T> b, T tie) {
-  if (std::abs(a.real() - b.real()) <= tie) return a.imag() > b.imag();
-  return a.real() > b.real();
-}
-
-}  // namespace internal
-
-// Order by real part, near ties by imaginary part (insertion sort).
-template <class T, std::size_t N>
-void CanonicalSort(std::array<std::complex<T>, N>& z) {
-  T max_re = 0;
-  for (const auto& w : z) max_re = std::max(max_re, std::abs(w.real()));
-  const T tie = T(internal::kRealTol) * (T(1) + max_re);
-  for (std::size_t i = 1; i < N; ++i) {
-    const std::complex<T> cur = z[i];
-    std::size_t j = i;
-    while (j > 0 && internal::After(z[j - 1], cur, tie)) {
-      z[j] = z[j - 1];
-      --j;
-    }
-    z[j] = cur;
-  }
-}
-
-// Roots of a[0] x^(N-1) + ... + a[N-1] in the canonical order.
-// Returns std::nullopt for a zero leading term.
-template <class T, std::size_t N>
-std::optional<std::array<std::complex<T>, N - 1>> PolyRoots(
-    const std::array<T, N>& a) {
-  static_assert(N >= 2, "need degree >= 1");
-  constexpr std::size_t kDeg = N - 1;
-  if (a[0] == T(0)) return std::nullopt;
-  std::array<T, N> c;
-  for (std::size_t i = 0; i < N; ++i) c[i] = a[i] / a[0];
-  T radius = 0;
-  for (std::size_t i = 1; i < N; ++i) radius = std::max(radius, std::abs(c[i]));
-  radius += T(1);
-
-  const std::complex<T> seed(T(0.4), T(0.9));
-  std::complex<T> pw(1);
-  std::array<std::complex<T>, kDeg> z;
-  for (std::size_t i = 0; i < kDeg; ++i) {
-    z[i] = radius * pw;
-    pw *= seed;
-  }
-
-  for (int it = 0; it < internal::kMaxIter; ++it) {
-    bool done = true;
-    for (std::size_t i = 0; i < kDeg; ++i) {
-      std::complex<T> den(1);
-      for (std::size_t j = 0; j < kDeg; ++j) {
-        if (j != i) den *= z[i] - z[j];
-      }
-      if (den == std::complex<T>(0)) continue;
-      const std::complex<T> step = PolyEval(c, z[i]) / den;
-      z[i] -= step;
-      if (std::abs(step) > T(internal::kDkTol) * (T(1) + std::abs(z[i]))) {
-        done = false;
-      }
-    }
-    if (done) break;
-  }
-
-  std::array<T, kDeg> dc;
-  for (std::size_t i = 0; i < kDeg; ++i) dc[i] = c[i] * T(kDeg - i);
-  for (std::size_t i = 0; i < kDeg; ++i) {
-    for (int s = 0; s < internal::kNewtonSteps; ++s) {
-      z[i] = internal::Newton(c, dc, z[i]);
-    }
-    if (std::abs(z[i].imag()) <
-        T(internal::kRealTol) * std::max(T(1), std::abs(z[i]))) {
-      z[i] = std::complex<T>(z[i].real(), T(0));
-    }
-  }
-  CanonicalSort(z);
-  return z;
-}
-
-}  // namespace pidlab
-
-#endif  // PIDLAB_POLY_H_
-```
-
-```cpp
-// Step-response metrics from sampled data.
-#ifndef PIDLAB_METRICS_H_
-#define PIDLAB_METRICS_H_
-
-#include <algorithm>
-#include <cmath>
-#include <cstddef>
-#include <limits>
-#include <optional>
-#include <span>
-
-namespace pidlab {
-
-template <class T = double>
-struct StepMetrics {
-  T rise;       // 10 % to 90 %, s
-  T overshoot;  // percent
-  T peak;       // s
-  T settle;     // 2 % band, s
-  T iae;        // unit * s
-};
-
-namespace internal {
-
-// First time the normalized response reaches `level`, interpolated.
-template <class T>
-T Cross(std::span<const T> y, std::size_t k0, T y0, T amp, T level, T ts) {
-  for (std::size_t i = 1; i < y.size() - k0; ++i) {
-    const T zi = (y[k0 + i] - y0) / amp;
-    if (zi >= level) {
-      const T zp = (y[k0 + i - 1] - y0) / amp;
-      const T frac = (level - zp) / (zi - zp);
-      return (T(i) - T(1) + frac) * ts;
-    }
-  }
-  return std::numeric_limits<T>::quiet_NaN();
-}
-
-}  // namespace internal
-
-// Metrics of a step applied at sample k0, from y[k0..]. The start value is
-// y[k0], r is the final target, times count from k0. Returns std::nullopt
-// if k0 is out of range or the step has zero size.
-template <class T>
-std::optional<StepMetrics<T>> ComputeStepMetrics(std::span<const T> y, T ts,
-                                                 std::size_t k0, T r) {
-  constexpr T kPeakTol = T(1e-9);
-  constexpr T kBand = T(0.02);
-  if (k0 >= y.size() || r == y[k0]) return std::nullopt;
-  const std::size_t n = y.size() - k0;
-  const T y0 = y[k0];
-  const T amp = r - y0;
-  T zmax = (y[k0] - y0) / amp;
-  T iae = 0;
-  long last_out = -1;
-  for (std::size_t i = 0; i < n; ++i) {
-    const T zi = (y[k0 + i] - y0) / amp;
-    zmax = std::max(zmax, zi);
-    if (std::abs(zi - T(1)) > kBand) last_out = static_cast<long>(i);
-    iae += std::abs(r - y[k0 + i]) * ts;
-  }
-  std::size_t k_peak = 0;
-  for (std::size_t i = 0; i < n; ++i) {
-    if ((y[k0 + i] - y0) / amp >= zmax - kPeakTol) {
-      k_peak = i;
-      break;
-    }
-  }
-  StepMetrics<T> m;
-  m.rise = internal::Cross(y, k0, y0, amp, T(0.9), ts) -
-           internal::Cross(y, k0, y0, amp, T(0.1), ts);
-  m.overshoot = std::max(T(0), zmax - T(1)) * T(100);
-  m.peak = static_cast<T>(k_peak) * ts;
-  m.settle = static_cast<T>(last_out + 1) * ts;
-  m.iae = iae;
-  return m;
-}
-
-}  // namespace pidlab
-
-#endif  // PIDLAB_METRICS_H_
-```
-
-</details>
-
-驱动：[`cpp/apps/ch02.cc`](https://github.com/bfmhno3/pid-lab/tree/tutorial-v1/cpp/apps/ch02.cc)。
+`std::complex` 的运算符和 C 的 `_Complex` 行为一样，所以循环体几乎逐字相同。Newton 和比较函数放在 `internal` 命名空间里，不对外。
 
 ### Rust
 
-没有现成的复数，所以先是 `complex.rs`。四则运算我用运算符重载，这样 `poly_roots` 的循环读起来和 Python 一样：
+没有现成的复数，所以先写 `complex.rs`。四则运算用运算符重载，这样 `poly_roots` 的循环读起来和 Python 一样。除法用的是教科书公式：
 
 ```rust
-/// Roots of `a[0] x^n + ... + a[n]` written to `roots[..n]`, canonically
-/// ordered. `a` has at most `MAX_POLY` coefficients.
-pub fn poly_roots(a: &[Real], roots: &mut [Complex]) -> Result<(), PolyError> {
-    let n = a.len();
-    if n < 2 || a[0] == 0.0 {
-        return Err(PolyError::Degenerate);
-    }
-    let deg = n - 1;
-    if n > MAX_POLY || roots.len() < deg {
-        return Err(PolyError::Size);
-    }
-    let mut c = [0.0; MAX_POLY];
-    for i in 0..n {
-        c[i] = a[i] / a[0];
-    }
-    let c = &c[..n];
-    let radius = 1.0 + c[1..].iter().fold(0.0, |m: Real, v| m.max(real::fabs(*v)));
-    let seed = Complex::new(0.4, 0.9);
-    let mut pw = Complex::ONE;
-    let z = &mut roots[..deg];
-    for zi in z.iter_mut() {
-        *zi = pw.scale(radius);
-        pw *= seed;
-    }
-
-    for _ in 0..MAX_ITER {
-        let mut done = true;
-        for i in 0..deg {
-            let mut den = Complex::ONE;
-            for j in 0..deg {
-                if j != i {
-                    den *= z[i] - z[j];
-                }
-            }
-            if den == Complex::ZERO {
-                continue;
-            }
-            let step = poly_eval(c, z[i]) / den;
-            z[i] -= step;
-            if step.abs() > DK_TOL * (1.0 + z[i].abs()) {
-                done = false;
-            }
-        }
-        if done {
-            break;
-        }
-    }
-
-    let mut dc = [0.0; MAX_POLY];
-    for i in 0..deg {
-        dc[i] = c[i] * (deg - i) as Real;
-    }
-    for zi in z.iter_mut() {
-        for _ in 0..NEWTON_STEPS {
-            *zi = newton(c, &dc[..deg], *zi);
-        }
-        if real::fabs(zi.im) < REAL_TOL * zi.abs().max(1.0) {
-            zi.im = 0.0;
-        }
-    }
-    canonical_sort(z);
-    Ok(())
-}
-```
-
-<details>
-<summary>完整源码：rust/src/complex.rs、rust/src/poly.rs、rust/src/metrics.rs</summary>
-
-```rust
-//! A minimal complex number: `no_std` has no `Complex`, and root finding
-//! needs only a handful of operations.
-
-use core::ops::{Add, AddAssign, Div, Mul, MulAssign, Sub, SubAssign};
-
-use crate::real::{self, Real};
-
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct Complex {
-    pub re: Real,
-    pub im: Real,
-}
-
-impl Complex {
-    pub const ZERO: Complex = Complex { re: 0.0, im: 0.0 };
-    pub const ONE: Complex = Complex { re: 1.0, im: 0.0 };
-
-    pub const fn new(re: Real, im: Real) -> Self {
-        Self { re, im }
-    }
-
-    /// Modulus.
-    pub fn abs(self) -> Real {
-        real::hypot(self.re, self.im)
-    }
-
-    /// Scale by a real number.
-    pub fn scale(self, s: Real) -> Self {
-        Self::new(s * self.re, s * self.im)
-    }
-}
-
-impl Add for Complex {
-    type Output = Complex;
-    fn add(self, o: Complex) -> Complex {
-        Complex::new(self.re + o.re, self.im + o.im)
-    }
-}
-
-impl Sub for Complex {
-    type Output = Complex;
-    fn sub(self, o: Complex) -> Complex {
-        Complex::new(self.re - o.re, self.im - o.im)
-    }
-}
-
-impl Mul for Complex {
-    type Output = Complex;
-    fn mul(self, o: Complex) -> Complex {
-        Complex::new(
-            self.re * o.re - self.im * o.im,
-            self.re * o.im + self.im * o.re,
-        )
-    }
-}
-
 impl Div for Complex {
     type Output = Complex;
     fn div(self, o: Complex) -> Complex {
@@ -1420,160 +507,11 @@ impl Div for Complex {
         )
     }
 }
-
-impl AddAssign for Complex {
-    fn add_assign(&mut self, o: Complex) {
-        *self = *self + o;
-    }
-}
-
-impl SubAssign for Complex {
-    fn sub_assign(&mut self, o: Complex) {
-        *self = *self - o;
-    }
-}
-
-impl MulAssign for Complex {
-    fn mul_assign(&mut self, o: Complex) {
-        *self = *self * o;
-    }
-}
 ```
 
+于是 `poly_roots` 里的核心循环和前面三个版本几乎一模一样：
+
 ```rust
-//! Polynomials as slices, coefficients highest degree first, and roots by
-//! Durand-Kerner with a few safeguarded Newton steps. No allocation.
-
-use crate::complex::Complex;
-use crate::real::{self, Real};
-
-/// Longest supported polynomial, in coefficients.
-pub const MAX_POLY: usize = 8;
-
-const MAX_ITER: usize = 1000;
-const DK_TOL: Real = 1e-14;
-const NEWTON_STEPS: usize = 3;
-const REAL_TOL: Real = 1e-9;
-
-#[derive(Debug, PartialEq, Eq)]
-pub enum PolyError {
-    /// The result does not fit `out`, or the input is empty.
-    Size,
-    /// Zero leading coefficient, or degree below 1.
-    Degenerate,
-}
-
-/// `out = a * b`; returns the length of the product.
-pub fn poly_mul(a: &[Real], b: &[Real], out: &mut [Real]) -> Result<usize, PolyError> {
-    if a.is_empty() || b.is_empty() || a.len() + b.len() - 1 > out.len() {
-        return Err(PolyError::Size);
-    }
-    let n = a.len() + b.len() - 1;
-    out[..n].fill(0.0);
-    for (i, ai) in a.iter().enumerate() {
-        for (j, bj) in b.iter().enumerate() {
-            out[i + j] += ai * bj;
-        }
-    }
-    Ok(n)
-}
-
-/// `out = a + b` with the constant terms aligned; returns the length.
-pub fn poly_add(a: &[Real], b: &[Real], out: &mut [Real]) -> Result<usize, PolyError> {
-    let n = a.len().max(b.len());
-    if n > out.len() {
-        return Err(PolyError::Size);
-    }
-    out[..n].fill(0.0);
-    for (i, ai) in a.iter().enumerate() {
-        out[n - a.len() + i] += ai;
-    }
-    for (i, bi) in b.iter().enumerate() {
-        out[n - b.len() + i] += bi;
-    }
-    Ok(n)
-}
-
-/// `a *= s`
-pub fn poly_scale(a: &mut [Real], s: Real) {
-    for c in a {
-        *c *= s;
-    }
-}
-
-/// Horner evaluation at a complex point.
-pub fn poly_eval(a: &[Real], z: Complex) -> Complex {
-    let mut acc = Complex::ZERO;
-    for &c in a {
-        acc = acc * z + Complex::new(c, 0.0);
-    }
-    acc
-}
-
-/// Keep the Newton step only if `|p|` shrinks.
-fn newton(a: &[Real], da: &[Real], z: Complex) -> Complex {
-    let p = poly_eval(a, z);
-    let dp = poly_eval(da, z);
-    if dp == Complex::ZERO {
-        return z;
-    }
-    let z_new = z - p / dp;
-    if poly_eval(a, z_new).abs() < p.abs() {
-        z_new
-    } else {
-        z
-    }
-}
-
-/// True when `a` must come after `b`.
-fn after(a: Complex, b: Complex, tie: Real) -> bool {
-    if real::fabs(a.re - b.re) <= tie {
-        a.im > b.im
-    } else {
-        a.re > b.re
-    }
-}
-
-/// Order by real part, near ties by imaginary part (insertion sort).
-pub fn canonical_sort(z: &mut [Complex]) {
-    let max_re = z.iter().fold(0.0, |m: Real, w| m.max(real::fabs(w.re)));
-    let tie = REAL_TOL * (1.0 + max_re);
-    for i in 1..z.len() {
-        let cur = z[i];
-        let mut j = i;
-        while j > 0 && after(z[j - 1], cur, tie) {
-            z[j] = z[j - 1];
-            j -= 1;
-        }
-        z[j] = cur;
-    }
-}
-
-/// Roots of `a[0] x^n + ... + a[n]` written to `roots[..n]`, canonically
-/// ordered. `a` has at most `MAX_POLY` coefficients.
-pub fn poly_roots(a: &[Real], roots: &mut [Complex]) -> Result<(), PolyError> {
-    let n = a.len();
-    if n < 2 || a[0] == 0.0 {
-        return Err(PolyError::Degenerate);
-    }
-    let deg = n - 1;
-    if n > MAX_POLY || roots.len() < deg {
-        return Err(PolyError::Size);
-    }
-    let mut c = [0.0; MAX_POLY];
-    for i in 0..n {
-        c[i] = a[i] / a[0];
-    }
-    let c = &c[..n];
-    let radius = 1.0 + c[1..].iter().fold(0.0, |m: Real, v| m.max(real::fabs(*v)));
-    let seed = Complex::new(0.4, 0.9);
-    let mut pw = Complex::ONE;
-    let z = &mut roots[..deg];
-    for zi in z.iter_mut() {
-        *zi = pw.scale(radius);
-        pw *= seed;
-    }
-
     for _ in 0..MAX_ITER {
         let mut done = true;
         for i in 0..deg {
@@ -1596,98 +534,9 @@ pub fn poly_roots(a: &[Real], roots: &mut [Complex]) -> Result<(), PolyError> {
             break;
         }
     }
-
-    let mut dc = [0.0; MAX_POLY];
-    for i in 0..deg {
-        dc[i] = c[i] * (deg - i) as Real;
-    }
-    for zi in z.iter_mut() {
-        for _ in 0..NEWTON_STEPS {
-            *zi = newton(c, &dc[..deg], *zi);
-        }
-        if real::fabs(zi.im) < REAL_TOL * zi.abs().max(1.0) {
-            zi.im = 0.0;
-        }
-    }
-    canonical_sort(z);
-    Ok(())
-}
 ```
 
-```rust
-//! Step-response metrics from sampled data.
-
-use crate::real::{self, Real};
-
-const PEAK_TOL: Real = 1e-9;
-const BAND: Real = 0.02;
-
-/// Times in seconds, overshoot in percent, `iae` in unit * s.
-#[derive(Debug, Clone, Copy)]
-pub struct StepMetrics {
-    /// 10 % to 90 %.
-    pub rise: Real,
-    pub overshoot: Real,
-    pub peak: Real,
-    /// 2 % band.
-    pub settle: Real,
-    pub iae: Real,
-}
-
-/// First time the normalized response reaches `level`, interpolated.
-fn cross(y: &[Real], k0: usize, y0: Real, amp: Real, level: Real, ts: Real) -> Real {
-    for i in 1..y.len() - k0 {
-        let zi = (y[k0 + i] - y0) / amp;
-        if zi >= level {
-            let zp = (y[k0 + i - 1] - y0) / amp;
-            let frac = (level - zp) / (zi - zp);
-            return ((i - 1) as Real + frac) * ts;
-        }
-    }
-    Real::NAN
-}
-
-/// Metrics of a step applied at sample `k0`, from `y[k0..]`. The start
-/// value is `y[k0]`, `r` is the final target, times count from `k0`.
-/// Returns `None` if `k0` is out of range or the step has zero size.
-pub fn step_metrics(y: &[Real], ts: Real, k0: usize, r: Real) -> Option<StepMetrics> {
-    if k0 >= y.len() || r == y[k0] {
-        return None;
-    }
-    let n = y.len() - k0;
-    let y0 = y[k0];
-    let amp = r - y0;
-    let mut zmax = (y[k0] - y0) / amp;
-    let mut iae = 0.0;
-    let mut last_out: isize = -1;
-    for i in 0..n {
-        let zi = (y[k0 + i] - y0) / amp;
-        zmax = zmax.max(zi);
-        if real::fabs(zi - 1.0) > BAND {
-            last_out = i as isize;
-        }
-        iae += real::fabs(r - y[k0 + i]) * ts;
-    }
-    let k_peak = (0..n)
-        .find(|&i| (y[k0 + i] - y0) / amp >= zmax - PEAK_TOL)
-        .unwrap_or(0);
-    Some(StepMetrics {
-        rise: cross(y, k0, y0, amp, 0.9, ts) - cross(y, k0, y0, amp, 0.1, ts),
-        overshoot: (zmax - 1.0).max(0.0) * 100.0,
-        peak: k_peak as Real * ts,
-        settle: (last_out + 1) as Real * ts,
-        iae,
-    })
-}
-```
-
-</details>
-
-驱动：[`rust/src/bin/ch02.rs`](https://github.com/bfmhno3/pid-lab/tree/tutorial-v1/rust/src/bin/ch02.rs)。`poly_roots` 要求调用者给一个足够长的 `&mut [Complex]`，这是在没有分配器的情况下把“返回一组根”表达出来的方式。
-
-### 编译和风格检查
-
-编译参数和第 1 篇一样：C 是 `gcc -std=c11 -O2 -Wall -Wextra -Wpedantic -Werror`（15.3.0），C++ 是 `g++ -std=c++20`（15.3.0）加同样的警告，Rust 是 rustc 1.95.0、edition 2024，`cargo clippy --release -- -D warnings`（0.1.95）。风格检查：C 用内核的 `checkpatch.pl --no-tree --ignore SPDX_LICENSE_TAG,NEW_TYPEDEFS`，全部文件 0 errors、0 warnings；C++ 用 `clang-format --style=Google`（21.1.8）；Python 用 `ruff format --line-length 79` 和 `ruff check`（0.15.14）；Rust 用 `cargo fmt --check`。另外我手工用 `-DPL_USE_FLOAT` 把 `poly.c`、`metrics.c`、`plants.c` 编了一遍，用 `cargo build --lib --no-default-features --features f32` 编了 Rust 库，都没有警告。
+`poly_roots` 要求调用者给一个足够长的 `&mut [Complex]`，这是在没有分配器的情况下把“返回一组根”表达出来的方式；次数不对返回 `PolyError::Degenerate`，缓冲区或系数个数超限返回 `PolyError::Size`。
 
 ## 结果
 
@@ -1710,7 +559,7 @@ ok   rlocus_pd_cpp.csv: max diff 7.816e-14 <= 1.0e-09
 ok   rlocus_pd_rs.csv: max diff 1.386e-13 <= 1.0e-09
 ```
 
-51 个对比文件（17 组乘 C、C++、Rust）里每一个，和 Python 的最大差值都小于 $10^{-9}$。仿真的 14 组和 `metrics` 是 `0.000e+00`，逐位一致，原因和第 1 篇一样（只有加减乘除，运算顺序写成了一样，x86-64 上 gcc 默认不生成 FMA）。真正有看头的是根轨迹：`rlocus_p` 最大差 $2.842\times 10^{-14}$，`rlocus_pd` 对 C 和 C++ 是 $7.816\times 10^{-14}$，对 Rust 是 $1.386\times 10^{-13}$。我预留的 $10^{-6}$ 一点没用到，差了七个数量级。这大概率是这两条轨迹的网格点没有正好落在重根上，不是 Durand–Kerner 在重根处突然变准了：重根附近它的精度仍然是 $\sqrt\epsilon$ 量级，我没有去构造一个正好重根的 $K$ 来逼它现原形。所以 `report` 里没有任何容差覆盖，两个根轨迹文件和别的文件一样用 $10^{-9}$。
+51 个对比文件（17 组乘 C、C++、Rust）里每一个，和 Python 的最大差值都小于 $10^{-9}$。仿真的 14 组和 `metrics` 是 `0.000e+00`，逐位一致，原因和第 1 篇一样（只有加减乘除，运算顺序写成了一样，x86-64 上 gcc 默认不生成 FMA）。真正有看头的是根轨迹：`rlocus_p` 最大差 $2.842\times 10^{-14}$，`rlocus_pd` 对 C 和 C++ 是 $7.816\times 10^{-14}$，对 Rust 是 $1.386\times 10^{-13}$。我打算放宽到的 $10^{-6}$ 一点没用到，差了七个数量级。这大概率是这两条轨迹的网格点没有正好落在重根上，不是 Durand–Kerner 在重根处突然变准了：重根附近它的精度仍然是 $\sqrt\epsilon$ 量级，我没有去构造一个正好重根的 $K$ 来逼它现原形。所以两个根轨迹文件和别的文件一样用 $10^{-9}$ 的容差。
 
 Python 自己的求根还要对照 `numpy.roots`，对 800 个多项式（两条轨迹各 400 个 $K$）：
 
@@ -1828,6 +677,46 @@ rlocus_pd: largest real part over the grid -0.3594 at K = 0.0100
 右列（PD）：开环零点在 $-20$（空心圆）。轨迹也先离开实轴（$K$ 在 0.0173 到 0.0178 之间），但随后绕了一个半圆，在 $K = 22.82$ 到 $23.49$ 之间回到实轴，一个根被零点吸住（最后贴着 $-20$），另一个往左，然后在 $K = 44.32$ 到 $45.62$ 之间和 $-500$ 那一支碰头，再次变成复数对，沿着实部约 $-240$ 的竖线往上跑（图里上排右）。**整个网格上最大的实部是 $-0.3594$，在 $K = 0.01$。** 上一节 Routh 推出的“PD 对所有 $K$ 稳定”在数据里没有被推翻。（我只试了 $K \le 1000$，这不是证明，证明是上面方括号那一行。）
 
 PD 轨迹中间那一段几乎是个圆，圆心在零点。两个极点加一个零点的根轨迹有一个经典结论：复数段是以零点为圆心的圆，半径是零点到两个极点距离的几何平均，这里是 $\sqrt{20\times 18} = 18.97$，回到实轴的位置因此在 $-20 - 18.97 = -38.97$。我没有在这里推这个结论，只是拿图来对：下排右图里圆的左端在 $-40$ 附近，和 $-38.97$ 对得上，$-500$ 的电流环极点让它略微变形。
+
+## 检查点
+
+在 `pid-lab` 的根目录、`nix develop` 里运行：
+
+```bash
+make ch02
+```
+
+输出就是上面“结果”里贴的那些：三行 `wrote 14 cases, metrics and 2 loci`，51 行 `ok`（每个对比文件 C、C++、Rust 各一行，最大差都小于 $10^{-9}$），然后是指标表和 `Durand-Kerner vs numpy.roots over 800 polys: max root distance 1.02e-12`。`out/ch02/` 下应该有 68 个 CSV，`figures/ch02/` 下 4 张图。
+
+风格和编译检查，参数和第 1 篇一样。C 是 `gcc -std=c11 -O2 -Wall -Wextra -Wpedantic -Werror`（15.3.0），C++ 是 `g++ -std=c++20`（15.3.0）加同样的警告，Rust 是 rustc 1.95.0、edition 2024，`cargo clippy --release -- -D warnings`（0.1.95）。C 用内核的 `checkpatch.pl --no-tree --ignore SPDX_LICENSE_TAG,NEW_TYPEDEFS`，全部文件 0 errors、0 warnings；C++ 用 `clang-format --style=Google`（21.1.8）；Python 用 `ruff format --line-length 79` 和 `ruff check`（0.15.14）；Rust 用 `cargo fmt --check`。另外我手工用 `-DPL_USE_FLOAT` 把 `poly.c`、`metrics.c`、`plants.c` 编了一遍，用 `cargo build --lib --no-default-features --features f32` 编了 Rust 库，都没有警告。
+
+### 文件清单
+
+这一篇新增的文件，以及它依赖的前一篇的文件（tag `tutorial-v1`）。模块：
+
+| 文件 | 命令 | 结果 |
+| --- | --- | --- |
+| [`python/pidlab/poly.py`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/python/pidlab/poly.py) | `make -s ch02` | 多项式运算与 Durand–Kerner，对 `numpy.roots` 最大距离 $1.02\times 10^{-12}$ |
+| [`python/pidlab/metrics.py`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/python/pidlab/metrics.py) | `make -s ch02` | 五个阶跃指标，`metrics_*.csv` 四份逐位一致 |
+| [`python/pidlab/plants.py`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/python/pidlab/plants.py) | `make -s ch02` | 新增 `MotorSpeedLag`、`DialPosition` |
+| [`c/include/pl/poly.h`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/c/include/pl/poly.h)、[`c/src/poly.c`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/c/src/poly.c) | `make -s ch02` | `rlocus_p_c.csv` 最大差 $2.842\times 10^{-14}$ |
+| [`c/include/pl/metrics.h`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/c/include/pl/metrics.h)、[`c/src/metrics.c`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/c/src/metrics.c) | `make -s ch02` | `metrics_c.csv` 最大差 0 |
+| [`c/include/pl/plants.h`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/c/include/pl/plants.h)、[`c/src/plants.c`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/c/src/plants.c)、[`c/include/pl/real.h`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/c/include/pl/real.h) | `make -s ch02` | 两个新对象与 `pl_cplx` |
+| [`cpp/include/pidlab/poly.h`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/cpp/include/pidlab/poly.h)、[`cpp/include/pidlab/metrics.h`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/cpp/include/pidlab/metrics.h) | `make -s ch02` | `rlocus_pd_cpp.csv` 最大差 $7.816\times 10^{-14}$ |
+| [`cpp/include/pidlab/plants.h`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/cpp/include/pidlab/plants.h) | `make -s ch02` | 两个新对象 |
+| [`rust/src/complex.rs`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/rust/src/complex.rs)、[`rust/src/poly.rs`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/rust/src/poly.rs) | `make -s ch02` | `rlocus_pd_rs.csv` 最大差 $1.386\times 10^{-13}$ |
+| [`rust/src/metrics.rs`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/rust/src/metrics.rs)、[`rust/src/plants.rs`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/rust/src/plants.rs) | `make -s ch02` | 指标与两个新对象 |
+
+驱动、应用，以及这一篇用到的第 1 篇的文件：
+
+| 文件 | 命令 | 结果 |
+| --- | --- | --- |
+| [`python/ch02_transfer_functions.py`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/python/ch02_transfer_functions.py) | `python3 python/ch02_transfer_functions.py ref`，然后 `report` | 写数据和 Python 参考输出；`report` 比对、打印指标表、画 4 张图 |
+| [`c/apps/ch02.c`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/c/apps/ch02.c) | `make -s ch02` | `ch02: C wrote 14 cases, metrics and 2 loci to out/ch02` |
+| [`cpp/apps/ch02.cc`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/cpp/apps/ch02.cc) | `make -s ch02` | `ch02: C++ wrote 14 cases, metrics and 2 loci to out/ch02` |
+| [`rust/src/bin/ch02.rs`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/rust/src/bin/ch02.rs) | `make -s ch02` | `ch02: Rust wrote 14 cases, metrics and 2 loci to out/ch02` |
+| [`python/pidlab/sim.py`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/python/pidlab/sim.py)、[`c/src/sim.c`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/c/src/sim.c)、[`cpp/include/pidlab/sim.h`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/cpp/include/pidlab/sim.h)、[`rust/src/sim.rs`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/rust/src/sim.rs) | 第 1 篇已有 | RK4 与延迟线，循环顺序不变 |
+| [`python/compare.py`](https://github.com/bfmhno3/pid-lab/blob/tutorial-v1/python/compare.py) | `make -s ch02` | 51 行 `ok`，容差 $10^{-9}$ |
 
 ## 下一篇
 
