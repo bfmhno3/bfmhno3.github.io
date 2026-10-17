@@ -117,6 +117,8 @@ The schema is in `src/content.config.ts`.
 
 ### Writing Technical Posts
 
+- Follow the voice and structure in [`.agents/skills/andrej-karpathy/SKILL.md`](.agents/skills/andrej-karpathy/SKILL.md); read it before drafting. This file wins on conflict.
+- When dispatching a subagent to write a post, make it read that SKILL in the task prompt.
 - Start from a runnable experiment or a concrete problem. The `description` states what was done and with which versions (for example "我用 Linux 6.18 写了一个双文件外部模块"), not a topic overview.
 - Record the environment: OS, tool and compiler versions, flags, hardware when relevant.
 - Back every behavioral claim with a command and its real output. Remove or flag unverified claims.
