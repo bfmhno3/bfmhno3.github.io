@@ -2563,4 +2563,4 @@ class C:
 
 ## 下一篇
 
-下一篇是《继承、ABC 与 Protocol：分析器插件》。现在 `InvertedIndex` 手写了 `__getitem__`、`__contains__`、`__len__` 和 `__iter__` 四个方法，每一个都只是把调用转给内部字典；我猜让它继承 `collections.abc.Mapping`，只留 `__getitem__`、`__iter__` 和 `__len__` 三个抽象方法，`keys`、`items`、`get` 和 `__eq__` 就会免费送上门。同样的思路也适合分词器：它现在是一个固定的函数，换一种分析方式要改源码，我想看看把它做成可替换的类，需要 ABC 还是 `Protocol`，MRO 又会在哪里出来咬我一口。
+下一篇是《[继承、ABC 与 Protocol：分析器插件](/posts/python-by-sift-07-inheritance-protocols/)》。现在 `InvertedIndex` 手写了 `__getitem__`、`__contains__`、`__len__` 和 `__iter__` 四个方法，每一个都只是把调用转给内部字典；我猜让它继承 `collections.abc.Mapping`，只留 `__getitem__`、`__iter__` 和 `__len__` 三个抽象方法，`keys`、`items`、`get` 和 `__eq__` 就会免费送上门。同样的思路也适合分词器：它现在是一个固定的函数，换一种分析方式要改源码，我想看看把它做成可替换的类，需要 ABC 还是 `Protocol`，MRO 又会在哪里出来咬我一口。
