@@ -1856,4 +1856,4 @@ print(list(zip(it, it)), list(it))
 
 ## 下一篇
 
-下一篇是《类与数据模型：让倒排表像内置类型》。这一篇里 `RawDoc` 和 `Token` 都是 `NamedTuple`，一个带字段名的元组，而 `build_index` 返回的是字典套字典，`dict[str, dict[int, int]]`，谁也没法给它加上自己的行为。我猜把倒排表写成一个自己的类，再让它支持 `len()`、`in`、`for`，用的正是这一篇的迭代器协议，只是这回要自己写 `__iter__`，而且要想清楚返回的是新迭代器还是它自己。
+下一篇是《[类与数据模型：让倒排表像内置类型](/posts/python-by-sift-06-classes-data-model/)》。这一篇里 `RawDoc` 和 `Token` 都是 `NamedTuple`，一个带字段名的元组，而 `build_index` 返回的是字典套字典，`dict[str, dict[int, int]]`，谁也没法给它加上自己的行为。我猜把倒排表写成一个自己的类，再让它支持 `len()`、`in`、`for`，用的正是这一篇的迭代器协议，只是这回要自己写 `__iter__`，而且要想清楚返回的是新迭代器还是它自己。
