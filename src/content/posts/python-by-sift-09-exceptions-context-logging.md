@@ -2767,4 +2767,4 @@ $ git diff --shortstat ch08 ch09 -- src lab
 
 ## 下一篇
 
-下一篇是《测试：pytest、hypothesis 与 CI》。这一章里的错误都是我手工造出来再看它们怎么走的：坏的括号、坏的 front matter、不存在的流水线名字。测试要把这些手工造的情形留下来，变成每次提交都会重新跑的东西，包括这一篇里我没有修的那些边角。
+下一篇是《[测试：pytest、hypothesis 与 CI](/posts/python-by-sift-10-testing/)》。这一章里的错误都是我手工造出来再看它们怎么走的：坏的括号、坏的 front matter、不存在的流水线名字。测试要把这些手工造的情形留下来，变成每次提交都会重新跑的东西，包括这一篇里我没有修的那些边角。
