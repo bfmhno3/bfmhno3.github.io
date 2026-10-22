@@ -2399,4 +2399,4 @@ $ git diff --shortstat ch07 ch08 -- src lab
 
 ## 下一篇
 
-下一篇是《异常、上下文管理器、日志与调试》。`QuerySyntaxError` 现在住在一个临时的位置，`syntax_error_demo_fail.py` 的回溯一路冒到顶。我想看看 Python 的异常层次、`raise from` 和 `ExceptionGroup`，能把这些零散的错误收成什么样子，以及当语料里有几个文件解析失败时，索引构建该怎么办。
+下一篇是《[异常、上下文管理器、日志与调试](/posts/python-by-sift-09-exceptions-context-logging/)》。`QuerySyntaxError` 现在住在一个临时的位置，`syntax_error_demo_fail.py` 的回溯一路冒到顶。我想看看 Python 的异常层次、`raise from` 和 `ExceptionGroup`，能把这些零散的错误收成什么样子，以及当语料里有几个文件解析失败时，索引构建该怎么办。
