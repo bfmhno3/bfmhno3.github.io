@@ -2454,4 +2454,4 @@ class F(D, E): ...
 
 ## 下一篇
 
-下一篇是《BM25 与查询语言：match/case 和递归下降》。`InvertedIndex` 现在有 `n_docs`、`doc_len` 和 `avg_doc_len`，BM25 公式要的语料统计就是这三个数；它又是个 `Mapping`，`match` 的映射模式已经认得它。我想看看递归下降的解析器配上 `match`/`case` 写出来是什么样子，还有查询里的 `所有权` 这种词，会被分析器切成 `所有` 和 `有权`，它们怎么变成一个短语。
+下一篇是《[BM25 与查询语言：match/case 和递归下降](/posts/python-by-sift-08-bm25-query-language/)》。`InvertedIndex` 现在有 `n_docs`、`doc_len` 和 `avg_doc_len`，BM25 公式要的语料统计就是这三个数；它又是个 `Mapping`，`match` 的映射模式已经认得它。我想看看递归下降的解析器配上 `match`/`case` 写出来是什么样子，还有查询里的 `所有权` 这种词，会被分析器切成 `所有` 和 `有权`，它们怎么变成一个短语。
