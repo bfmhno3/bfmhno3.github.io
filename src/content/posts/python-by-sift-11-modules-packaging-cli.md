@@ -2374,4 +2374,4 @@ exit 0
 
 ## 下一篇
 
-下一篇是《文件与二进制格式：struct、varint、mmap 与压缩》。这一篇里 `SIFT_INDEX` 只会检查一个目录在不在，因为索引还只存在于内存里，每条 `sift search` 都要付 2 秒建索引的钱；这笔钱要在下一篇里换成磁盘上的一个文件，`IndexMissingError` 第一次有了真实的原因。我想看的是，一个 `struct` 打包出来的头加上 `mmap` 出来的词典，能不能让第一次查询从 2 秒掉到一个我能忍受的数；还有一个小问题，`stopwords.txt` 需要 `importlib.resources` 才能躲开路径，一个二进制索引文件在 wheel 里会不会遇到同样的事。
+下一篇是《[文件与二进制格式：struct、varint、mmap 与压缩](/posts/python-by-sift-12-files-binary-format/)》。这一篇里 `SIFT_INDEX` 只会检查一个目录在不在，因为索引还只存在于内存里，每条 `sift search` 都要付 2 秒建索引的钱；这笔钱要在下一篇里换成磁盘上的一个文件，`IndexMissingError` 第一次有了真实的原因。我想看的是，一个 `struct` 打包出来的头加上 `mmap` 出来的词典，能不能让第一次查询从 2 秒掉到一个我能忍受的数；还有一个小问题，`stopwords.txt` 需要 `importlib.resources` 才能躲开路径，一个二进制索引文件在 wheel 里会不会遇到同样的事。
