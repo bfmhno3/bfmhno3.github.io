@@ -2355,4 +2355,4 @@ $ git diff --shortstat ch09 ch10
 
 ## 下一篇
 
-下一篇是《模块、包、导入系统与命令行》。这一篇的 `pytest.ini` 和 `python3 -m sift` 都靠 `nix develop` 设好的 `PYTHONPATH` 里的 `src` 才找得到包。下一篇要把这件事交给 `pyproject.toml`：`import sift` 到底去哪里找、`sift` 命令怎么从 `__main__.py` 变成一个真的入口，`pytest.ini` 的内容也会搬进去。我想看的是 `PYTHONPATH` 换掉之后，这批测试还绿不绿；再往后，第 12 篇索引要落盘，我猜“写下去再读回来还是同一个索引”会是我最先想写的一条性质。
+下一篇是《[模块、包、导入系统与命令行](/posts/python-by-sift-11-modules-packaging-cli/)》。这一篇的 `pytest.ini` 和 `python3 -m sift` 都靠 `nix develop` 设好的 `PYTHONPATH` 里的 `src` 才找得到包。下一篇要把这件事交给 `pyproject.toml`：`import sift` 到底去哪里找、`sift` 命令怎么从 `__main__.py` 变成一个真的入口，`pytest.ini` 的内容也会搬进去。我想看的是 `PYTHONPATH` 换掉之后，这批测试还绿不绿；再往后，第 12 篇索引要落盘，我猜“写下去再读回来还是同一个索引”会是我最先想写的一条性质。
