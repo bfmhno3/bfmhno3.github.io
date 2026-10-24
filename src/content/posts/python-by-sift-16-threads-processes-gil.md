@@ -1900,4 +1900,4 @@ $ python3 /tmp/sift-scratch/parts_cost.py
 
 ## 下一篇
 
-下一篇是《并发（下）：asyncio 与手写 HTTP 服务器》。一个线程怎么同时等很多个连接，我想从 `selectors` 写一个小的事件循环开始，再把 `sift` 的搜索放到一个手写的 HTTP 服务器后面。
+下一篇是《[并发（下）：asyncio 与手写 HTTP 服务器](/posts/python-by-sift-17-asyncio/)》。一个线程怎么同时等很多个连接，我想从 `selectors` 写一个小的事件循环开始，再把 `sift` 的搜索放到一个手写的 HTTP 服务器后面。
