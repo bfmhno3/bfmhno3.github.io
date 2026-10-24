@@ -2314,4 +2314,4 @@ Counter(n='seven') False
 
 ## 下一篇
 
-下一篇是《对象模型与元编程：描述符、元类、字节码》。这一篇里 `config.py` 的两处 `cast` 是我最不放心的地方：它们是我告诉检查器“这里我比你清楚”的地方，而配置值的校验目前还是散落在 `_number` 和 `_section` 里的手写 `isinstance`。我想把校验收进一个描述符 `Setting[T]`，让 `config.k1` 在检查器眼里是 `float`、在运行时有范围检查；我猜这是 mypy 和 pyright 争得最凶的地方，因为描述符协议的 `__get__` 需要重载才能让类属性和实例属性有不同的类型。
+下一篇是《[对象模型与元编程：描述符、元类、字节码](/posts/python-by-sift-15-metaprogramming/)》。这一篇里 `config.py` 的两处 `cast` 是我最不放心的地方：它们是我告诉检查器“这里我比你清楚”的地方，而配置值的校验目前还是散落在 `_number` 和 `_section` 里的手写 `isinstance`。我想把校验收进一个描述符 `Setting[T]`，让 `config.k1` 在检查器眼里是 `float`、在运行时有范围检查；我猜这是 mypy 和 pyright 争得最凶的地方，因为描述符协议的 `__get__` 需要重载才能让类属性和实例属性有不同的类型。
