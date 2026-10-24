@@ -2120,4 +2120,4 @@ $ git diff --shortstat ch12 ch13
 
 ## 下一篇
 
-下一篇是《类型系统：从注解到 mypy --strict》。这一章的 `db.py` 里，类型注解已经不只是文档：`Mapped[str | None]` 既是列的定义也是类型，`session_scope` 的返回类型是 `Iterator[Session]`，`TypeDecorator[datetime]` 带着一个类型参数。我想知道的是：把整个 `src/sift` 都交给 `mypy --strict` 和 `pyright` 会各自抱怨多少次，这些抱怨里有多少是真的 bug，又有多少只是我没把类型说清楚。
+下一篇是《[类型系统：从注解到 mypy --strict](/posts/python-by-sift-14-type-system/)》。这一章的 `db.py` 里，类型注解已经不只是文档：`Mapped[str | None]` 既是列的定义也是类型，`session_scope` 的返回类型是 `Iterator[Session]`，`TypeDecorator[datetime]` 带着一个类型参数。我想知道的是：把整个 `src/sift` 都交给 `mypy --strict` 和 `pyright` 会各自抱怨多少次，这些抱怨里有多少是真的 bug，又有多少只是我没把类型说清楚。
