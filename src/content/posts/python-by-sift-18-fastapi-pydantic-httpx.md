@@ -1959,4 +1959,4 @@ WARNING uvicorn.error: Invalid HTTP request received.
 
 ## 下一篇
 
-下一篇是《命令行体验与分发：typer、rich、uv 与 wheel》。`cli.py` 里的选项和退出码越攒越多，我想看看把 argparse 换成类型注解驱动的 typer 之后，它们能不能一个字都不变。
+下一篇是《[命令行体验与分发：typer、rich、uv 与 wheel](/posts/python-by-sift-19-typer-rich-uv/)》。`cli.py` 里的选项和退出码越攒越多，我想看看把 argparse 换成类型注解驱动的 typer 之后，它们能不能一个字都不变。
