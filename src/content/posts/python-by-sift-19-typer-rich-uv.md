@@ -1897,4 +1897,4 @@ Sift 6.1.0 Python bindings for Sift Science's API
 
 ## 下一篇
 
-下一篇是《GUI（上）：tkinter 与事件循环》。命令行已经能用了，我想看 `sift` 放进一个窗口里，界面卡住的时候事件循环到底在干什么。
+下一篇是《[GUI（上）：tkinter 与事件循环](/posts/python-by-sift-20-tkinter/)》。命令行已经能用了，我想看 `sift` 放进一个窗口里，界面卡住的时候事件循环到底在干什么。
