@@ -2,7 +2,7 @@
 title: "命令行体验与分发：typer、rich、uv 与 wheel"
 commentId: "post:python-by-sift-19-typer-rich-uv"
 published: "2026-10-25 12:00:00 +08:00"
-description: "用 Sift 重学 Python 第 19 篇：我用 Python 3.14.7、typer 0.25.1、click 8.3.3、rich 15.0.0、uv 0.12.5、build 1.5.1 和 hatchling 1.31.0 把 Sift 的命令行从 argparse 换成 typer，输出换成 rich，再打成 wheel 装进干净的虚拟环境。换完之后 sift --help 从 144.5 毫秒变成 180.4 毫秒，sift --version 却从 143.6 毫秒变成 97.0 毫秒；慢的那 36 毫秒是 rich 画帮助页，设 TYPER_USE_RICH=0 就只要 81.0 毫秒；wheel 96,448 字节 49 个文件，sdist 298,117 字节装下了整个仓库，加一个 include 列表后 139,755 字节；同一个 wheel 装进新虚拟环境，pip 要 2.59 秒，uv 0.03 秒。"
+description: "用 Sift 重学 Python 第 19 篇：我用 Python 3.14.7、typer 0.25.1、click 8.3.3、rich 15.0.0、uv 0.12.5、build 1.5.1 和 hatchling 1.31.0 把 Sift 的命令行从 argparse 换成 typer，输出换成 rich，再打成 wheel 装进干净的虚拟环境。sift --help 在管道里从 155.1 毫秒变成 82.7 毫秒，在终端里 rich 画帮助页却让它从 152.8 毫秒变成 198.1 毫秒；sift --version 从 143.6 毫秒变成 100.1 毫秒；wheel 96,640 字节 49 个文件，sdist 299,258 字节装下了整个仓库，加一个 include 列表后 140,395 字节；同一个 wheel 装进新虚拟环境，pip 默认 2.970 秒，uv 默认 0.025 秒，可其中约 2 秒是 pip 在编译 .pyc，让 uv 也编译就要 0.491 秒。"
 category: Tutorial
 tags:
   - Python
@@ -19,22 +19,27 @@ comment: true
 slug: python-by-sift-19-typer-rich-uv
 ---
 
-我把 Sift 的命令行从 argparse 换成了 typer，换之前的预期很朴素：代码少一点，别的不变。然后我用 hyperfine 量了启动时间：`sift --help` 慢了 36 毫秒（145 到 180），`sift --version` 却快了 47 毫秒（144 到 97）。同一个库，一个变慢一个变快，差别在于 `--help` 要用 rich 画一个带边框的帮助页，而 `--version` 现在连 rich 和 asyncio 都不导入；把 rich 关掉，`--help` 只要 81 毫秒。这一篇从这几行数字出发：先看 typer 怎么把类型注解变成命令行，再看 rich 怎么画表格，最后用 uv 和 hatchling 把项目打成 wheel，装进一个什么都没有的虚拟环境。
+我把 Sift 的命令行从 argparse 换成了 typer，换之前的预期很朴素：代码少一点，别的不变。然后我用 hyperfine 量了启动时间：`sift --version` 快了 44 毫秒（144 到 100），`sift --help` 在管道里快了 72 毫秒（155 到 83），可是在终端里它慢了 45 毫秒（153 到 198）。后面这个数是 rich 画帮助页的代价：管道里 Sift 不让 typer 用 rich，终端里才用；而 `--version` 现在连 rich 和 asyncio 都不导入。这一篇从这几行数字出发：先看 typer 怎么把类型注解变成命令行，再看 rich 怎么画表格，最后用 uv 和 hatchling 把项目打成 wheel，装进一个什么都没有的虚拟环境。
 
 ```text
 $ python3 /tmp/sift-scratch/ch19/startup_pair.py
-sift --help     argparse                   144.5 ms
-sift --help     typer                      180.4 ms
-sift --help     typer, TYPER_USE_RICH=0     81.0 ms
+sift --help     argparse                   155.1 ms
+sift --help     typer                       82.7 ms
+sift --help     typer, TYPER_USE_RICH=0     82.6 ms
 sift --version  argparse                   143.6 ms
-sift --version  typer                       97.0 ms
+sift --version  typer                      100.1 ms
+$ python3 /tmp/sift-scratch/ch19/help_on_pty.py
+argparse (ch18)    median  152.8 ms
+typer (ch19)       median  198.1 ms
 ```
 
 > [!NOTE] Note
-> 这一篇结束时仓库处于标签 `ch19`（提交 `40e1608`）。改写的有 `src/sift/cli.py`（argparse 换成 typer，命令、选项、`--json` 输出和退出码不变）、`src/sift/log.py`（`rich=True` 真正起作用）、`src/sift/__init__.py`（`__version__` 改成第一次用到时才去读）、`src/sift/parallel.py` 和 `src/sift/storage/store.py`（多一个进度回调）、`pyproject.toml`（多了 typer、click、rich 三个依赖）、`README.md` 和 `lab/ch16/extra.sh`。新增 `src/sift/render.py`（rich 的表格、进度条和回溯）和 `tests/test_render.py`。
+> 这一篇结束时仓库处于标签 `ch19`（提交 `06f4f32`）。改写的有 `src/sift/cli.py`（argparse 换成 typer，命令、选项、`--json` 输出和退出码不变，多了 `markup_mode()`）、`src/sift/log.py`（`rich=True` 真正起作用）、`src/sift/__init__.py`（`__version__` 改成第一次用到时才去读）、`src/sift/parallel.py` 和 `src/sift/storage/store.py`（多一个进度回调）、`pyproject.toml`（多了 typer、click、rich 三个依赖，hatchling 有了下限）、`README.md` 和 `lab/ch16/extra.sh`，测试里改了 `tests/test_cli.py`、`tests/test_log.py`、`tests/test_parallel.py` 和 `tests/test_store.py`。新增 `src/sift/render.py`（rich 的表格、进度条和回溯）、`tests/test_render.py`，以及 `lab/ch19/` 下的实验：`argparse_vs_typer.py`、`rich_tour.py`、`rich_search_svg.py`、`version_bump.py`、`extra.sh`、`uv_demo/` 和那张 SVG。
 > 后面的章节里，第 20 篇给 `src/sift/cli.py` 加 `sift gui --tk`，给 `pyproject.toml` 加 `gui` 可选依赖；第 21 篇让 `sift gui` 默认走 Qt，并扩充这个可选依赖；第 22 篇再给 `src/sift/cli.py` 加 `sift similar` 和 `sift report`，给 `pyproject.toml` 加 `data` 可选依赖；第 24 和 25 篇给 `sift index` 加 `--tokenizer`。
 > 涉及的 Python 特性：`Annotated` 与函数签名反射、模块级 `__getattr__`、`importlib.metadata`、类型检查器对方法重写的检查、pty 与信号、PEP 517 构建后端。
 > 前置：[第 18 篇](/posts/python-by-sift-18-fastapi-pydantic-httpx/)。上一篇的服务器已经有了完整的路由和退出码，这一篇不动它们的行为，只换外面那层壳。
+
+有一处退步要先说清楚。第 16 篇在自由线程的 `python3.14t` 上跑 `PYTHONPATH=src python3.14t -m sift bench index`，那个解释器没有 SQLAlchemy，所以 `cli.py` 把存储模块改成了懒导入。现在 `cli.py` 顶部有 `import click` 和 `import typer`，`python3.14t` 的环境里没有这两个（rich 也没有），我试了：`PYTHONPATH=src python3.14t -m sift --version` 以 `ModuleNotFoundError: No module named 'click'` 结束，第 18 篇它打印的是 `sift 0.0.0+source`。所以 `lab/ch16/extra.sh` 现在先把 `typer`、`click`、`rich` 和它们的纯 Python 依赖用符号链接放进一个临时目录，再加进 `PYTHONPATH`；README 里那条命令也跟着变了。
 
 ## 环境
 
@@ -47,7 +52,7 @@ $ python3 -VV
 Python 3.14.7 (main, Aug  5 2026, 10:29:49) [GCC 15.3.0]
 $ git describe --tags; git rev-parse --short HEAD
 ch19
-40e1608
+06f4f32
 $ lscpu | sed -n '/Model name/p;/^CPU(s):/p'
 CPU(s):                                  16
 Model name:                              AMD Ryzen 7 PRO 6850U with Radeon Graphics
@@ -70,26 +75,22 @@ hyperfine 1.20.0
 pip 26.2.1
 ```
 
-这台机器的 CPU 有快慢两个状态（第 11 篇测到过约 2.5 倍），所以计时前后我各夹一次 `cpu_state.py`（第 12 篇贴过的固定忙循环，快状态下 5 个数在 110 到 120 毫秒）。`make ch19` 前后是 `121 115 112 112 115` 和 `112 112 117 118 122`；下面每个以毫秒计的计时脚本前后我也夹了，读数都在 109 到 124 之间，没有出现过慢状态的 280 毫秒上下。所以全篇是快状态的数字。以秒计、主要花在网络上的几个数（`uv lock`、隔离构建）没有夹，那里快慢状态的差别淹没在网络里。
+这台机器的 CPU 有快慢两个状态（第 11 篇测到过约 2.5 倍），所以计时前后我各夹一次 `cpu_state.py`（第 12 篇贴过的固定忙循环，快状态下 5 个数在 110 到 120 毫秒）。下面每个以毫秒计的计时脚本前后我也夹了，读数在 109 到 139 之间（139 只出现过一次），没有出现过慢状态的 280 毫秒上下。重新量的这一轮整体比第一轮慢一些（argparse 的 `--help` 从 144.5 变成 155.1 毫秒），所以正文用重新量的数，同一张表里的数才能互相比。所以全篇是快状态的数字。以秒计、主要花在网络上的几个数（`uv lock`、隔离构建）没有夹，那里快慢状态的差别淹没在网络里。
 
 文中引用的第三方源码都是这个环境里装的版本，我在 nix 存储里按路径读的，行号在读的那份文件里数，路径相对于 `site-packages`：
 
 - `typer` 0.25.1、`click` 8.3.3、`rich` 15.0.0、`hatchling` 1.31.0、`build` 1.5.1。
-- `uv` 是编译好的二进制，Rust 源码不在环境里。我读的是 GitHub 仓库标签 `0.12.5`（提交 `210d1f6785e9`）下的 `docs/`，所以 uv 的行为我引的是文档，行为本身用命令验证。
+- `uv` 是编译好的二进制，我读的是 GitHub 仓库标签 `0.12.5`（提交 `210d1f6785e9`）下的 `docs/`，行为本身用命令验证。
 - PEP 取自 `python/peps` 的提交 `018ddd7`，打包规范取自 `pypa/packaging.python.org` 的提交 `d1ad4ad`（都是读的时候的 `HEAD`）。PEP 427 和 PEP 566 页首都写着“规范的现行版本在 packaging.python.org”，所以关于 wheel 和核心元数据的细节我读的是 `binary-distribution-format.rst` 和 `core-metadata.rst`，不是 PEP 原文。
 
-仓库这一头，`make ch19` 跑 4 个 Python 实验再加 `extra.sh`，完整测试、类型检查和格式检查：
+仓库这一头，`make ch19` 跑 4 个 Python 实验再加 `extra.sh`（我是在 `git archive ch19` 解出来的目录里跑的，所以 `extra.sh` 里需要标签 `ch18` 的启动对比被它自己跳过了），完整测试、类型检查和格式检查：
 
 ```text
-$ python3 /tmp/sift-scratch/cpu_state.py
-121 115 112 112 115 ms
 $ make ch19 > /tmp/ch19_make.txt 2>&1; echo $?; grep -c ^ok /tmp/ch19_make.txt
 0
 5
-$ python3 /tmp/sift-scratch/cpu_state.py
-112 112 117 118 122 ms
 $ python3 -m pytest | tail -1
-956 passed, 1 xfailed, 1 warning in 33.83s
+970 passed, 1 xfailed, 1 warning in 38.29s
 $ make typecheck | tail -2
 Success: no issues found in 41 source files
 0 errors, 0 warnings, 0 informations
@@ -204,11 +205,11 @@ $ sift search --mode async x -> exit 2
 
 规则全在输出里了，我再对着源码把它们一条一条核实（`typer/main.py`，typer 0.25.1）：
 
-- 没有默认值的参数是命令行参数（Argument），有默认值的是选项（Option）。`words` 没有默认值，所以是 `TyperArgument`，`list[str]` 让它的 `nargs` 变成 -1（`typer/main.py` 第 1642 到 1644 行、第 1757 行）；其余四个有默认值，都是 `TyperOption`（第 1647 行）。选项名是参数名里的下划线换成连字符再加 `--`（`get_click_param` 里的 `default_option_declaration`，第 1708 到 1717 行）。我给 `as_json` 手写了 `"--json"`，所以它的选项名是 `--json` 而不是 `--as-json`。
+- 没有默认值的参数是命令行参数 (Argument)，有默认值的是选项 (Option)。`words` 没有默认值，所以是 `TyperArgument`，`list[str]` 让它的 `nargs` 变成 -1（`typer/main.py` 第 1642 到 1644 行、第 1757 行）；其余四个有默认值，都是 `TyperOption`（第 1647 行）。选项名是参数名里的下划线换成连字符再加 `--`（`get_click_param` 里的 `default_option_declaration`，第 1708 到 1717 行）。我给 `as_json` 手写了 `"--json"`，所以它的选项名是 `--json` 而不是 `--as-json`。
 - `bool` 变成开关：第 1701 到 1702 行把 `is_flag` 设成 `True`。不手写选项名的话，声明是 `--x/--no-x` 一对（第 1708 到 1710 行）；我写了 `"--json"`，所以只剩一个。Sift 里的 `--no-log` 是我手写的单个开关，不是 typer 自动生成的反向开关。
 - `Annotated[int, typer.Option(min=1, max=100)]` 里的元数据由 `get_params_from_function` 拆出来（`typer/utils.py` 第 107 到 121 行，用 `_split_annotation_from_typer_annotations`）。同一个参数既写 `Annotated[..., Option()]` 又写 `= Option()` 当默认值会直接报错（第 124 到 129 行），我试了一次，抛出的是 `MixedAnnotatedAndDefaultStyleError`，信息里说 `Option` 和默认值不能同时给。两种风格不能混在一个参数上。
-- `StrEnum` 变成 `TyperChoice`，也就是 `click.Choice` 的一个子类（`get_click_type` 里 `Enum` 的分支，第 1605 到 1612 行；`typer/_types.py` 第 9 行），报错信息里自动列出候选值（上面最后一行）。`Path | None` 里的 `None` 被剥掉（`get_click_param` 的 `is_union` 分支，第 1662 到 1672 行），类型变成 `path`。
-- 只注册了一个命令的 `Typer` 不会生成命令组，而是一个单独的命令（`get_command`，`main.py` 第 1171 到 1200 行）。这条我用实验确认了：
+- `StrEnum` 变成 `TyperChoice`，也就是 `click.Choice` 的一个子类（`get_click_type` 里 `Enum` 的分支，第 1605 到 1614 行；`typer/_types.py` 第 9 行），报错信息里自动列出候选值（上面最后一行）。`Path | None` 里的 `None` 被剥掉（`get_click_param` 的 `is_union` 分支，第 1662 到 1670 行），类型变成 `path`。
+- 只注册了一个命令的 `Typer` 不会生成命令组，而是一个单独的命令（`get_command`，`main.py` 第 1171 到 1208 行）。这条我用实验确认了：
 
 ```text
 $ python3 -c '
@@ -249,7 +250,7 @@ typer   : 25 lines, 23 code lines
 
 ### 回调：`--version` 和 `--debug` 是怎么抢在前面的
 
-Sift 的根命令有两个全局选项，`--version` 和 `--debug`。它们不属于任何一个子命令，在 typer 里写成 `@app.callback()` 装饰的函数，每次调用都先跑。下面是 `src/sift/cli.py` 第 132 到 167 行（标签 `ch19`），这两个函数我原样摘出来：
+Sift 的根命令有两个全局选项，`--version` 和 `--debug`。它们不属于任何一个子命令，在 typer 里写成 `@app.callback()` 装饰的函数，每次调用都先跑。下面是 `src/sift/cli.py` 第 150 到 185 行（标签 `ch19`），这两个函数我原样摘出来：
 
 ```python
 def show_version(value: bool) -> None:
@@ -353,7 +354,7 @@ TyperGroup
 
 ### 退出码：从 `main()` 搬进命令组
 
-第 11 篇起，`sift` 的退出码是约定好的：0 成功（没有命中也是 0），2 用法错误，3 查询语法错，4 没有索引，1 其他 `SiftError`，Ctrl-C 是 130。argparse 版本把这套映射写在 `main()` 里：`try: args.func(args)`，一串 `except`。typer 版本不能照搬，因为测试用的 `CliRunner` 调的是 click 命令，不经过 `main()`。映射放在 `main()` 里，就只有真的起一个子进程才测得到。所以我把它搬进 `TyperGroup` 的子类，重写 `invoke`。`src/sift/cli.py` 第 71 到 112 行：
+第 11 篇起，`sift` 的退出码是约定好的：0 成功（没有命中也是 0），2 用法错误，3 查询语法错，4 没有索引，1 其他 `SiftError`，Ctrl-C 是 130。argparse 版本把这套映射写在 `main()` 里：`try: args.func(args)`，一串 `except`。typer 版本不能照搬，因为测试用的 `CliRunner` 调的是 click 命令，不经过 `main()`。映射放在 `main()` 里，就只有真的起一个子进程才测得到。所以我把它搬进 `TyperGroup` 的子类，重写 `invoke`。`src/sift/cli.py` 第 74 到 115 行：
 
 ```python
 class SiftGroup(TyperGroup):
@@ -366,7 +367,7 @@ class SiftGroup(TyperGroup):
     """
 
     def invoke(self, ctx: click.Context) -> object:
-        """Run the command; print a Sift error and exit with its code."""
+        """Run the command; print a Sift error, exit with its code."""
         try:
             return super().invoke(ctx)
         except QuerySyntaxError as error:
@@ -447,10 +448,8 @@ exit 0
 $ sift search --limit 101 a
 Usage: sift search [OPTIONS] QUERY...
 Try 'sift search -h' for help.
-╭─ Error ──────────────────────────────────────────────────────────────────────╮
-│ Invalid value for '--limit': [search] limit must be an integer between 1 and │
-│ 100                                                                          │
-╰──────────────────────────────────────────────────────────────────────────────╯
+
+Error: Invalid value for '--limit': [search] limit must be an integer between 1 and 100
 exit 2
 
 $ sift search \"kalman --no-log
@@ -478,11 +477,78 @@ sift search: error: argument --limit: [search] limit must be an integer between 
 exit 2
 ```
 
-退出码一个没变，变的是用法错误的样子：argparse 是两行纯文本，typer 是 click 的用法提示加一个红框（颜色在管道里看不到，框线还在）。第一条搜索的输出里有 `[kalman]` 这样的方括号，那是纯文本模式用方括号标记命中的词；它和后面 rich 一节里的一个坑有关，先记着。
+退出码一个没变。用法错误在管道里是 click 的纯文本（用法提示、一个空行、`Error: ...`），argparse 是两行，终端上才是 rich 的红框，下一节细说。第一条搜索的输出里有 `[kalman]` 这样的方括号，那是纯文本模式用方括号标记命中的词；它和后面 rich 一节里的一个坑有关，先记着。
 
-Ctrl-C 和 SIGTERM 不能在上面的脚本里试：非交互 shell 里用 `&` 放到后台的作业会忽略 SIGINT，Python 继承了“忽略”的设置，就不装自己的处理器了。我第一次用 `kill -INT` 试，`sift open` 照常睡满 30 秒，退出码 0，什么都没发生。所以信号得从 Python 里用 `subprocess.Popen(...).send_signal` 发（那个二十来行的脚本我没有贴进来）。发完之后：`sift open` 和 `sift serve` 收到 SIGINT 都在约 2.8 秒后以 130 退出，stderr 上是 `interrupted`；`sift serve` 收到 SIGTERM 以 0 退出，stderr 为空。这和第 17、18 篇的约定一致（`serve` 自己装了 SIGTERM 的处理，干净退出）。
+Ctrl-C 和 SIGTERM 不能在上面的脚本里试：非交互 shell 里用 `&` 放到后台的作业会忽略 SIGINT，Python 继承了“忽略”的设置，就不装自己的处理器了。我第一次用 `kill -INT` 试，什么都没发生。所以信号得从 Python 里发：
 
-最后一个细节是 `main()` 末尾的那个 `except SystemExit`。typer 的 `app(...)` 在命令成功、`--help` 和 `--version` 时也会 `sys.exit(0)`，而 `main()` 是 `[project.scripts]` 里的入口，也被别的代码当普通函数调用，它不应该退出。`src/sift/cli.py` 第 771 到 787 行，退出码为 0 的 `SystemExit` 在这里被吞掉，其余原样抛出：
+```python
+"""Send SIGINT and SIGTERM to long-running sift commands.
+
+A background job of a non-interactive shell ignores SIGINT, so the
+signals are sent from Python, which starts the child with the default
+handlers.
+"""
+
+import os
+import signal
+import subprocess
+import sys
+import time
+
+EDITOR = "sh -c 'sleep 30'"
+
+
+def run(argv: list[str], sig: signal.Signals, env: dict[str, str]) -> None:
+    """Start argv, wait a moment, send sig, print how it ended."""
+    child = subprocess.Popen(
+        argv,
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    time.sleep(2.5)
+    sent = time.perf_counter()
+    child.send_signal(sig)
+    out, err = child.communicate(timeout=40)
+    took = time.perf_counter() - sent
+    print(f"$ {' '.join(argv)} ({sig.name} after 2.5 s)")
+    print(f"  exit {child.returncode}, {took:.2f} s after the signal")
+    print(f"  stdout: {out.strip()!r}")
+    print(f"  stderr: {err.strip()!r}")
+
+
+def main() -> None:
+    """Interrupt `sift open` and `sift serve`; terminate `sift serve`."""
+    env = dict(os.environ, SIFT_INDEX=sys.argv[1], EDITOR=EDITOR)
+    run(["sift", "open", "1"], signal.SIGINT, env)
+    run(["sift", "serve", "--port", "0"], signal.SIGINT, env)
+    run(["sift", "serve", "--port", "0"], signal.SIGTERM, env)
+
+
+if __name__ == "__main__":
+    main()
+```
+
+```text
+$ python3 /tmp/sift-scratch/ch19/signals.py /tmp/sift-scratch/ch19/idx
+$ sift open 1 (SIGINT after 2.5 s)
+  exit 130, 0.36 s after the signal
+  stdout: ''
+  stderr: 'interrupted'
+$ sift serve --port 0 (SIGINT after 2.5 s)
+  exit 130, 0.39 s after the signal
+  stdout: 'listening on http://127.0.0.1:35139'
+  stderr: 'interrupted'
+$ sift serve --port 0 (SIGTERM after 2.5 s)
+  exit 0, 0.41 s after the signal
+  stdout: 'listening on http://127.0.0.1:36283'
+  stderr: ''
+```
+
+`open` 和 `serve` 收到 SIGINT 都在信号之后约 0.4 秒以 130 退出，`serve` 收到 SIGTERM 以 0 退出，和第 17、18 篇的约定一致。我只试了这两个命令；别的命令（比如 `sift index --jobs 4` 的子进程池）收到 Ctrl-C 的行为我没有验证。
+
+最后一个细节是 `main()` 末尾的那个 `except SystemExit`。typer 的 `app(...)` 在命令成功、`--help` 和 `--version` 时也会 `sys.exit(0)`，而 `main()` 是 `[project.scripts]` 里的入口，也被别的代码当普通函数调用，它不应该退出。`src/sift/cli.py` 第 789 到 805 行，退出码为 0 的 `SystemExit` 在这里被吞掉，其余原样抛出：
 
 ```python
 def main(argv: Sequence[str] | None = None) -> None:
@@ -512,33 +578,11 @@ main returned None
 
 同一个命令行，`app` 以 `SystemExit(0)` 结束，`main` 返回 `None`。
 
-### 用法错误不是 sift 画的
+### 用法错误是谁画的
 
-`sift search --limit 101 a` 那个红框不是 `sift.render` 画的，是 typer 在 click 抛出 `UsageError` 之后画的。`click/exceptions.py` 第 65 行写着 `UsageError.exit_code = 2`，所以退出码 2 一直是 click 的约定，argparse 的也是 2，不是巧合。typer 的 `_main` 接住 `click.ClickException`，如果装了 rich，就调 `rich_utils.rich_format_error`，没装才用 click 自己的 `e.show()`（`typer/core.py` 第 204 到 215 行）。“装没装 rich”由模块加载时的一行决定：`HAS_RICH = parse_boolean_env_var(os.getenv("TYPER_USE_RICH"), default=True)`（第 29 行）。这里有一个我之前没想到的地方：`render.py` 的 `wants_rich` 在管道里返回假，Sift 自己的输出在管道里就是纯文本，但 typer 的用法错误和 `--help` 在管道里照样是 rich 的框，因为 typer 不看 `isatty`。我设 `TYPER_USE_RICH=0` 试了：
+`sift search --limit 101 a` 的错误提示不是 `sift.render` 画的，是 typer 在 click 抛出 `UsageError` 之后印的。`click/exceptions.py` 第 65 行写着 `UsageError.exit_code = 2`，所以退出码 2 一直是 click 的约定，argparse 的也是 2，不是巧合。typer 的 `_main` 接住 `click.ClickException`，如果 `rich_markup_mode` 不是 `None`，就调 `rich_utils.rich_format_error` 画一个框，否则用 click 自己的 `e.show()`（`typer/core.py` 第 204 到 215 行）；帮助页也一样（第 719 到 731 行）。
 
-```text
-$ TYPER_USE_RICH=0 sift search --limit 101 a; echo "exit $?"
-Usage: sift search [OPTIONS] QUERY...
-Try 'sift search -h' for help.
-
-Error: Invalid value for '--limit': [search] limit must be an integer between 1 and 100
-exit 2
-$ TYPER_USE_RICH=0 sift --help | head -n 12
-Usage: sift [OPTIONS] COMMAND [ARGS]...
-
-  Search the Markdown posts of a blog.
-
-Options:
-  --version             Show the version and exit.
-  --debug               Log at DEBUG level and print tracebacks with rich.
-  --install-completion  Install completion for the current shell.
-  --show-completion     Show completion for the current shell, to copy it or
-                        customize the installation.
-  -h, --help            Show this message and exit.
-
-```
-
-退出码还是 2，只是回到了 click 原来的样子。`render.py` 里“其他地方都是第 18 篇的纯文本”这句话只对 Sift 自己的输出成立，对 typer 的帮助页和错误不成立。我没有让 `sift` 在管道里自动设 `TYPER_USE_RICH=0`（要在 import typer 之前设，而且是改 typer 的行为），这是一个已知的缺口。
+typer 自己不看输出是不是终端，所以只靠 `wants_rich` 管不住它：我第一版里，管道中的 Sift 输出是纯文本，而 `sift --help | cat` 和 `2>&1 | cat` 里的用法错误照样是 rich 的框。这一版在 `cli.py` 里补了一个 `markup_mode()`，在构造 `typer.Typer(...)` 时传给 `rich_markup_mode`。上面的 `exit_codes.sh` 和 `startup_pair.py` 都是在这一版上跑的。
 
 ### 补全
 
@@ -557,9 +601,9 @@ $ _SIFT_COMPLETE=complete_bash COMP_WORDS="sift index --mode " \
     COMP_CWORD=3 sift
 ```
 
-补全脚本是一个 bash 函数（`_SIFT_COMPLETE=source_bash sift` 会打印它），每次按 Tab 就用环境变量 `_SIFT_COMPLETE=complete_bash` 再启动一次 `sift`，让它把候选词打印出来。`typer/core.py` 的 `_main` 开头（第 183 行）调 `_typer_main_shell_completion`（第 626 到 644 行），后者读 `_{prog_name}_COMPLETE` 这个环境变量，有值就调 `shell_complete` 并 `sys.exit`，不跑命令。所以每次补全都是一次完整的 Python 启动，延迟不会比 `sift --version` 的约 95 毫秒更小。
+补全脚本是一个 bash 函数（`_SIFT_COMPLETE=source_bash sift` 会打印它），每次按 Tab 就用环境变量 `_SIFT_COMPLETE=complete_bash` 再启动一次 `sift`，让它把候选词打印出来。`typer/core.py` 的 `_main` 开头（第 183 行）调 `_typer_main_shell_completion`（第 626 到 644 行），后者读 `_{prog_name}_COMPLETE` 这个环境变量，有值就调 `shell_complete` 并 `sys.exit`，不跑命令。所以每次补全都是一次 Python 启动，但补全在 `_main` 里就退出了，应用不用加载完。我用 hyperfine 量了（20 次，`python3 -m sift --version` 对 `_SIFT_COMPLETE=complete_bash COMP_WORDS="sift se" COMP_CWORD=1 python3 -m sift`）：`--version` 102.4 ± 13.2 毫秒，补全 83.8 ± 5.5 毫秒，这一次机器偏忙，误差较大，大意是补全比 `--version` 还快十几毫秒。
 
-最后一条是空的：`--mode` 在 Sift 里是 `str` 加自己的 `parser=`，typer 不知道它有三个合法值，所以补不出来。第 16 篇的 `Mode` 是 `Literal["process", "thread", "interp"]`，而 typer 认识 `Literal`（`get_click_type` 第 1615 到 1618 行）。我用一个二十来行的玩具程序试过（没有贴进来）：同样的 `--mode`，标成 `Literal` 能补出 `process`、`thread`、`interp` 三个值，标成 `str` 补不出来，而且前者的报错信息是 typer 自动生成的。Sift 没这么写的原因我没有查，猜是为了保住 `mode_arg` 自己的报错文字，这只是猜测。所以 `--mode` 补不出来是 Sift 的写法造成的，不是 typer 的限制。
+最后一条是空的：`--mode` 在 Sift 里是 `str` 加自己的 `parser=`，typer 不知道它有三个合法值，所以补不出来。第 16 篇的 `Mode` 是 `Literal["process", "thread", "interp"]`，而 typer 认识 `Literal`（`get_click_type` 第 1615 到 1618 行）。把 `--mode` 直接标成 `Literal` 就应该能补，也应该有自动生成的报错信息，这是我读源码得出的，没有在 Sift 里试过 (unverified)。Sift 没这么写的原因我没有查，猜是为了保住 `mode_arg` 自己的报错文字，这只是猜测。所以 `--mode` 补不出来是 Sift 的写法造成的，不是 typer 的限制。
 
 ## 启动时间：一慢一快
 
@@ -641,16 +685,62 @@ sift --version  typer                       97.0 ms
 113 113 113 114 114 ms
 ```
 
-`make ch19` 里的 `extra.sh` 做的是同一件事，结果落在 `out/ch19/startup_compare.txt`，三轮的均值是：`--help` argparse 139.0、137.4、138.3 毫秒，typer 174.4、172.6、173.8 毫秒；`--version` argparse 137.3、138.6、138.1 毫秒，typer 93.3、93.9、93.1 毫秒；只启动解释器（`python3 -c pass`）17.8 毫秒。两次测量差几个毫秒（这次机器稍慢一点，但 `cpu_state` 仍在快状态里），结论一样：`--help` 慢约 35 到 36 毫秒（约 1.25 倍），`--version` 快约 45 到 47 毫秒（约 1.48 倍），每组的标准差只有 2 到 5 毫秒，所以这两个差不是噪声。
+`make ch19` 里的 `extra.sh` 也有同样的对比，但我是在解包出来的目录里跑的，没有标签 `ch18`，它自己跳过了，所以正文里的数都来自上面这个脚本和下面的 `help_on_pty.py`。
 
-### `--help` 慢在哪
+`--help` 的结果要分开读。在管道里（hyperfine 的输出是管道），typer 的 82.7 毫秒比 argparse 的 155.1 毫秒快 72 毫秒，和设了 `TYPER_USE_RICH=0` 的 82.6 毫秒一样：`cli.py` 的 `markup_mode()` 在输出不是终端时让 typer 走 click 的纯文本帮助，rich 根本没被导入（`typer/core.py` 第 29 行的开关就是 `TYPER_USE_RICH`，`markup_mode()` 的做法见后面）。在终端上就不一样了。我用后面会讲的 `pty` 做了一个 `help_on_pty.py`，15 轮取中位数，每轮换先后顺序：
 
-我的第一个猜测是 typer 比 argparse 重。`--version` 是反例。第二个猜测是 rich：typer 的帮助页是 rich 画的。表里最后一行已经回答了：关掉 rich 的 `--help` 只要 81.0 毫秒，比 argparse 的 144.5 毫秒还快 63.5 毫秒；打开 rich，多出 99.4 毫秒。开关是 `typer/core.py` 第 29 行的 `TYPER_USE_RICH`。再看每条路径载入了多少模块：
+```python
+"""Time `sift --help` on a pseudo-terminal: argparse (ch18) vs typer.
+
+On a terminal Sift lets typer draw the help with rich. Each round runs
+both once, swapping the order, and the median of 15 rounds is printed.
+"""
+
+import os
+import statistics
+import sys
+import time
+
+from pty_run import run_on_tty
+
+TREES = {"argparse (ch18)": "/tmp/c18src", "typer (ch19)": "/tmp/c19src"}
+ROUNDS = 15
+
+
+def timed(tree: str) -> float:
+    """Return the wall time in ms of one `python3 -m sift --help`."""
+    env = dict(os.environ, PYTHONPATH=tree, TERM="xterm-256color")
+    env.pop("NO_COLOR", None)
+    start = time.perf_counter()
+    run_on_tty([sys.executable, "-m", "sift", "--help"], env)
+    return (time.perf_counter() - start) * 1000
+
+
+def main() -> None:
+    """Alternate the two trees and print the medians."""
+    times: dict[str, list[float]] = {name: [] for name in TREES}
+    for n in range(ROUNDS):
+        names = list(TREES)[:: 1 if n % 2 == 0 else -1]
+        for name in names:
+            times[name].append(timed(TREES[name]))
+    for name, values in times.items():
+        print(f"{name:<18} median {statistics.median(values):6.1f} ms")
+
+
+if __name__ == "__main__":
+    main()
+```
+
+输出就是开头那两行：argparse 152.8 毫秒，typer 198.1 毫秒，终端上 typer 慢 45 毫秒；脚本前后的 `cpu_state` 是 `115 113 112 113 116` 和 `113 120 121 117 115`。typer 在终端上比自己在管道里多花 115 毫秒，这就是 rich 画一个带边框帮助页的价格；argparse 在伪终端和管道里差不多（152.8 对 155.1），所以这 115 毫秒不是伪终端本身的开销。
+
+有一点必须承认：这个对比被另一件事搅浑了。`ch18` 和 `ch19` 的差别不止 typer，还有我同时做的懒导入（下面讲）。所以“管道里 typer 快 72 毫秒”不能算在 typer 头上，它主要是少导入了 asyncio 和 `importlib.metadata`。要把两件事拆开，需要第三列（`ch18` 加上懒导入），我没有做。能说的只有：这一章的改动合起来，`--help` 在管道里更快，在终端上更慢，`--version` 更快。
+
+再看每条路径载入了多少模块：
 
 ```bash
 #!/usr/bin/env bash
 # Count the modules loaded by `sift --help` and `sift --version`.
-# Usage: bash module_count.sh   (inside nix develop, at the repo root)
+# Usage: bash module_count.sh  (inside nix develop, at the repo root)
 for tree in /tmp/c18src src; do
     for arg in --help --version; do
         PYTHONPATH=$tree python3 -c '
@@ -668,16 +758,16 @@ done
 ```
 
 ```text
-$ bash /tmp/sift-scratch/ch19/module_count.sh
+$ cd /tmp/c19 && bash /tmp/sift-scratch/ch19/module_count.sh
 /tmp/c18src --help: rich=False asyncio=True importlib.metadata=True modules=289
 /tmp/c18src --version: rich=False asyncio=True importlib.metadata=True modules=289
-src --help: rich=True asyncio=False importlib.metadata=True modules=370
+src --help: rich=False asyncio=False importlib.metadata=False modules=168
 src --version: rich=False asyncio=False importlib.metadata=True modules=206
 ```
 
-`--help` 的路径比 `--version` 多载入 164 个模块（370 对 206），多出来的主要就是 rich。`typer/rich_utils.py` 第 12 到 25 行在模块顶部就 `from rich import ...` 一串，而 `TyperCommand.format_help` 和 `TyperGroup.format_help` 在运行时才 `from . import rich_utils`（`typer/core.py` 第 726 行和第 808 行）：只有真的要画帮助页，rich 才会被加载。argparse 版本的两条路径都是 289 个模块，不分 `--help` 和 `--version`，因为它在导入阶段就把 asyncio 之类全拉进来了，下面会看到。
+（管道里的结果。）管道里的 `--help` 只载入 168 个模块，连 `importlib.metadata` 都没有，因为 `--help` 不需要版本号；`--version` 要读一次元数据，所以是 206 个。终端上的 `--help` 多载入 rich：`typer/rich_utils.py` 第 12 到 25 行在模块顶部就 `from rich import ...` 一串，而 `TyperCommand.format_help` 和 `TyperGroup.format_help` 在运行时才 `from . import rich_utils`（`typer/core.py` 第 726 行和第 808 行），只有真的要画帮助页，rich 才会被加载。argparse 版本的两条路径都是 289 个模块，因为它在导入阶段就把 asyncio 之类全拉进来了，下面会看到。
 
-这是个取舍。我换 typer 的理由之一是 rich 的帮助页好看，代价是每次 `--help` 多花约 100 毫秒，对一个人偶尔在终端里敲一次的命令，这不算什么。一个每秒要被调用很多次的脚本可以设 `TYPER_USE_RICH=0`，但那会把 typer 的帮助页和错误页一起换回 click 的样子，我没有在 Sift 里这么做。
+终端上每次 `--help` 多花约 115 毫秒换一个好看的帮助页，对偶尔敲一次的命令，这不算什么。
 
 ### `--version` 为什么快了
 
@@ -745,7 +835,7 @@ def __getattr__(name: str) -> str:
     return found
 ```
 
-模块级的 `__getattr__` 是 PEP 562（Python 3.7）加的：访问模块上不存在的属性时，解释器会调用它（`pep-0562.rst` 第 44 行起的例子就是这种写法）。第一次访问 `sift.__version__` 才去读元数据，之后把结果写进 `globals()`，下次就是普通的模块属性，不再进 `__getattr__`。这样 `import sift` 是 0.1 毫秒。`--version` 自己当然还是要读一次元数据，所以 `importlib.metadata` 还是出现在了第二个列表里，但只花 8.9 毫秒，比以前的 31.6 毫秒少，我猜是因为 typer 和 click 已经把它依赖的一些标准库模块带进来了，这只是猜测，我没有逐个模块对。
+模块级的 `__getattr__` 是 PEP 562 (Python 3.7) 加的：访问模块上不存在的属性时，解释器会调用它（`pep-0562.rst` 第 44 行起的例子就是这种写法）。第一次访问 `sift.__version__` 才去读元数据，之后把结果写进 `globals()`，下次就是普通的模块属性，不再进 `__getattr__`。这样 `import sift` 是 0.1 毫秒。`--version` 自己当然还是要读一次元数据，所以 `importlib.metadata` 还是出现在了第二个列表里，但只花 8.9 毫秒，比以前的 31.6 毫秒少，我猜是因为 typer 和 click 已经把它依赖的一些标准库模块带进来了，这只是猜测，我没有逐个模块对。
 
 `sift.cli` 顶部现在只剩 `click`、`typer` 和 `sift.render`、`sift.errors`、`sift.log`、`sift.util`；`asyncio`、`json`、存储和搜索模块都改成了命令函数里的导入（比如 `run_serve` 里才 `import asyncio`，`render.py` 的顶部只导入标准库，用到 rich 的函数各自在调用时 `from rich... import`）。这个做法第 11 篇的 `lazy_import.py` 讲过，代价是缺依赖的错误从启动时推迟到第一次调用那个命令的时候。ch19 的 `--version` 路径上没有 `asyncio`，也没有 `rich`（前面的表里可以看到），省下的主要就是这几块。
 
@@ -753,34 +843,6 @@ def __getattr__(name: str) -> str:
 
 typer 管输入，rich 管输出。先把 rich 的几样东西过一遍。`lab/ch19/rich_tour.py` 里的 `tour` 函数（第 28 到 53 行）在一个固定宽度的、可录制的 `Console` 上每样画一个：规则线、标记语言、表格、语法高亮、面板、进度条、`Live` 和 JSON。
 
-```python
-def tour(console: Console) -> None:
-    """Print one of each rich feature on console."""
-    console.rule("[bold cyan]rich tour")
-    console.print("[bold]bold[/bold] [i]italic[/i] [red on white]red[/]")
-    console.print(
-        "a [link=https://rich.readthedocs.io]link[/link], :sparkles:"
-    )
-    table = Table(title="hits", box=box.ROUNDED)
-    table.add_column("#", justify="right")
-    table.add_column("title", style="cyan")
-    table.add_column("score", justify="right")
-    table.add_row("1", "Kalman filter, part 2", "8.279")
-    table.add_row("2", "The UKF", "7.872")
-    console.print(table)
-    console.print(Syntax(CODE, "python", line_numbers=True))
-    console.print(Panel("Panel text", title="Panel", subtitle="subtitle"))
-    with Progress(console=console) as progress:
-        task = progress.add_task("indexing", total=20)
-        for _ in range(20):
-            progress.advance(task)
-            time.sleep(0.005)
-    with Live(Panel("starting"), console=console, auto_refresh=False) as live:
-        for step in ("reading", "analyzing", "writing"):
-            live.update(Panel(step, title="live"), refresh=True)
-            time.sleep(0.01)
-    console.print_json('{"query": "kalman", "total": 5, "hits": [1, 2]}')
-```
 
 ```text
 $ python3 lab/ch19/rich_tour.py | grep -v '^a link' | sed -n 1,9p
@@ -824,7 +886,7 @@ def render(renderable: object) -> str:
 def main() -> None:
     """Show the string, the escaped string and Text side by side."""
     print("source        :", SNIPPET)
-    print("str   (BAD)   :", render(SNIPPET))  # BAD: parsed as markup
+    print("str  (BAD)   :", render(SNIPPET))  # BAD: parsed as markup
     print("escape(str)   :", render(escape(SNIPPET)))
     print("Text(str)     :", render(Text(SNIPPET)))
     try:
@@ -840,29 +902,14 @@ if __name__ == "__main__":
 ```text
 $ python3 /tmp/sift-scratch/ch19/rich_markup_trap.py
 source        : git clone https://github.com/x/[kalman]-lab.git [bold] done
-str   (BAD)   : git clone https://github.com/x/-lab.git  done
+str  (BAD)   : git clone https://github.com/x/-lab.git  done
 escape(str)   : git clone https://github.com/x/[kalman]-lab.git [bold] done
 Text(str)     : git clone https://github.com/x/[kalman]-lab.git [bold] done
 # error: MarkupError: closing tag '[/kalman]' at position 0 doesn't match any open tag
 ```
 
-直接传字符串（`BAD`），`[kalman]` 和 `[bold]` 都被当成标签吃掉了，没有报错，文章里的字就这样悄悄少了；最糟的是 `[/xxx]` 这种看起来像关闭标签的，会抛 `MarkupError`（`rich/markup.py` 第 168 行），一条命令因为一篇博客里的一个方括号崩掉。解法有两个：`rich.markup.escape` 转义，或者干脆不用字符串，用 `Text`。`Text.append` 只是把字符串加进去，样式靠 `Span` 另外挂，从不去解析标记（`rich/text.py` 里的 `append`）。`render.py` 的 `snippet_text` 走的是第二条路。`src/sift/render.py` 第 55 到 67 行：
+直接传字符串 (`BAD`)，`[kalman]` 和 `[bold]` 都被当成标签吃掉了，没有报错，文章里的字就这样悄悄少了；最糟的是 `[/xxx]` 这种看起来像关闭标签的，会抛 `MarkupError`（`rich/markup.py` 第 167 行），一条命令因为一篇博客里的一个方括号崩掉。解法有两个：`rich.markup.escape` 转义，或者干脆不用字符串，用 `Text`。`Text.append` 只是把字符串加进去，样式靠 `Span` 另外挂，从不去解析标记（`rich/text.py` 里的 `append`）。`render.py` 的 `snippet_text` 走的是第二条路。`src/sift/render.py` 第 55 到 67 行（代码没有贴）：
 
-```python
-def snippet_text(parts: Parts) -> Text:
-    """Return the snippet as rich Text, the matched parts highlighted.
-
-    The parts are the ``(text, matched)`` pairs of ``Hit.snippet``.
-    The text is never parsed as console markup, so a ``[chain]`` in a
-    post stays what it is.
-    """
-    from rich.text import Text
-
-    text = Text()
-    for piece, matched in parts:
-        text.append(piece, style=HIT_STYLE if matched else None)
-    return text
-```
 
 这里用到第 8 篇以来的 `Hit.snippet`：一个 `(文字, 是否命中)` 的列表，命中的片段用样式 `bold black on yellow` 标出来。纯文本模式里同一个列表被 `render_plain` 用方括号标出来，这也是前面输出里 `[kalman]` 的来源。同一份数据，两种出口。
 
@@ -886,6 +933,21 @@ def wants_rich(stream: TextIO) -> bool:
 ```
 
 我没有直接用 rich 自己的检测。`Console.is_terminal` 在 `rich/console.py` 第 931 到 976 行：先看 `force_terminal` 参数，再看 `TTY_COMPATIBLE`、`FORCE_COLOR` 这些环境变量，最后才问 `isatty()`；`NO_COLOR` 在 rich 里只关颜色（第 725 到 729 行的 `no_color`），不关框线。我要的是“`NO_COLOR` 就整个退回纯文本”，所以自己判，不依赖 rich。
+
+管道和重定向的问题在 typer 自己那一头：它的帮助页和用法错误不看 `isatty`。所以 `cli.py` 还有一个 `markup_mode()`，在构造 `typer.Typer(...)` 时作为 `rich_markup_mode` 传进去（第 118 到 127 行）：
+
+```python
+def markup_mode() -> Literal["rich"] | None:
+    """Return "rich" if help and usage errors may be drawn, else None.
+
+    None makes typer print click's plain text. Both streams must be
+    terminals: help goes to stdout, usage errors to stderr, and
+    ``2>&1 | cat`` must give no boxes either.
+    """
+    if render.wants_rich(sys.stdout) and render.wants_rich(sys.stderr):
+        return "rich"
+    return None
+```
 
 两个出口我都要验证：在真终端里画 rich，在管道里和 `ch18` 逐字节相同。终端我用 `pty` 造一个。脚本把 `sift index --full` 和 `sift search` 放在一个 100 乘 30 的伪终端里跑，把它写出来的字节读回来：
 
@@ -1032,33 +1094,12 @@ same       sift index --corpus corpus/posts
 same       sift index --corpus /nonexistent
 ```
 
-八条都一样，包括错误信息（`2>&1` 把 stderr 也并进来了）。`--json` 一条值得单独说：JSON 输出是别的程序要读的，所以它不走 rich，`run_search` 里 `as_json` 为真就直接 `print(json.dumps(...))` 然后 `return`（`src/sift/cli.py` 第 463 到 480 行）。这套规则的边界是上一节说过的：typer 自己的帮助页和用法错误不受它管。
+八条都一样，包括错误信息（`2>&1` 把 stderr 也并进来了）。`--json` 一条值得单独说：JSON 输出是别的程序要读的，所以它不走 rich，`run_search` 里 `as_json` 为真就直接 `print(json.dumps(...))` 然后 `return`（`src/sift/cli.py` 第 481 到 498 行）。
 
 ### 表格
 
-终端里的搜索结果由 `hit_table` 画，`src/sift/render.py` 第 70 到 88 行：
+终端里的搜索结果由 `hit_table` 画（`src/sift/render.py` 第 70 到 88 行，代码没有贴）：
 
-```python
-def hit_table(result: SearchResult) -> Table:
-    """Return the table of the hits: rank, score, title, path, snippet."""
-    from rich import box
-    from rich.table import Table
-    from rich.text import Text
-
-    table = Table(box=box.ROUNDED, show_lines=True, expand=True)
-    table.add_column("#", justify="right", no_wrap=True)
-    table.add_column("score", justify="right", no_wrap=True)
-    table.add_column("document", ratio=1, overflow="fold")
-    for rank, hit in enumerate(result.hits, 1):
-        cell = Text()
-        cell.append(hit.title, style="bold cyan")
-        cell.append("\n")
-        cell.append(str(hit.path), style="dim")
-        cell.append("\n")
-        cell.append_text(snippet_text(hit.snippet))
-        table.add_row(str(rank), f"{hit.score:.3f}", cell)
-    return table
-```
 
 三列：序号和分数不换行、右对齐，第三列 `ratio=1` 吃掉剩下的宽度，`overflow="fold"` 让超长的路径折行而不是被截断。标题、路径和摘要放在同一个单元格里用换行分开，因为 rich 的表格按列算宽度，中文标题和英文摘要混在一列里，rich 按单元格宽度（`cell_len`，一个汉字占两格）折行，这是它比我手写对齐强的地方。
 
@@ -1066,15 +1107,50 @@ def hit_table(result: SearchResult) -> Table:
 
 第 9 篇留下的 `setup_logging(level, *, rich=...)` 以前忽略 `rich`，这一章让它起作用。
 
-用两个处理器各记三条同样的日志（一个二十行的脚本，没有贴进来），在管道上得到：
+用两个处理器各记三条同样的日志：
+
+```python
+"""Log the same three records through both handlers of setup_logging."""
+
+import logging
+
+from sift.log import setup_logging
+
+
+def emit() -> None:
+    """Log one record at each of three levels."""
+    log = logging.getLogger("sift.demo")
+    log.debug("opened %s", "segment.sft")
+    log.warning("skipping %s: %s", "a.md", "bad front matter [x]")
+    log.error("cannot write %s", "sift.db")
+
+
+def main() -> None:
+    """Show the plain handler, then the rich one (on a pipe)."""
+    for rich in (False, True):
+        print(f"--- setup_logging('DEBUG', rich={rich})")
+        setup_logging("DEBUG", rich=rich)
+        emit()
+       (handler,) = logging.getLogger("sift").handlers
+        print(f"handler: {type(handler).__module__}.{type(handler).__name__}")
+
+
+if __name__ == "__main__":
+    main()
+```
 
 ```text
+$ python3 /tmp/sift-scratch/ch19/log_handlers.py 2>&1
 --- setup_logging('DEBUG', rich=False)
 DEBUG sift.demo: opened segment.sft
 WARNING sift.demo: skipping a.md: bad front matter [x]
+ERROR sift.demo: cannot write sift.db
+handler: logging.StreamHandler
 --- setup_logging('DEBUG', rich=True)
 DEBUG    sift.demo: opened segment.sft                                          
 WARNING  sift.demo: skipping a.md: bad front matter [x]                         
+ERROR    sift.demo: cannot write sift.db                                        
+handler: rich.logging.RichHandler
 ```
 
 `RichHandler` 把级别放进固定宽度的一列，消息和后面补满的空格对齐，在终端里级别还会上色。注意第二条消息里的 `[x]` 原样保留了：`log.py` 里创建处理器时写了 `markup=False`，否则日志消息里的方括号又会掉进上一节那个坑。命令行只在 stderr 是终端时才传 `rich=True`。
@@ -1085,49 +1161,38 @@ WARNING  sift.demo: skipping a.md: bad front matter [x]
 $ sift --debug search --no-log '"kalman' 2>&1 | sed "s|$PWD/||" \
     | sed -n 1,6p
 ╭───────────────────── Traceback (most recent call last) ──────────────────────╮
-│ src/sift/cli.py:441 in run_search                │
+│ src/sift/cli.py:459 in run_search                                   │
 │                                                                              │
-│   438 │   directory = index_dir(config)                                      │
-│   439 │   require_index(directory)                                           │
+│   456 │   directory = index_dir(config)                                      │
+│   457 │   require_index(directory)                                           │
+│   458 │   text = read_query(query)                                           │
 ```
 
 我只贴了前 6 行；后面是出错的那一行 `parse(text)` 和 `parse`、`__init__`、词法分析器 `iter_tokens` 三帧，退出码是 3，和不加 `--debug` 时一样。这里 `--debug` 把一个“预期内的用户错误”也印成了调用栈，这正是它存在的目的：平时用户只看到 `unterminated phrase` 和一个插入符，要排查时再加 `--debug`。框的右边竖线有两处对不齐，是因为我用 `sed` 把绝对路径换成了相对路径，字符串变短了，框是 rich 按原来的路径长度画的，不是 rich 的毛病。
 
 ### 那张图
 
-这一章要求有一张 `sift search "kalman filter"` 的图。rich 能把录下来的控制台导出成 SVG：`Console(record=True)` 把所有输出连同样式都记下来，`save_svg` 写出一个 SVG 文件（`rich/console.py` 第 2606 行起）。`lab/ch19/rich_search_svg.py` 的 `main`（第 28 到 55 行）在临时目录里建索引，用 `Searcher` 搜 `kalman filter`，在一个 `Console(file=io.StringIO(), width=100, force_terminal=True, color_system="truecolor", record=True)` 上依次打印命令行、`render.hit_table(result)` 和摘要行，最后 `console.save_svg(...)`。
+我想放一张 `sift search "kalman filter"` 的图。rich 能把录下来的控制台导出成 SVG：`Console(record=True)` 把所有输出连同样式都记下来，`save_svg` 写出一个 SVG 文件（`rich/console.py` 第 2606 行起）。`lab/ch19/rich_search_svg.py` 的 `main`（第 28 到 55 行）在临时目录里建索引，用 `Searcher` 搜 `kalman filter`，在一个 `Console(file=io.StringIO(), width=100, force_terminal=True, color_system="truecolor", record=True)` 上依次打印命令行、`render.hit_table(result)` 和摘要行，最后 `console.save_svg(...)`。
 
 
-输出到 `io.StringIO`，宽度固定 100 列，`force_terminal=True` 逼 rich 以为自己在终端里。它跑得通（`make ch19` 里是 `ok`），文本部分的输出也对。但我把生成的 `lab/ch19/ch19-rich-search.svg` 在 Chromium 里打开一看，标题和摘要里的中文挤成一团，高亮的黄框也错了位。我先用 ImageMagick 转成 PNG，怀疑是它换了字体，再换成无头 Chromium 直接渲染，一模一样，所以不是渲染器的问题，是文件本身。
+输出到 `io.StringIO`，宽度固定 100 列，`force_terminal=True` 逼 rich 以为自己在终端里。它跑得通（`make ch19` 里是 `ok`），文本部分的输出也对。但我第一次生成的 `lab/ch19/ch19-rich-search.svg` 在 Chromium 里打开一看，标题和摘要里的中文挤成一团，高亮的黄框也错了位。我先用 ImageMagick 转成 PNG，怀疑是它换了字体，再换成无头 Chromium 直接渲染，一模一样，所以不是渲染器的问题，是文件本身。
 
 ![sift search “kalman filter” 的终端画面：一个圆角表格，三列依次是序号、分数和文档，共五行结果，每个文档格里有青色的中文标题、灰色的路径和摘要，摘要里的 Kalman 与 filter 是黄底高亮](/assets/images/python-by-sift/ch19-rich-search.svg)
 
 上面这张是修好之后的版本。翻 SVG 的文本，看到问题：
 
 ```text
-$ grep -o '<text[^>]*>[^<]*升到高维[^<]*</text>' lab/ch19/ch19-rich-search.svg
+$ git show 40e1608:lab/ch19/ch19-rich-search.svg \
+    | grep -o '<text[^>]*>[^<]*升到高维[^<]*</text>'
 <text class="terminal-2074516607-r4" x="170.8" y="117.6" textLength="231.8" clip-path="url(#terminal-2074516607-line-4)">升到高维：多变量卡尔曼滤波的推导与实现</text>
 ```
 
-这个标题有 19 个字，每个字占两格，一格 12.2 像素，应该撑满 `19 × 2 × 12.2 = 463.6` 像素，可是 `textLength` 写的是 231.8，正好一半（`19 × 12.2`）。`textLength` 告诉浏览器“把这段文字压缩或拉伸到这个宽度”，于是每个汉字被压成了半宽，叠在一起。原因在 `rich/console.py`：高亮背景的宽度用的是 `text_length = cell_len(text)`（第 2514 行），算的是终端格数，是对的；而 `<text>` 元素的 `textLength=char_width * len(text)`（第 2534 行）用的是字符个数，对中文就少算了一半。背景框按格数画，文字按字数压，两者在第一个汉字之后就对不上了，后面的英文单词于是错位。（我读的是 rich 15.0.0 里装的那份，上游有没有改过我没有查。）
+这个标题有 19 个字，每个字占两格，一格 12.2 像素，应该撑满 `19 × 2 × 12.2 = 463.6` 像素，可是 `textLength` 写的是 231.8，正好一半（`19 × 12.2`）。`textLength` 告诉浏览器“把这段文字压缩或拉伸到这个宽度”，于是每个汉字被压成了半宽，叠在一起。原因在 `rich/console.py`：高亮背景的宽度用的是 `text_length = cell_len(text)`（第 2512 行），算的是终端格数，是对的；而 `<text>` 元素的 `textLength=char_width * len(text)`（第 2534 行）用的是字符个数，对中文就少算了一半。背景框按格数画，文字按字数压，两者在第一个汉字之后就对不上了，后面的英文单词于是错位。（我读的是 rich 15.0.0 里装的那份，上游有没有改过我没有查。）
 
-修法很小：把每个 `<text>` 的 `textLength` 改成 `cell_len(文本) × 12.2`。我写了一个脚本做这件事，原文件不动，写到另一个文件：
+修法很小：把每个 `<text>` 的 `textLength` 改成 `cell_len(文本) × 12.2`。重切之后这个修正已经进了仓库：`lab/ch19/rich_search_svg.py` 自己带了后处理，`make ch19` 重新生成的文件是修好的（`lab/ch19/rich_search_svg.py` 第 40 到 47 行）：
 
 ```python
-"""Rewrite the textLength of a rich SVG from characters to cells."""
-
-import html
-import re
-import sys
-from pathlib import Path
-
-from rich.cells import cell_len
-
-CHAR_WIDTH = 12.2  # font size 20 times rich's aspect ratio 0.61
-TEXT = re.compile(r'<text([^>]*?)textLength="[\d.]+"([^>]*)>([^<]*)</text>')
-
-
-def fix(match: re.Match[str]) -> str:
+def fix_text_length(match: re.Match[str]) -> str:
     """Return the element with textLength = cells * CHAR_WIDTH."""
     head, tail, text = match.groups()
     cells = cell_len(html.unescape(text))
@@ -1135,34 +1200,26 @@ def fix(match: re.Match[str]) -> str:
         return match.group(0)  # a bare newline: nothing to measure
     length = round(cells * CHAR_WIDTH, 1)
     return f'<text{head}textLength="{length}"{tail}>{text}</text>'
-
-
-def main() -> None:
-    """Read argv[1], write the fixed copy to argv[2]."""
-    source = Path(sys.argv[1]).read_text(encoding="utf-8")
-    Path(sys.argv[2]).write_text(TEXT.sub(fix, source), encoding="utf-8")
-
-
-if __name__ == "__main__":
-    main()
 ```
 
-`CHAR_WIDTH = 12.2` 是 rich 的 `font_aspect_ratio` 0.61 乘字号 20（`save_svg` 的默认参数在 `console.py` 第 2606 到 2616 行）；`html.unescape` 是因为 SVG 里的空格写成了 `&#160;`；只含换行的元素宽度是 0，我让它保持原样。文件里共 220 个 `<text>` 元素，数值真正变了的是 14 个，全是含中文的，其余原样。我把改过的文件放进了这个博客的 `public/assets/images/python-by-sift/ch19-rich-search.svg`，上面的图用的就是它。仓库里的 `lab/ch19/ch19-rich-search.svg` 我没有动，它还是有问题的那一份，列在文末的缺口里。
+`CHAR_WIDTH = 12.2` 是 rich 的 `font_aspect_ratio` 0.61 乘字号 20（`save_svg` 的默认参数在 `console.py` 第 2606 到 2616 行）；`html.unescape` 是因为 SVG 里的空格写成了 `&#160;`；只含换行的元素宽度是 0，我让它保持原样。文件里共 220 个 `<text>` 元素，数值真正变了的是 14 个，全是含中文的。仓库里现在的 `lab/ch19/ch19-rich-search.svg` 的 sha256 是 `69a5e3f34b97...`，和这个博客里 `public/assets/images/python-by-sift/ch19-rich-search.svg` 用 `cmp` 比较是同一份，上面的图用的就是它。
 
 这张 SVG 有一点值得知道：文件里有 `@font-face` 指向 `cdnjs.cloudflare.com` 上的 Fira Code（`grep` 出了四个网址），作为 `<img>` 嵌进网页时，我猜浏览器不会去加载这些外部字体，会退回本机的等宽字体，字形和 Fira Code 不同，但 `textLength` 把宽度锁死了，所以版面不会乱。这只是我的推测，我在无头 Chromium 里的截图（本机字体）是对的，没有在别的浏览器或别的字体下验证。
 
-## uv：装得快，只是因为它在做另一件事
+## uv：快在哪
 
-这一章的另一半是项目怎么管、怎么发给别人。先量一个最直接的问题：把同一个 wheel 装进一个新的虚拟环境，`python -m venv` 加 `pip` 要多久，`uv venv` 加 `uv pip` 要多久。为了让网络不插手，我先把 `sift` 和它的 10 个依赖的 wheel 都下载到一个本地目录，两个安装器都只从这个目录装（pip 用 `--no-index --find-links`，uv 加上 `--offline`）。两边都轮流跑，每一轮换先后顺序：
+这一章的另一半是项目怎么管、怎么发给别人。先量一个最直接的问题：同一个 wheel 装进一个新虚拟环境，pip 和 uv 各要多久。我上一版只比了默认设置，得到一个很好看的倍数，可是评审重跑时发现它主要是字节码编译：pip 默认在安装时把每个 `.py` 编成 `.pyc`，uv 默认不编。所以这一版把变量拆开。为了让网络不插手，`sift` 和它的 10 个依赖的 wheel 先下载到一个本地目录，两个安装器都只从这里装（pip 用 `--no-index --find-links`，uv 加 `--offline`）；新环境用 `python -m venv --without-pip` 和 `uv venv` 建，建环境不计时；六种情形每一轮换一次先后顺序：
 
 ```python
-"""Time venv and install of the sift wheel: venv + pip, or uv.
+"""Time the install of the sift wheel with pip and uv, six ways.
 
 All wheels (sift and its 10 dependencies) are downloaded once into a
-directory; both installers then work from it with no index, so the
-network is out of the picture. Rounds swap the order of the two.
+directory, so no network is involved. Every case installs into a fresh
+venv made with --without-pip / uv venv, which is not timed. The cases
+take turns in every round.
 """
 
+import os
 import shutil
 import statistics
 import subprocess
@@ -1171,66 +1228,64 @@ import tempfile
 import time
 from pathlib import Path
 
-ROUNDS = 7
+ROUNDS = 5
+CASES = {
+    "pip default": ("pip", [], {}),
+    "pip --no-compile": ("pip", ["--no-compile"], {}),
+    "uv default": ("uv", [], {}),
+    "uv --compile-bytecode": ("uv", ["--compile-bytecode"], {}),
+    "uv link-mode=copy": ("uv", [], {"UV_LINK_MODE": "copy"}),
+    "uv copy + compile": (
+        "uv",
+        ["--compile-bytecode"],
+        {"UV_LINK_MODE": "copy"},
+    ),
+}
 
 
-def run(*argv: str | Path) -> None:
+def run(argv: list[str], env: dict[str, str] | None = None) -> None:
     """Run a command quietly; raise if it fails."""
-    subprocess.run([str(a) for a in argv], check=True, capture_output=True)
+    subprocess.run(argv, check=True, capture_output=True, env=env)
 
 
-def with_pip(wheels: Path, work: Path) -> tuple[float, float]:
-    """Return seconds for `python -m venv` and for `pip install`."""
-    env = work / "pip-venv"
+def install_seconds(case: str, wheels: Path, work: Path) -> float:
+    """Return the seconds one install takes in a new venv."""
+    tool, flags, extra = CASES[case]
+    venv = work / "venv"
+    env = dict(os.environ, **extra)
+    python = str(venv / "bin" / "python")
+    if tool == "pip":
+        run([sys.executable, "-m", "venv", "--without-pip", str(venv)])
+        argv = [sys.executable, "-m", "pip", "--python", python, "install"]
+        argv += ["--no-index", "--find-links", str(wheels), *flags, "sift"]
+    else:
+        run(["uv", "venv", str(venv)])
+        argv = ["uv", "pip", "install", "--python", python, "--offline"]
+        argv += ["--no-index", "--find-links", str(wheels), *flags, "sift"]
     start = time.perf_counter()
-    run(sys.executable, "-m", "venv", env)
-    made = time.perf_counter()
-    run(
-        env / "bin" / "pip", "install", "--no-index",
-        "--find-links", wheels, "sift",
-    )  # fmt: skip
-    done = time.perf_counter()
-    shutil.rmtree(env)
-    return made - start, done - made
-
-
-def with_uv(wheels: Path, work: Path) -> tuple[float, float]:
-    """Return seconds for `uv venv` and for `uv pip install`."""
-    env = work / "uv-venv"
-    start = time.perf_counter()
-    run("uv", "venv", env)
-    made = time.perf_counter()
-    run(
-        "uv", "pip", "install", "--python", env / "bin" / "python",
-        "--offline", "--no-index", "--find-links", wheels, "sift",
-    )  # fmt: skip
-    done = time.perf_counter()
-    shutil.rmtree(env)
-    return made - start, done - made
+    run(argv, env)
+    seconds = time.perf_counter() - start
+    shutil.rmtree(venv)
+    return seconds
 
 
 def main() -> None:
-    """Download once, then alternate the two installers."""
+    """Download once, then rotate through the cases."""
     wheel = next(Path(sys.argv[1]).glob("*.whl"))
     with tempfile.TemporaryDirectory() as tmp:
         work = Path(tmp)
         wheels = work / "wheels"
-        run(sys.executable, "-m", "pip", "download", "-d", wheels, wheel)
-        count = len(list(wheels.glob("*.whl")))
-        print(f"{count} wheels in the local directory")
-        results: dict[str, list[tuple[float, float]]] = {"pip": [], "uv": []}
-        steps = {"pip": with_pip, "uv": with_uv}
+        run([sys.executable, "-m", "pip", "download", "-d", str(wheels),
+             str(wheel)])  # fmt: skip
+        names = list(CASES)
+        times: dict[str, list[float]] = {name: [] for name in names}
         for n in range(ROUNDS):
-            order = ("pip", "uv") if n % 2 == 0 else ("uv", "pip")
-            for name in order:
-                results[name].append(steps[name](wheels, work))
-        for name, values in results.items():
-            venv = statistics.median(v for v, _ in values)
-            install = statistics.median(i for _, i in values)
-            print(
-                f"{name:<4} venv {venv:5.2f} s  install {install:5.2f} s  "
-                f"(median of {ROUNDS})"
-            )
+            shift = n % len(names)
+            for name in names[shift:] + names[:shift]:
+                times[name].append(install_seconds(name, wheels, work))
+        for name, values in times.items():
+            median = statistics.median(values)
+            print(f"{name:<24} median {median:6.3f} s")
 
 
 if __name__ == "__main__":
@@ -1239,16 +1294,19 @@ if __name__ == "__main__":
 
 ```text
 $ python3 /tmp/sift-scratch/cpu_state.py; \
-    python3 /tmp/sift-scratch/ch19/install_compare.py out/ch19/dist; \
+    python3 /tmp/sift-scratch/ch19/install_compare.py /tmp/c19/dist; \
     python3 /tmp/sift-scratch/cpu_state.py
-113 110 112 114 112 ms
-11 wheels in the local directory
-pip  venv  2.08 s  install  2.59 s  (median of 7)
-uv   venv  0.01 s  install  0.03 s  (median of 7)
-119 117 113 115 114 ms
+116 111 115 117 113 ms
+pip default              median  2.970 s
+pip --no-compile         median  0.840 s
+uv default               median  0.025 s
+uv --compile-bytecode    median  0.491 s
+uv link-mode=copy        median  0.059 s
+uv copy + compile        median  0.496 s
+112 114 111 112 112 ms
 ```
 
-pip 一侧一共 4.7 秒，uv 一侧 0.04 秒。拆开看：`python -m venv` 要 2.08 秒，因为它还要在新环境里装一份 pip (`ensurepip`)，uv 的环境里没有 pip，0.01 秒；装 11 个 wheel，pip 2.59 秒，uv 0.03 秒，约 86 倍。我想强调一下这个比较的范围：它比的是“本地已有 wheel、没有网络”这种最理想的情形，也只量了这一个包；uv 快主要是因为它是编译的程序、用硬链接从缓存里“装”文件，而不是一个个复制，这后半句是我的理解，我没有去验证 uv 这次是不是用了硬链接。真实世界里有网络、有解析，差距没有这么大，下面 `uv lock` 的 4 秒就是网络和解析。
+默认对默认是 2.970 秒对 0.025 秒，但这个比值不能说明 uv 的安装器快多少：pip 的 2.970 秒里有约 2.1 秒（2.970 减 0.840）是编译 `.pyc`。同样让 uv 编译，它要 0.491 秒，pip 默认比它慢约 6 倍；两边都不编译，是 0.840 秒对 0.025 秒，约 34 倍。硬链接对复制：0.025 秒对 0.059 秒，约 2.4 倍。所以 uv 默认更快有三个原因：不编字节码（最大的一块）、从缓存里硬链接而不是复制、自己是编译好的程序。后两个里的前一个我用 `UV_LINK_MODE=copy` 验证了；“自己是编译好的程序”这一块我没有隔离出来。这个比较的范围也很窄：本地已有 wheel、没有网络、只有这一个包，真实世界里还有下面 `uv lock` 的 4 秒解析和下载。建环境这次没有计时。
 
 ### 用 uv 管一个项目
 
@@ -1262,13 +1320,13 @@ Initialized project `uv-demo`
 $ uv add rich
 Using CPython 3.14.7 interpreter at: /nix/store/ls26898yzdy2wn1cvh3zkr420lsx2dvw-python3-3.14.7-env/bin/python
 Creating virtual environment at: .venv
-Resolved 5 packages in 4.24s
+Resolved 5 packages in 4.37s
    Building uv-demo @ file://$TMP/uv-project
       Built uv-demo @ file://$TMP/uv-project
 Downloading pygments (1.2MiB)
  Downloaded pygments
-Prepared 5 packages in 2.52s
-Installed 5 packages in 7ms
+Prepared 5 packages in 2.40s
+Installed 5 packages in 6ms
  + markdown-it-py==4.2.0
  + mdurl==0.1.2
  + pygments==2.21.0
@@ -1276,9 +1334,9 @@ Installed 5 packages in 7ms
  + uv-demo==0.1.0 (from file://$TMP/uv-project)
 $ uv lock   # cache already filled by uv add
 Resolved 5 packages in 1ms
-uv lock, warm cache: 0.085 s
-Resolved 5 packages in 4.71s
-uv lock, empty cache: 4.800 s
+uv lock, warm cache: 0.063 s
+Resolved 5 packages in 4.34s
+uv lock, empty cache: 4.409 s
 $ uv run uv-demo
 Hello from uv-demo!
 $ uv tree
@@ -1295,9 +1353,9 @@ uv-demo v0.1.0
 
 几件事可以从输出里读出来：
 
-- `uv add rich` 一条命令做了五件事：创建 `.venv`（它在 `Using CPython 3.14.7 interpreter` 那里选了解释器），解析依赖（`Resolved 5 packages`），写 `pyproject.toml` 的 `dependencies`，写 `uv.lock`，把包装进 `.venv`。5 个包是 `rich` 加它的 4 个传递依赖，`uv tree` 画出了树。`uv-demo` 自己也在那 5 个里，是以可编辑方式装进去的（`Built uv-demo @ file://...`）。
-- `uv lock` 的耗时有两个：缓存已经有内容时 0.085 秒，缓存清空后 4.800 秒（脚本里 `rm uv.lock; rm -rf "$UV_CACHE_DIR"` 再锁一次）。差的 4.7 秒是联网取 `rich` 及其依赖的元数据。之前我手动跑过一次冷缓存是 4.211 秒，所以“约 4 到 5 秒”才是我敢说的，不是某个精确值；这几个数以秒计，我没有夹 `cpu_state`。
-- `uv.lock` 是文本的 TOML，记录每个包的版本、来源、下载地址和哈希。文档（`docs/concepts/projects/layout.md` 第 79 到 96 行，uv 0.12.5）说它是“通用的”、跨平台的锁文件，应该提交进版本控制，由 uv 管理，不要手改。`uv run` 会自动保证锁文件是新的、环境同步到它（`docs/concepts/projects/sync.md` 第 9 到 32 行），想关掉用 `--locked`、`--frozen` 或 `--no-sync`。
+- `uv add rich` 一条命令做了五件事：创建 `.venv`（它在 `Using CPython 3.14.7 interpreter` 那里选了解释器），解析依赖 (`Resolved 5 packages`)，写 `pyproject.toml` 的 `dependencies`，写 `uv.lock`，把包装进 `.venv`。5 个包是 `rich` 加它的 4 个传递依赖，`uv tree` 画出了树。`uv-demo` 自己也在那 5 个里（输出里的 `Built uv-demo @ file://...`）。
+- `uv lock` 的耗时有两个：缓存已经有内容时 0.063 秒，缓存清空后 4.409 秒。差的 4.7 秒是联网取 `rich` 及其依赖的元数据。我之前跑过的几次冷缓存在 4.2 到 4.8 秒之间，所以只能说“约 4 到 5 秒”；这几个数以秒计，没有夹 `cpu_state`。
+- `uv.lock` 是文本的 TOML，记录每个包的版本、来源和哈希。文档（`docs/concepts/projects/layout.md` 第 79 到 96 行，uv 0.12.5）说它是跨平台的锁文件，应该提交进版本控制，不要手改；`uv run` 会自动保证它是新的（`docs/concepts/projects/sync.md` 第 9 到 32 行）。
 - `uv init --package` 默认选的构建后端是 uv 自己的 `uv_build`（`lab/ch19/uv_demo/pyproject.toml` 里是 `build-backend = "uv_build"`；`docs/concepts/projects/init.md` 第 67 到 68 行也是这样写的）。Sift 用的是 hatchling。后端可以换，这正是 PEP 517 要的，下面打包那一节会看到。
 
 ### `uv tool` 和 `uvx`
@@ -1307,7 +1365,7 @@ uv-demo v0.1.0
 ```bash
 #!/usr/bin/env bash
 # uv tool install and uvx, in a throw-away directory.
-# Usage: bash uv_tools.sh WHEEL   (inside nix develop, at the repo root)
+# Usage: bash uv_tools.sh WHEEL  (inside nix develop, at the repo root)
 set -euo pipefail
 repo=$PWD
 wheel=$(realpath "$1")
@@ -1440,7 +1498,7 @@ https://nix.dev/permalink/stub-ld
 exit 127
 ```
 
-关掉以后，要不存在的 Python 版本会明确报错（退出码 2），而不是悄悄下载一份。原因在后面几行：uv 下载的是预编译的、动态链接的 CPython，ELF 头里写着解释器是 `/lib64/ld-linux-x86-64.so.2`，那是一个通用 Linux 的路径。NixOS 默认没有这个文件，那个位置放的是一个 stub，打印上面那段“NixOS cannot run dynamically linked executables”然后退出 127；`nix-ld` 这个模块可以把它换成一个真的加载器。我的这台机器恰好启用了 `nix-ld`（`readlink` 的结果），所以下载的 Python 3.13.15 在这里能跑（`-V` 打印了版本）。这意味着：我这台机器上关掉下载并不是“因为它在这里会坏”，而是 flake 给所有人写的默认，别的 NixOS 机器没有 `nix-ld` 就会坏。“没有 `nix-ld` 的机器上下载的 Python 会失败”这一点我没有在那样的机器上试过，stub 的输出只能说明 stub 会说什么，这是个推断（unverified）。另外 `UV_PYTHON=python3.14` 把 uv 钉在了 shell 里的解释器上，所以前面所有 `uv` 命令用的都是 `nix develop` 给的那个 3.14.7。
+关掉以后，要不存在的 Python 版本会明确报错（退出码 2），而不是悄悄下载一份。原因在后面几行：uv 下载的是预编译的、动态链接的 CPython，ELF 头里写着解释器是 `/lib64/ld-linux-x86-64.so.2`，那是一个通用 Linux 的路径。NixOS 默认没有这个文件，那个位置放的是一个 stub，打印上面那段“NixOS cannot run dynamically linked executables”然后退出 127；`nix-ld` 这个模块可以把它换成一个真的加载器。我的这台机器恰好启用了 `nix-ld`（`readlink` 的结果），所以下载的 Python 3.13.15 在这里能跑（`-V` 打印了版本）。这意味着：我这台机器上关掉下载并不是“因为它在这里会坏”，而是 flake 给所有人写的默认，别的 NixOS 机器没有 `nix-ld` 就会坏。“没有 `nix-ld` 的机器上下载的 Python 会失败”这一点我没有在那样的机器上试过，stub 的输出只能说明 stub 会说什么，这是个推断 (unverified)。另外 `UV_PYTHON=python3.14` 把 uv 钉在了 shell 里的解释器上，所以前面所有 `uv` 命令用的都是 `nix develop` 给的那个 3.14.7。
 
 ## 打包：wheel 和 sdist
 
@@ -1456,7 +1514,7 @@ Sift 的 `pyproject.toml`（标签 `ch19`，全文）：
 
 ```toml
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling>=1.31"]
 build-backend = "hatchling.build"
 
 [project]
@@ -1506,9 +1564,9 @@ include = ["src"]
 pythonVersion = "3.14"
 ```
 
-`requires = ["hatchling"]` 没有版本。这有一个后果，我下面会量到。`[project.scripts]` 里的 `sift = "sift.cli:main"` 就是命令行入口：安装时生成一个叫 `sift` 的可执行文件，调用 `sift.cli.main()`，这也是为什么 `main` 要能当普通函数调用并且成功时返回。
+`requires = ["hatchling>=1.31"]` 只有下限，没有上限。这有一个后果，我下面会量到（量的时候它还是没有任何版本的 `["hatchling"]`，仓库在重切时才加了下限）。`[project.scripts]` 里的 `sift = "sift.cli:main"` 就是命令行入口：安装时生成一个叫 `sift` 的可执行文件，调用 `sift.cli.main()`，这也是为什么 `main` 要能当普通函数调用并且成功时返回。
 
-hatchling 把这些钩子写成了薄薄的包装：`hatchling/build.py`（1.31.0）里的 `build_wheel`（第 33 到 44 行）和 `build_sdist`（第 22 到 29 行）各自建一个 `WheelBuilder` 或 `SdistBuilder` 然后 `build`。`python -m build`（build 1.5.1）是个前端：不带参数时先从源码树造 sdist，再从 sdist 造 wheel（`build/__main__.py` 第 844 行：`build_package_via_sdist`，日志里是 `Building wheel from sdist`）。
+hatchling 把这些钩子写成了薄薄的包装：`hatchling/build.py` (1.31.0) 里的 `build_sdist`（第 27 到 34 行）和 `build_wheel`（第 47 到 58 行）各自建一个 `WheelBuilder` 或 `SdistBuilder` 然后 `build`。`python -m build` (build 1.5.1) 是个前端：不带参数时先从源码树造 sdist，再从 sdist 造 wheel（`build/__main__.py` 第 844 行：`build_package_via_sdist`，日志里是 `Building wheel from sdist`）。
 
 ### 隔离构建
 
@@ -1517,7 +1575,7 @@ PEP 518 的 `requires` 是给“隔离构建”用的：前端为每次构建建
 ```bash
 #!/usr/bin/env bash
 # Build the wheel of a clean checkout three ways and time each.
-# Usage: bash isolated_build.sh REPO_DIR   (inside nix develop)
+# Usage: bash isolated_build.sh REPO_DIR  (inside nix develop)
 set -euo pipefail
 repo=$(realpath "$1")
 work=$(mktemp -d)
@@ -1542,8 +1600,6 @@ timeit 'build (isolated, pip, cold cache)' \
     python3 -m build --wheel --outdir o2 .
 timeit 'build --installer uv (cold cache)' \
     python3 -m build --wheel --installer uv --outdir o3 .
-echo '# the isolated run, as pip saw it:'
-python3 -m build --wheel --outdir o4 . 2>&1 | sed -n 1,6p
 ```
 
 ```text
@@ -1551,18 +1607,11 @@ $ bash /tmp/sift-scratch/ch19/isolated_build.sh .
 build --no-isolation                0.32 s
 build (isolated, pip, cold cache)  58.96 s
 build --installer uv (cold cache)   4.90 s
-# the isolated run, as pip saw it:
-* Creating isolated environment: venv+pip...
-* Installing packages in isolated environment:
-  - hatchling
-* Getting build dependencies for wheel...
-* Installed build dependency versions:
-  - hatchling==1.32.4
 ```
 
 不隔离 0.32 秒；隔离、用 pip、冷缓存 58.96 秒；隔离、`--installer uv`、冷缓存 4.90 秒。58.96 秒这个数让我意外，我把这一项单独重跑了两次：第一次 59.05 秒，紧接着的第二次（pip 缓存已经热了）1.10 秒。它可复现，所以不是网络偶然抖了一下，但为什么 pip 冷缓存要等将近一分钟，我没有查出来（`python -m venv` 单独要 2.04 秒，不是它），这是我留下的疑问。
 
-这里面更重要的是最后一行：隔离环境装的是 `hatchling==1.32.4`，而我的开发环境是 1.31.0。同一份源码，两种方式建出来的 wheel，`WHEEL` 文件里的 `Generator:` 就不同了，我重跑那次打印了它：隔离构建的是 `Generator: hatchling 1.32.4`，`RECORD` 的哈希也就跟着不同（`add603642ac9` 对 `c23f2d1b4949` 的前 12 位）。原因是 `requires = ["hatchling"]` 没有上限甚至没有下限，每次隔离构建装的是当天 PyPI 上最新的 hatchling。要可复现的构建，该给它加约束，比如 `hatchling>=1.31,<2`。我没有改仓库里的 `pyproject.toml`，这在文末列为缺口。（这个 wheel 里的 `.py` 文件内容当然是一样的，两个 `RECORD` 的差别只在 `WHEEL` 那一行；我没有逐行比较整个 `RECORD`，这是个推断，依据是 `WHEEL` 是唯一记录 hatchling 版本的文件。）
+这里面更重要的是隔离环境装的版本：`WHEEL` 文件里的 `Generator:` 是 `hatchling 1.32.4`，而我的开发环境是 1.31.0。同一份源码，两种方式建出来的 wheel，`WHEEL` 文件里的 `Generator:` 就不同了，我重跑那次打印了它：隔离构建的是 `Generator: hatchling 1.32.4`，`RECORD` 的哈希也就跟着不同（`add603642ac9` 对 `c23f2d1b4949` 的前 12 位）。原因是我测的那一版 `requires = ["hatchling"]` 没有任何版本约束，每次隔离构建装的是当天 PyPI 上最新的 hatchling。重切后仓库写成了 `hatchling>=1.31`，只有下限，隔离构建仍然会装当天最新的，我没有在重切后的树上重量 (unverified)。要可复现的构建还得有上限，比如 `>=1.31,<2`。
 
 ### wheel 里面是什么
 
@@ -1577,7 +1626,7 @@ Archive:  sift-0.1.0-py3-none-any.whl
       768  01-01-1980 00:00   sift/__init__.py
       131  01-01-1980 00:00   sift/__main__.py
      2885  01-01-1980 00:00   sift/cache.py
-    24594  01-01-1980 00:00   sift/cli.py
+    25202  01-01-1980 00:00   sift/cli.py
      6694  01-01-1980 00:00   sift/client.py
       539  01-01-1980 00:00   sift-0.1.0.dist-info/METADATA
        87  01-01-1980 00:00   sift-0.1.0.dist-info/WHEEL
@@ -1585,14 +1634,14 @@ Archive:  sift-0.1.0-py3-none-any.whl
     11358  01-01-1980 00:00   sift-0.1.0.dist-info/licenses/LICENSE-APACHE
      1064  01-01-1980 00:00   sift-0.1.0.dist-info/licenses/LICENSE-MIT
      3727  01-01-1980 00:00   sift-0.1.0.dist-info/RECORD
-   264197                     49 files
+   264788                     49 files
 $ ls -l out/ch19/dist
-total 388
--rw-r--r-- 1 user group  96448 Oct 24 21:46 sift-0.1.0-py3-none-any.whl
--rw-r--r-- 1 user group 298117 Oct 24 21:46 sift-0.1.0.tar.gz
+total 392
+-rw-r--r-- 1 user group  96640 Oct 25 05:52 sift-0.1.0-py3-none-any.whl
+-rw-r--r-- 1 user group 299258 Oct 25 05:52 sift-0.1.0.tar.gz
 ```
 
-（`Archive:` 那行我把路径缩成了文件名，`ls` 里把用户名和组换成了 `user group`。）wheel 是 96,448 字节，49 个文件，解压后 264,197 字节：压缩比约 2.7。所有时间戳都是 1980-01-01，是 ZIP 格式能表示的最早日期，构建工具把它固定下来，同样的输入就能得到同样的字节，我没有为这一点单独做实验。里面没有 `tests/`、`lab/`、没有 `__pycache__`（`wheel_anatomy.sh` 数过，是 0）。
+wheel 是 96,640 字节，49 个文件，解压后 264,788 字节：压缩比约 2.7。所有时间戳都是 1980-01-01，是 ZIP 格式能表示的最早日期，构建工具把它固定下来，同样的输入就能得到同样的字节，我没有为这一点单独做实验。里面没有 `tests/`、`lab/`、没有 `__pycache__`（`wheel_anatomy.sh` 数过，是 0）。
 
 文件名里的 `py3-none-any` 是三个标签：Python 3、不依赖具体 ABI、任何平台。`WHEEL` 文件里的 `Tag: py3-none-any` 和 `Root-Is-Purelib: true` 说的是同一件事（规范第 204 行）：纯 Python，装到 `purelib`。这个包没有编译扩展，所以一个 wheel 通吃；到第 24、25 篇有了 C 和 Rust 的扩展，标签就会变成平台相关的了。元数据文件：
 
@@ -1627,69 +1676,31 @@ $ unzip -p "$w" '*.dist-info/entry_points.txt'
 sift = sift.cli:main
 ```
 
-三个点。第一，`Metadata-Version: 2.4`。核心元数据规范（`core-metadata.rst`）列的合法值是 2.1 到 2.6 等（第 53 行）；`License-Expression` 和 `License-File` 这两个字段是 2.4 加的（第 488 行、第 517 行的 `versionadded`），来自 PEP 639，所以我 `pyproject.toml` 里写的 `license = "MIT OR Apache-2.0"`（一个 SPDX 表达式，不是旧的 `{text = ...}`）才会变成 `License-Expression`；`license-files` 列的两个文件被收进 `licenses/`。PEP 566 的元数据版本是 2.1，现在已经是历史了。第二，可选依赖变成了两样东西：一个 `Provides-Extra: web` 声明有这个 extra，加上四行带环境标记 `extra == 'web'` 的 `Requires-Dist`；装 `sift[web]` 时，安装器才把这四行当成必须。第三，`entry_points.txt` 里的 `[console_scripts]` 就是 `[project.scripts]` 的翻译；`pip` 或 `uv` 装 wheel 时按它生成那个 `sift` 的可执行脚本。
+三个点。第一，`Metadata-Version: 2.4`。核心元数据规范 (`core-metadata.rst`) 列的合法值是 2.1 到 2.6 等（第 53 行）；`License-Expression` 和 `License-File` 这两个字段是 2.4 加的（第 488 行、第 517 行的 `versionadded`），来自 PEP 639，所以我 `pyproject.toml` 里写的 `license = "MIT OR Apache-2.0"`（一个 SPDX 表达式，不是旧的 `{text = ...}`）才会变成 `License-Expression`；`license-files` 列的两个文件被收进 `licenses/`。PEP 566 的元数据版本是 2.1，现在已经是历史了。第二，可选依赖变成了两样东西：一个 `Provides-Extra: web` 声明有这个 extra，加上四行带环境标记 `extra == 'web'` 的 `Requires-Dist`；装 `sift[web]` 时，安装器才把这四行当成必须。第三，`entry_points.txt` 里的 `[console_scripts]` 就是 `[project.scripts]` 的翻译；`pip` 或 `uv` 装 wheel 时按它生成那个 `sift` 的可执行脚本。
 
-`RECORD` 是一份清单，列出 wheel 里每个文件、它的 sha256 和大小，规范要求除了 `RECORD` 自己以外每个文件都必须有哈希，`RECORD` 那一行的哈希和大小留空（第 239 到 244 行），安装时安装器要核对（第 250 到 253 行）。我写一个脚本来核对，哈希是 `urlsafe-base64-nopad`（第 401 到 407 行的示例）：
-
-```python
-"""Check every hash and size in the RECORD of a wheel (PEP 427)."""
-
-import base64
-import csv
-import hashlib
-import io
-import sys
-import zipfile
-
-
-def digest(data: bytes) -> str:
-    """Return sha256 as urlsafe base64 without padding."""
-    raw = hashlib.sha256(data).digest()
-    return base64.urlsafe_b64encode(raw).rstrip(b"=").decode()
-
-
-def main() -> None:
-    """Compare RECORD with the files in the wheel given as argv[1]."""
-    with zipfile.ZipFile(sys.argv[1]) as wheel:
-        names = set(wheel.namelist())
-        record = next(n for n in names if n.endswith(".dist-info/RECORD"))
-        rows = list(csv.reader(io.StringIO(wheel.read(record).decode())))
-        bad = 0
-        for path, hash_field, size in rows:
-            if path == record:
-                print(f"{path}: hash and size empty: {hash_field == ''}")
-                continue
-            data = wheel.read(path)
-            want = f"sha256={digest(data)}"
-            if hash_field != want or int(size) != len(data):
-                bad += 1
-                print("MISMATCH", path)
-        listed = {row[0] for row in rows}
-        print(f"{len(rows)} rows, {bad} mismatches")
-        print("files not in RECORD:", sorted(names - listed))
-
-
-if __name__ == "__main__":
-    main()
-```
+装 `sift[web]` 时多出多少包，可以用 `--dry-run` 看，不真的装（只贴了 `grep -E 'Resolved|Would install'` 过滤出的两行）：
 
 ```text
-$ python3 /tmp/sift-scratch/ch19/record_check.py "$w"
-sift-0.1.0.dist-info/RECORD: hash and size empty: True
-49 rows, 0 mismatches
-files not in RECORD: []
+$ uv pip install --python "$venv/bin/python" --dry-run "sift @ <wheel>"
+Resolved 11 packages in 4.88s
+Would install 11 packages
+$ uv pip install --python "$venv/bin/python" --dry-run "sift[web] @ <wheel>"
+Resolved 25 packages in 5.29s
+Would install 25 packages
 ```
 
-49 行对 49 个文件，0 个不一致。（脚本的文档字符串写着 PEP 427，现在这条规则的现行文本在 packaging.python.org 的规范页上，PEP 页首写着这一点，我引的行号是规范页的。）
+不带 extra 是 11 个包，带了是 25 个。完整的列表我上一轮看过，`fastapi` 解析成 0.162.0、`uvicorn` 0.54.0、`pydantic` 2.14.1，都比开发环境里的新；我没有拿这些新版本去跑第 18 篇的服务器。
+
+`RECORD` 是一份清单，列出 wheel 里每个文件、它的 sha256 和大小：规范要求除了 `RECORD` 自己以外每个文件都必须有哈希，`RECORD` 那一行的哈希和大小留空（`binary-distribution-format.rst` 第 239 到 244 行），安装时安装器要核对（第 250 到 253 行）。上一版我写过一个脚本把 49 行逐行核对过，没有不一致，这一版没有贴它，这一条请当作我报告的结果。
 
 ### sdist：整个仓库
 
-另一个产物是 sdist，`sift-0.1.0.tar.gz`，298,117 字节，是 wheel 的 3.1 倍。sdist 的规范（`source-distribution-format.rst`）要求里面是单个顶层目录 `{name}-{version}`，并且有 `pyproject.toml`，以及版本 2.2 以上的 `PKG-INFO`（第 17 行、第 61 到 64 行）。里面有什么，由 hatchling 决定，下面把成员按顶层目录数一遍；再在一份干净检出的副本里给 sdist 加一个 `include` 列表，看看有什么变化：
+另一个产物是 sdist，`sift-0.1.0.tar.gz`，299,258 字节，是 wheel 的 3.1 倍。sdist 的规范 (`source-distribution-format.rst`) 要求里面是单个顶层目录 `{name}-{version}`，并且有 `pyproject.toml`，以及版本 2.2 以上的 `PKG-INFO`（第 17 行、第 61 到 64 行）。里面有什么，由 hatchling 决定，下面把成员按顶层目录数一遍；再在一份干净检出的副本里给 sdist 加一个 `include` 列表，看看有什么变化：
 
 ```bash
 #!/usr/bin/env bash
 # Build the sdist of a clean checkout twice: as is, and with include.
-# Usage: bash sdist_include.sh REPO_DIR   (run inside nix develop)
+# Usage: bash sdist_include.sh REPO_DIR  (run inside nix develop)
 set -euo pipefail
 repo=$(realpath "$1")
 work=$(mktemp -d)
@@ -1718,8 +1729,8 @@ tar tzf out-all/*.tar.gz | cut -d/ -f2 | sort | uniq -c | sort -rn
 ```text
 $ bash /tmp/sift-scratch/ch19/sdist_include.sh . 2>&1 | grep -v '^\*' \
     | sed -n 1,8p
-out-all   298117 bytes  357 members
-out-inc   139755 bytes   87 members
+out-all   299258 bytes  357 members
+out-inc   140395 bytes   87 members
 # members of out-all by top-level directory
     260 lab
      43 src
@@ -1728,7 +1739,7 @@ out-inc   139755 bytes   87 members
       1 sift.toml
 ```
 
-默认的 sdist 有 357 个成员，其中 260 个是 `lab/`，也就是前 19 章的全部实验脚本，加上 CI 配置、`flake.nix`、`.envrc`；真正的源码 `src/` 只有 43 个。给它一个 `include`（`src`、`tests`、许可证、`README.md`）后，只剩 87 个成员，139,755 字节，约一半。为什么默认这样？hatchling 的规则在 `hatchling/builders/config.py`：`include_spec` 在没有任何 `include` 或 `packages` 时是 `None`（第 118 到 150 行，`default_include()` 在第 803 行返回 `[]`），而 `path_is_included` 在 `include_spec` 为 `None` 时对每个路径都返回 `True`（第 76 到 79 行）；排除靠 `.gitignore`（第 740 到 775 行 `load_vcs_exclusion_patterns` 读它）加上两条内置的：`*.py[cdo]` 和 `/dist`（第 815 到 818 行，`DEFAULT_BUILD_DIRECTORY = "dist"`，在 `constants.py` 第 1 行）。我仓库的 `.gitignore` 排除了 `/corpus/`、`/out/`、`/.sift/`、`/.venv/`、`/.tutorial/`、`/dist/` 等，所以这些没进去；其余的一切都进去了。我在仓库工作区（里面有 `corpus/`、`out/`、`.venv/`）里直接建的 sdist 也是 298,117 字节，和干净检出一样，印证了这一点。
+默认的 sdist 有 357 个成员，其中 260 个是 `lab/`，也就是前 19 章的全部实验脚本，加上 CI 配置、`flake.nix`、`.envrc`；真正的源码 `src/` 只有 43 个。给它一个 `include`（`src`、`tests`、许可证、`README.md`）后，只剩 87 个成员，140,395 字节，约一半。为什么默认这样？hatchling 的规则在 `hatchling/builders/config.py`：`include_spec` 在没有任何 `include` 或 `packages` 时是 `None`（第 118 到 150 行，`default_include()` 在第 803 行返回 `[]`），而 `path_is_included` 在 `include_spec` 为 `None` 时对每个路径都返回 `True`（第 76 到 79 行）；排除靠 `.gitignore`（第 765 到 795 行的 `load_vcs_exclusion_patterns` 读它，找 `.gitignore` 的是第 751 到 763 行的 `vcs_exclusion_files`）加上两条内置的：`*.py[cdo]` 和 `/dist`（第 815 到 818 行，`DEFAULT_BUILD_DIRECTORY = "dist"`，在 `constants.py` 第 1 行）。我仓库的 `.gitignore` 排除了 `/corpus/`、`/out/`、`/.sift/`、`/.venv/`、`/.tutorial/`、`/dist/` 等，所以这些没进去；其余的一切都进去了。
 
 wheel 靠 `[tool.hatch.build.targets.wheel] packages = ["src/sift"]` 只收 `src/sift`。`hatchling/builders/wheel.py` 的 `default_file_selection_options`（第 229 到 260 行）自己也会找 `src/<项目名>/__init__.py`，我在一份临时副本里去掉这个表重建过（脚本没有贴进来）：wheel 的字节数和 `RECORD` 的哈希都没变，所以那一行是多余的。
 
@@ -1771,13 +1782,13 @@ Creating virtual environment at: $TMP/sift-venv
 Activate with: source $TMP/sift-venv/bin/activate
 $ uv pip install sift-0.1.0-py3-none-any.whl
 Using Python 3.14.7 environment at: $TMP/sift-venv
-Resolved 11 packages in 3.60s
+Resolved 11 packages in 4.45s
 Downloading pygments (1.2MiB)
 Downloading sqlalchemy (4.4MiB)
  Downloaded pygments
  Downloaded sqlalchemy
-Prepared 11 packages in 2.80s
-Installed 11 packages in 9ms
+Prepared 11 packages in 3.28s
+Installed 11 packages in 8ms
  + annotated-doc==0.0.5
  + click==8.5.0
  + markdown-it-py==4.2.0
@@ -1789,40 +1800,40 @@ Installed 11 packages in 9ms
  + sqlalchemy==2.1.6
  + typer==0.27.3
  + typing-extensions==4.16.0
-uv pip install: 6.486 s
+uv pip install: 7.825 s
 $ python -c "import sift, rich; print(sift.__file__, rich.__file__)"
-$TMP/sift-venv/lib/python3.14/site-packages/sift/__init__.py
+REPO/src/sift/__init__.py
 $TMP/sift-venv/lib/python3.14/site-packages/rich/__init__.py
 $ sift index --corpus corpus/posts
 documents: 123
 vocabulary: 81167
-full rebuild: parsed 123, unchanged 0, removed 0; segment 2880196 bytes; took 3116.2 ms
+full rebuild: parsed 123, unchanged 0, removed 0; segment 2880196 bytes; took 3462.1 ms
 $ sift --version
 sift 0.1.0
 $ sift search kalman
  1    5.062  corpus/posts/kalman-filter-01-one-dimension.md
     一维卡尔曼滤波：两个高斯相乘
-    …： git clone https://github.com/bfmhno3/[kalman]-lab.git cd [kalman]-lab git checkout tutorial-v1 nix 
+    …： git clone https://github.com/bfmhno3/[kalman]-lab.git cd [kalman]-lab git checkout tutorial-v1 nix deve
  2    4.717  corpus/posts/kalman-filter-02-multivariate.md
     升到高维：多变量卡尔曼滤波的推导与实现
-    …aw measurement: 1.436 m position RMSE [Kalman] filter: 0.542 m velocity RMSE [Kalman] filter: 0.616 m/s
+    …aw measurement: 1.436 m position RMSE [Kalman] filter: 0.542 m velocity RMSE [Kalman] filter: 0.616 m/s m
  3    4.604  corpus/posts/kalman-filter-07-ukf.md
     无迹卡尔曼滤波，以及四个滤波器同台
-    …ier 和 Uhlmann 的 "A new extension of the [Kalman] filter to nonlinear systems"（1997），缩放参
-8 hits in 123 files: index opened in 136.3 ms, query took 38.989 ms
+    …ier 和 Uhlmann 的 "A new extension of the [Kalman] filter to nonlinear systems" (1997)，缩放参数的版本来自 Wan 和 van d
+8 hits in 123 files: index opened in 139.7 ms, query took 45.079 ms
 ```
 
-它跑起来了，搜索结果和用开发环境跑的一样（同样的分数 5.062、4.717、4.604）。`sift` 的 `__file__` 在新环境的 `site-packages` 里，不是源码目录，所以这确实是装上去的 wheel，不是 `PYTHONPATH` 在帮忙。
+它跑起来了：`sift index`、`sift --version` 和 `sift search kalman` 三条命令都成功，搜索结果的分数和用开发环境跑的一样（5.062、4.717、4.604）。`sift` 的 `__file__` 在新环境的 `site-packages` 里，不是源码目录，所以这确实是装上去的 wheel，不是 `PYTHONPATH` 在帮忙。我只验证了这三条命令；`--help` 和用法行的版式在新版 typer 下可能不同，我没有看。
 
-这里有一件事我必须讲清楚：新环境解析出来的版本和 `nix develop` 里的不一样。`typer` 是 0.27.3（开发环境 0.25.1），`click` 是 8.5.0（8.3.3），`sqlalchemy` 是 2.1.6（2.0.51），都更新。我的依赖写的是 `typer>=0.25`、`click>=8.2.1`、`sqlalchemy>=2.0.51`，只有下限，没有上限，所以安装器取了当天最新的。它们都能跑，是一个好结果，但是一个运气：我没有拿 `sqlalchemy` 2.1 的变更去核对 `storage/db.py`，也没有跑测试套件在新环境里（`pytest` 不在这个环境里）。如果要保证“装出来的和测过的一样”，需要一个锁文件；`uv.lock` 就是做这个的，不过 Sift 本身这一章还没有锁，只有 `lab/ch19/uv_demo` 里那个小项目有。
+这里有一件事我必须讲清楚：新环境解析出来的版本和 `nix develop` 里的不一样。`typer` 是 0.27.3（开发环境 0.25.1），`click` 是 8.5.0 (8.3.3)，`sqlalchemy` 是 2.1.6 (2.0.51)，都更新。我的依赖写的是 `typer>=0.25`、`click>=8.2.1`、`sqlalchemy>=2.0.51`，只有下限，没有上限，所以安装器取了当天最新的。这三条命令都能跑，是一个好结果，但是一个运气：我没有拿 `sqlalchemy` 2.1 的变更去核对 `storage/db.py`，也没有跑测试套件在新环境里（`pytest` 不在这个环境里）。如果要保证“装出来的和测过的一样”，需要一个锁文件；`uv.lock` 就是做这个的，不过 Sift 本身这一章还没有锁，只有 `lab/ch19/uv_demo` 里那个小项目有。
 
-还有一件小事：`sift index --corpus corpus/posts` 在新环境里要 3.1 秒（SQLAlchemy 2.1.6 的版本，开发环境里的全量构建是 3.3 到 3.6 秒），我不把这个当成 SQLAlchemy 2.1 变快的证据，两次测量的条件不同，波动也比这个差大。
+还有一件小事：`sift index --corpus corpus/posts` 在新环境里要 3.5 秒（SQLAlchemy 2.1.6 的版本，开发环境里的全量构建是 3.3 到 3.6 秒），我不把这个当成 SQLAlchemy 2.1 变快的证据，两次测量的条件不同，波动也比这个差大。
 
 ## 发布到 PyPI：只说，没做
 
 这一节没有一条命令是我跑出来的。我没有在 PyPI 或 TestPyPI 上注册、上传过任何东西，下面是流程的说明，你照着做之前要自己核对当时的文档。
 
-发布分三步：构建（上面做过了，`python -m build` 产出 sdist 和 wheel），检查，上传。检查可以用 `twine check dist/*`，上传可以用 `twine upload` 或者 `uv publish`；TestPyPI 是一个独立的、可以随便试的索引，和正式的 PyPI 账号体系分开。更推荐的做法是 Trusted Publishing（让 CI 用 OIDC 令牌上传，不留长期 API 令牌）。这些命令我没有装 `twine`，也没有执行 `uv publish`，所以它们的选项和输出我都没有核对过。
+发布分三步：构建（上面做过了，`python -m build` 产出 sdist 和 wheel），检查，上传。检查可以用 `twine check dist/*`，上传可以用 `twine upload` 或者 `uv publish`；TestPyPI 是一个独立的、可以随便试的索引，和正式的 PyPI 账号体系分开。更推荐的做法是 Trusted Publishing（让 CI 用 OIDC 令牌上传，不留长期 API 令牌）。具体的形式大致是这样的，全部是 unverified：`twine check dist/*` 检查元数据；`uv publish --index testpypi dist/*`（需要在 `pyproject.toml` 里先配一个名为 `testpypi` 的 `[[tool.uv.index]]`，带 `publish-url`）上传到 TestPyPI；Trusted Publishing 则是在 PyPI 项目设置里登记一个 GitHub 仓库和工作流，工作流用 `pypa/gh-action-pypi-publish` 或 `uv publish`，不需要保存令牌。我没有装 `twine`，也没有执行 `uv publish`，所以这些命令的选项和输出我都没有核对过。
 
 有一件事我能确认：Sift 现在的名字发不了。我向 PyPI 的 JSON 接口查了一下（一个只读的 GET，没有登录）：
 
@@ -1835,52 +1846,52 @@ $ curl -s https://pypi.org/pypi/sift/json | python3 -c \
 Sift 6.1.0 Python bindings for Sift Science's API
 ```
 
-`sift` 已经被另一个项目占了（一家公司的 API 绑定，版本 6.1.0）。所以真要发布，`name` 得换一个，比如 `sift-search`，而包的导入名（`import sift`）可以不变，因为 PyPI 上的名字和导入名是两回事；但同一环境里要是同时装了那个 `sift` 和我的包，就会撞同一个 `sift/` 目录，这一点我没有试。
+`sift` 已经被另一个项目占了（一家公司的 API 绑定，版本 6.1.0）。所以真要发布，`name` 得换一个，比如 `sift-search`，而包的导入名 (`import sift`) 可以不变，因为 PyPI 上的名字和导入名是两回事；但同一环境里要是同时装了那个 `sift` 和我的包，就会撞同一个 `sift/` 目录，这一点我没有试。
 
 ## 本篇文件
 
-这一章动了 22 个文件，`git diff --shortstat ch18 ch19` 给出 `22 files changed, 2226 insertions(+), 651 deletions(-)`。表里的 `+N -M` 来自 `git diff --numstat ch18 ch19`，命令是跑它对应的测试或脚本，结果是我在标签 `ch19` 上最后一次实际跑出来的；`/tmp/sift-scratch/ch19/` 里的草稿脚本不进仓库，不在表里。
+这一章动了 22 个文件，`git diff --shortstat ch18 ch19` 给出 `22 files changed, 2325 insertions(+), 651 deletions(-)`。表里的 `+N -M` 来自 `git diff --numstat ch18 ch19`，命令是跑它对应的测试或脚本，结果是我在标签 `ch19` 上最后一次实际跑出来的；`/tmp/sift-scratch/ch19/` 里的草稿脚本不进仓库，不在表里。
 
 | 文件 | 命令 | 结果 |
 | --- | --- | --- |
-| [`README.md`](https://github.com/bfmhno3/sift/blob/ch19/README.md) | `git diff --numstat ch18 ch19 -- README.md` | 退出码 0；`+14 -2` |
+| [`README.md`](https://github.com/bfmhno3/sift/blob/ch19/README.md) | `git diff --numstat ch18 ch19 -- README.md` | 退出码 0；`+15 -2` |
 | [`extra.sh`](https://github.com/bfmhno3/sift/blob/ch19/lab/ch16/extra.sh) (ch16) | `bash lab/ch16/extra.sh` | 退出码 0，最后一行 `python3.14t / python3 = 1.18`；`+22 -3` |
 | [`argparse_vs_typer.py`](https://github.com/bfmhno3/sift/blob/ch19/lab/ch19/argparse_vs_typer.py) | `python3 lab/ch19/argparse_vs_typer.py` | 退出码 0，`typer   : 25 lines, 23 code lines`；`+155 -0` |
-| [`ch19-rich-search.svg`](https://github.com/bfmhno3/sift/blob/ch19/lab/ch19/ch19-rich-search.svg) | `python3 lab/ch19/rich_search_svg.py` | 退出码 0，重新生成后 `git status` 无改动（文件里中文的 `textLength` 是错的，见正文）；`+207 -0` |
+| [`ch19-rich-search.svg`](https://github.com/bfmhno3/sift/blob/ch19/lab/ch19/ch19-rich-search.svg) | `python3 lab/ch19/rich_search_svg.py` | 退出码 0，生成的文件和已提交的一致；`+207 -0` |
 | [`extra.sh`](https://github.com/bfmhno3/sift/blob/ch19/lab/ch19/extra.sh) (ch19) | `make ch19 > /tmp/ch19_make.txt 2>&1` | 退出码 0，5 个 `ok`；`+149 -0` |
-| [`rich_search_svg.py`](https://github.com/bfmhno3/sift/blob/ch19/lab/ch19/rich_search_svg.py) | `python3 lab/ch19/rich_search_svg.py` | 退出码 0，`5 hits in 123 files`；`+59 -0` |
+| [`rich_search_svg.py`](https://github.com/bfmhno3/sift/blob/ch19/lab/ch19/rich_search_svg.py) | `python3 lab/ch19/rich_search_svg.py` | 退出码 0，`5 hits in 123 files`；`+82 -0` |
 | [`rich_tour.py`](https://github.com/bfmhno3/sift/blob/ch19/lab/ch19/rich_tour.py) | `python3 lab/ch19/rich_tour.py` | 退出码 0，`saved out/ch19/rich-tour.svg (34527 bytes)`；`+73 -0` |
 | [`pyproject.toml`](https://github.com/bfmhno3/sift/blob/ch19/lab/ch19/uv_demo/pyproject.toml) (uv_demo) | `python3 -c "import tomllib; ..."` 读依赖和后端 | 退出码 0，`['rich>=15.0.0'] uv_build`；`+19 -0` |
 | [`uv.lock`](https://github.com/bfmhno3/sift/blob/ch19/lab/ch19/uv_demo/uv.lock) | `uv lock --check`（在临时副本里） | 退出码 0，`Resolved 5 packages in 0.81ms`；`+57 -0` |
 | [`version_bump.py`](https://github.com/bfmhno3/sift/blob/ch19/lab/ch19/version_bump.py) | `python3 lab/ch19/version_bump.py` | 退出码 0，`importlib.metadata still says 0.1.0`；`+50 -0` |
-| [`pyproject.toml`](https://github.com/bfmhno3/sift/blob/ch19/pyproject.toml) | `python3 -c "import tomllib; ..."` 读 `dependencies` | 退出码 0，`['sqlalchemy>=2.0.51', 'typer>=0.25', 'click>=8.2.1', 'rich>=15']`；`+3 -0` |
+| [`pyproject.toml`](https://github.com/bfmhno3/sift/blob/ch19/pyproject.toml) | `python3 -c "import tomllib; ..."` 读 `dependencies` | 退出码 0，`['sqlalchemy>=2.0.51', 'typer>=0.25', 'click>=8.2.1', 'rich>=15']`；`+4 -1` |
 | [`__init__.py`](https://github.com/bfmhno3/sift/blob/ch19/src/sift/__init__.py) | `python3 -c "import sys, sift; ..."` 读 `__version__` 前后看 `importlib.metadata` | 退出码 0，`False 0.1.0 True`；`+18 -6` |
-| [`cli.py`](https://github.com/bfmhno3/sift/blob/ch19/src/sift/cli.py) | `python3 -m pytest tests/test_cli.py` | 退出码 0，`126 passed in 9.31s`；`+407 -312` |
-| [`log.py`](https://github.com/bfmhno3/sift/blob/ch19/src/sift/log.py) | `python3 -m pytest tests/test_log.py` | 退出码 0，`6 passed in 0.60s`；`+23 -6` |
-| [`parallel.py`](https://github.com/bfmhno3/sift/blob/ch19/src/sift/parallel.py) | `python3 -m pytest tests/test_parallel.py` | 退出码 0，`44 passed in 1.98s`；`+30 -9` |
-| [`render.py`](https://github.com/bfmhno3/sift/blob/ch19/src/sift/render.py) | `python3 -m pytest tests/test_render.py` | 退出码 0，`21 passed in 0.67s`；`+181 -0` |
-| [`store.py`](https://github.com/bfmhno3/sift/blob/ch19/src/sift/storage/store.py) | `python3 -m pytest tests/test_store.py` | 退出码 0，`39 passed in 3.37s`；`+6 -2` |
-| [`test_cli.py`](https://github.com/bfmhno3/sift/blob/ch19/tests/test_cli.py) | `python3 -m pytest tests/test_cli.py` | 退出码 0，`126 passed in 9.31s`；`+439 -311` |
-| [`test_log.py`](https://github.com/bfmhno3/sift/blob/ch19/tests/test_log.py) | `python3 -m pytest tests/test_log.py` | 退出码 0，`6 passed in 0.60s`；`+28 -0` |
-| [`test_parallel.py`](https://github.com/bfmhno3/sift/blob/ch19/tests/test_parallel.py) | `python3 -m pytest tests/test_parallel.py` | 退出码 0，`44 passed in 1.98s`；`+41 -0` |
-| [`test_render.py`](https://github.com/bfmhno3/sift/blob/ch19/tests/test_render.py) | `python3 -m pytest tests/test_render.py` | 退出码 0，`21 passed in 0.67s`；`+204 -0` |
-| [`test_store.py`](https://github.com/bfmhno3/sift/blob/ch19/tests/test_store.py) | `python3 -m pytest tests/test_store.py` | 退出码 0，`39 passed in 3.37s`；`+41 -0` |
+| [`cli.py`](https://github.com/bfmhno3/sift/blob/ch19/src/sift/cli.py) | `python3 -m pytest tests/test_cli.py` | 退出码 0，`140 passed in 9.82s`；`+425 -312` |
+| [`log.py`](https://github.com/bfmhno3/sift/blob/ch19/src/sift/log.py) | `python3 -m pytest tests/test_log.py` | 退出码 0，`6 passed in 0.68s`；`+23 -6` |
+| [`parallel.py`](https://github.com/bfmhno3/sift/blob/ch19/src/sift/parallel.py) | `python3 -m pytest tests/test_parallel.py` | 退出码 0，`44 passed in 2.27s`；`+30 -9` |
+| [`render.py`](https://github.com/bfmhno3/sift/blob/ch19/src/sift/render.py) | `python3 -m pytest tests/test_render.py` | 退出码 0，`21 passed in 0.76s`；`+181 -0` |
+| [`store.py`](https://github.com/bfmhno3/sift/blob/ch19/src/sift/storage/store.py) | `python3 -m pytest tests/test_store.py` | 退出码 0，`39 passed in 3.49s`；`+6 -2` |
+| [`test_cli.py`](https://github.com/bfmhno3/sift/blob/ch19/tests/test_cli.py) | `python3 -m pytest tests/test_cli.py` | 退出码 0，`140 passed in 9.82s`；`+495 -310` |
+| [`test_log.py`](https://github.com/bfmhno3/sift/blob/ch19/tests/test_log.py) | `python3 -m pytest tests/test_log.py` | 退出码 0，`6 passed in 0.68s`；`+28 -0` |
+| [`test_parallel.py`](https://github.com/bfmhno3/sift/blob/ch19/tests/test_parallel.py) | `python3 -m pytest tests/test_parallel.py` | 退出码 0，`44 passed in 2.27s`；`+41 -0` |
+| [`test_render.py`](https://github.com/bfmhno3/sift/blob/ch19/tests/test_render.py) | `python3 -m pytest tests/test_render.py` | 退出码 0，`21 passed in 0.76s`；`+204 -0` |
+| [`test_store.py`](https://github.com/bfmhno3/sift/blob/ch19/tests/test_store.py) | `python3 -m pytest tests/test_store.py` | 退出码 0，`39 passed in 3.49s`；`+41 -0` |
 
-整个测试套件是 `956 passed, 1 xfailed, 1 warning in 33.83s`，类型检查和格式检查的结果在正文开头。计时类的数每次都不一样，表里挑的是不带计时的那一行或我最后一次跑出的值。
+整个测试套件是 `970 passed, 1 xfailed, 1 warning in 38.29s`，类型检查和格式检查的结果在正文开头。计时类的数每次都不一样，表里挑的是不带计时的那一行或我最后一次跑出的值。
 
-这一章留下、而我没有动仓库去修的几处：
+这一章留下的几处，仓库里还没有改：
 
-- `lab/ch19/ch19-rich-search.svg` 里含中文的文字被压成半宽，原因在 rich 的 `save_svg`；修好的版本放在了这个博客里，仓库里的那份还是旧的。
-- `pyproject.toml` 的 `requires = ["hatchling"]` 没有版本约束，隔离构建会用当天最新的 hatchling；sdist 没有 `include` 列表，装下了整个仓库。
+- `pyproject.toml` 的 `hatchling>=1.31` 没有上限；sdist 没有 `include` 列表，装下了整个仓库。
 - `[tool.hatch.build.targets.wheel]` 那一表是多余的，hatchling 自己能推出来。
-- typer 的帮助页和用法错误在管道里也是 rich 的框，`wants_rich` 管不到它们。
 - `--mode` 是 `str` 加 `parser=`，没有补全。
+- `sift index` 的进度条只覆盖解析阶段，满格之后还要写段文件和数据库。
+- 自由线程的 `python3.14t` 现在不能直接 `PYTHONPATH=src python3.14t -m sift`，要靠 `lab/ch16/extra.sh` 的符号链接绕过去。
 
 ## 练习
 
 **1.** 把 `sift index` 的 `--mode` 直接标成 `Literal["process", "thread", "interp"]`，看补全能不能补出三个值，错误信息会变成什么样。然后跑 `tests/test_cli.py`，找出哪些测试因为报错文字变了而失败，决定是改测试还是保留 `mode_arg`。先写下预测。
 
-**2.** 把 `requires` 改成 `["hatchling>=1.31,<2"]`，给 sdist 加一个 `include` 列表，让它只带 `src`、`tests`、许可证和 `README.md`，再分别用 `--no-isolation` 和隔离构建各造一次 wheel。比较两个 wheel 的 `RECORD` 哈希是否一致；再想想为什么我在正文里看到的两个哈希不同，而你的应该相同。
+**2.** 把 `requires` 加上上限，改成 `["hatchling>=1.31,<2"]`，给 sdist 加一个 `include` 列表，让它只带 `src`、`tests`、许可证和 `README.md`，再分别用 `--no-isolation` 和隔离构建各造一次 wheel。比较两个 wheel 的 `RECORD` 哈希是否一致；再想想为什么我在正文里看到的两个哈希不同，而你的应该相同。
 
 **3.** rich 的 `Text.append` 只去掉响铃、退格、垂直制表、换页和回车这五种控制字符（`rich/control.py` 第 9 到 15 行），我在一个小测试里看到 ESC 原样通过。写一篇正文里含 `\x1b[31m` 的假文章，让 `sift search` 在终端上分别走 rich 路径和纯文本路径，看哪条会把终端染红；然后决定该在 `snippet_text` 里剥掉它，还是在建索引时就剥。
 
