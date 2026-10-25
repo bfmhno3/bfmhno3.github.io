@@ -1,0 +1,207 @@
+<svg class="rich-terminal" viewBox="0 0 994 952.8" xmlns="http://www.w3.org/2000/svg">
+    <!-- Generated with Rich https://www.textualize.io -->
+    <style>
+
+    @font-face {
+        font-family: "Fira Code";
+        src: local("FiraCode-Regular"),
+                url("https://cdnjs.cloudflare.com/ajax/libs/firacode/6.2.0/woff2/FiraCode-Regular.woff2") format("woff2"),
+                url("https://cdnjs.cloudflare.com/ajax/libs/firacode/6.2.0/woff/FiraCode-Regular.woff") format("woff");
+        font-style: normal;
+        font-weight: 400;
+    }
+    @font-face {
+        font-family: "Fira Code";
+        src: local("FiraCode-Bold"),
+                url("https://cdnjs.cloudflare.com/ajax/libs/firacode/6.2.0/woff2/FiraCode-Bold.woff2") format("woff2"),
+                url("https://cdnjs.cloudflare.com/ajax/libs/firacode/6.2.0/woff/FiraCode-Bold.woff") format("woff");
+        font-style: bold;
+        font-weight: 700;
+    }
+
+    .terminal-2074516607-matrix {
+        font-family: Fira Code, monospace;
+        font-size: 20px;
+        line-height: 24.4px;
+        font-variant-east-asian: full-width;
+    }
+
+    .terminal-2074516607-title {
+        font-size: 18px;
+        font-weight: bold;
+        font-family: arial;
+    }
+
+    .terminal-2074516607-r1 { fill: #98a84b;font-weight: bold }
+.terminal-2074516607-r2 { fill: #c5c8c6 }
+.terminal-2074516607-r3 { fill: #c5c8c6;font-weight: bold }
+.terminal-2074516607-r4 { fill: #68a0b3;font-weight: bold }
+.terminal-2074516607-r5 { fill: #868887 }
+.terminal-2074516607-r6 { fill: #4b4e55;font-weight: bold }
+    </style>
+
+    <defs>
+    <clipPath id="terminal-2074516607-clip-terminal">
+      <rect x="0" y="0" width="975.0" height="901.8" />
+    </clipPath>
+    <clipPath id="terminal-2074516607-line-0">
+    <rect x="0" y="1.5" width="976" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-2074516607-line-1">
+    <rect x="0" y="25.9" width="976" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-2074516607-line-2">
+    <rect x="0" y="50.3" width="976" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-2074516607-line-3">
+    <rect x="0" y="74.7" width="976" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-2074516607-line-4">
+    <rect x="0" y="99.1" width="976" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-2074516607-line-5">
+    <rect x="0" y="123.5" width="976" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-2074516607-line-6">
+    <rect x="0" y="147.9" width="976" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-2074516607-line-7">
+    <rect x="0" y="172.3" width="976" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-2074516607-line-8">
+    <rect x="0" y="196.7" width="976" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-2074516607-line-9">
+    <rect x="0" y="221.1" width="976" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-2074516607-line-10">
+    <rect x="0" y="245.5" width="976" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-2074516607-line-11">
+    <rect x="0" y="269.9" width="976" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-2074516607-line-12">
+    <rect x="0" y="294.3" width="976" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-2074516607-line-13">
+    <rect x="0" y="318.7" width="976" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-2074516607-line-14">
+    <rect x="0" y="343.1" width="976" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-2074516607-line-15">
+    <rect x="0" y="367.5" width="976" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-2074516607-line-16">
+    <rect x="0" y="391.9" width="976" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-2074516607-line-17">
+    <rect x="0" y="416.3" width="976" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-2074516607-line-18">
+    <rect x="0" y="440.7" width="976" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-2074516607-line-19">
+    <rect x="0" y="465.1" width="976" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-2074516607-line-20">
+    <rect x="0" y="489.5" width="976" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-2074516607-line-21">
+    <rect x="0" y="513.9" width="976" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-2074516607-line-22">
+    <rect x="0" y="538.3" width="976" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-2074516607-line-23">
+    <rect x="0" y="562.7" width="976" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-2074516607-line-24">
+    <rect x="0" y="587.1" width="976" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-2074516607-line-25">
+    <rect x="0" y="611.5" width="976" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-2074516607-line-26">
+    <rect x="0" y="635.9" width="976" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-2074516607-line-27">
+    <rect x="0" y="660.3" width="976" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-2074516607-line-28">
+    <rect x="0" y="684.7" width="976" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-2074516607-line-29">
+    <rect x="0" y="709.1" width="976" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-2074516607-line-30">
+    <rect x="0" y="733.5" width="976" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-2074516607-line-31">
+    <rect x="0" y="757.9" width="976" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-2074516607-line-32">
+    <rect x="0" y="782.3" width="976" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-2074516607-line-33">
+    <rect x="0" y="806.7" width="976" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-2074516607-line-34">
+    <rect x="0" y="831.1" width="976" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-2074516607-line-35">
+    <rect x="0" y="855.5" width="976" height="24.65"/>
+            </clipPath>
+    </defs>
+
+    <rect fill="#292929" stroke="rgba(255,255,255,0.35)" stroke-width="1" x="1" y="1" width="992" height="950.8" rx="8"/><text class="terminal-2074516607-title" fill="#c5c8c6" text-anchor="middle" x="496" y="27">sift&#160;search&#160;&quot;kalman&#160;filter&quot;</text>
+            <g transform="translate(26,22)">
+            <circle cx="0" cy="0" r="7" fill="#ff5f57"/>
+            <circle cx="22" cy="0" r="7" fill="#febc2e"/>
+            <circle cx="44" cy="0" r="7" fill="#28c840"/>
+            </g>
+        
+    <g transform="translate(9, 41)" clip-path="url(#terminal-2074516607-clip-terminal)">
+    <rect fill="#d0b344" x="646.6" y="147.9" width="73.2" height="24.65" shape-rendering="crispEdges"/><rect fill="#d0b344" x="732" y="147.9" width="73.2" height="24.65" shape-rendering="crispEdges"/><rect fill="#d0b344" x="341.6" y="172.3" width="73.2" height="24.65" shape-rendering="crispEdges"/><rect fill="#d0b344" x="427" y="172.3" width="73.2" height="24.65" shape-rendering="crispEdges"/><rect fill="#d0b344" x="695.4" y="294.3" width="73.2" height="24.65" shape-rendering="crispEdges"/><rect fill="#d0b344" x="780.8" y="294.3" width="73.2" height="24.65" shape-rendering="crispEdges"/><rect fill="#d0b344" x="463.6" y="343.1" width="73.2" height="24.65" shape-rendering="crispEdges"/><rect fill="#d0b344" x="549" y="343.1" width="73.2" height="24.65" shape-rendering="crispEdges"/><rect fill="#d0b344" x="671" y="440.7" width="73.2" height="24.65" shape-rendering="crispEdges"/><rect fill="#d0b344" x="170.8" y="465.1" width="73.2" height="24.65" shape-rendering="crispEdges"/><rect fill="#d0b344" x="671" y="635.9" width="73.2" height="24.65" shape-rendering="crispEdges"/><rect fill="#d0b344" x="170.8" y="660.3" width="73.2" height="24.65" shape-rendering="crispEdges"/><rect fill="#d0b344" x="756.4" y="660.3" width="73.2" height="24.65" shape-rendering="crispEdges"/><rect fill="#d0b344" x="829.6" y="782.3" width="73.2" height="24.65" shape-rendering="crispEdges"/><rect fill="#d0b344" x="329.4" y="806.7" width="73.2" height="24.65" shape-rendering="crispEdges"/>
+    <g class="terminal-2074516607-matrix">
+    <text class="terminal-2074516607-r1" x="0" y="20" textLength="353.8" clip-path="url(#terminal-2074516607-line-0)">$&#160;sift&#160;search&#160;&quot;kalman&#160;filter&quot;</text><text class="terminal-2074516607-r2" x="976" y="20" textLength="12.2" clip-path="url(#terminal-2074516607-line-0)">
+</text><text class="terminal-2074516607-r2" x="0" y="44.4" textLength="976.0" clip-path="url(#terminal-2074516607-line-1)">╭───┬───────┬──────────────────────────────────────────────────────────────────╮</text><text class="terminal-2074516607-r2" x="976" y="44.4" textLength="12.2" clip-path="url(#terminal-2074516607-line-1)">
+</text><text class="terminal-2074516607-r2" x="0" y="68.8" textLength="12.2" clip-path="url(#terminal-2074516607-line-2)">│</text><text class="terminal-2074516607-r3" x="24.4" y="68.8" textLength="12.2" clip-path="url(#terminal-2074516607-line-2)">#</text><text class="terminal-2074516607-r2" x="48.8" y="68.8" textLength="12.2" clip-path="url(#terminal-2074516607-line-2)">│</text><text class="terminal-2074516607-r3" x="73.2" y="68.8" textLength="61.0" clip-path="url(#terminal-2074516607-line-2)">score</text><text class="terminal-2074516607-r2" x="146.4" y="68.8" textLength="12.2" clip-path="url(#terminal-2074516607-line-2)">│</text><text class="terminal-2074516607-r3" x="170.8" y="68.8" textLength="780.8" clip-path="url(#terminal-2074516607-line-2)">document&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="terminal-2074516607-r2" x="963.8" y="68.8" textLength="12.2" clip-path="url(#terminal-2074516607-line-2)">│</text><text class="terminal-2074516607-r2" x="976" y="68.8" textLength="12.2" clip-path="url(#terminal-2074516607-line-2)">
+</text><text class="terminal-2074516607-r2" x="0" y="93.2" textLength="976.0" clip-path="url(#terminal-2074516607-line-3)">├───┼───────┼──────────────────────────────────────────────────────────────────┤</text><text class="terminal-2074516607-r2" x="976" y="93.2" textLength="12.2" clip-path="url(#terminal-2074516607-line-3)">
+</text><text class="terminal-2074516607-r2" x="0" y="117.6" textLength="12.2" clip-path="url(#terminal-2074516607-line-4)">│</text><text class="terminal-2074516607-r2" x="24.4" y="117.6" textLength="12.2" clip-path="url(#terminal-2074516607-line-4)">1</text><text class="terminal-2074516607-r2" x="48.8" y="117.6" textLength="12.2" clip-path="url(#terminal-2074516607-line-4)">│</text><text class="terminal-2074516607-r2" x="73.2" y="117.6" textLength="61.0" clip-path="url(#terminal-2074516607-line-4)">8.279</text><text class="terminal-2074516607-r2" x="146.4" y="117.6" textLength="12.2" clip-path="url(#terminal-2074516607-line-4)">│</text><text class="terminal-2074516607-r4" x="170.8" y="117.6" textLength="463.6" clip-path="url(#terminal-2074516607-line-4)">升到高维：多变量卡尔曼滤波的推导与实现</text><text class="terminal-2074516607-r2" x="963.8" y="117.6" textLength="12.2" clip-path="url(#terminal-2074516607-line-4)">│</text><text class="terminal-2074516607-r2" x="976" y="117.6" textLength="12.2" clip-path="url(#terminal-2074516607-line-4)">
+</text><text class="terminal-2074516607-r2" x="0" y="142" textLength="12.2" clip-path="url(#terminal-2074516607-line-5)">│</text><text class="terminal-2074516607-r2" x="48.8" y="142" textLength="12.2" clip-path="url(#terminal-2074516607-line-5)">│</text><text class="terminal-2074516607-r2" x="146.4" y="142" textLength="12.2" clip-path="url(#terminal-2074516607-line-5)">│</text><text class="terminal-2074516607-r5" x="170.8" y="142" textLength="549.0" clip-path="url(#terminal-2074516607-line-5)">corpus/posts/kalman-filter-02-multivariate.md</text><text class="terminal-2074516607-r2" x="963.8" y="142" textLength="12.2" clip-path="url(#terminal-2074516607-line-5)">│</text><text class="terminal-2074516607-r2" x="976" y="142" textLength="12.2" clip-path="url(#terminal-2074516607-line-5)">
+</text><text class="terminal-2074516607-r2" x="0" y="166.4" textLength="12.2" clip-path="url(#terminal-2074516607-line-6)">│</text><text class="terminal-2074516607-r2" x="48.8" y="166.4" textLength="12.2" clip-path="url(#terminal-2074516607-line-6)">│</text><text class="terminal-2074516607-r2" x="146.4" y="166.4" textLength="12.2" clip-path="url(#terminal-2074516607-line-6)">│</text><text class="terminal-2074516607-r2" x="170.8" y="166.4" textLength="475.8" clip-path="url(#terminal-2074516607-line-6)">…aw&#160;measurement:&#160;1.436&#160;m&#160;position&#160;RMSE&#160;</text><text class="terminal-2074516607-r6" x="646.6" y="166.4" textLength="73.2" clip-path="url(#terminal-2074516607-line-6)">Kalman</text><text class="terminal-2074516607-r6" x="732" y="166.4" textLength="73.2" clip-path="url(#terminal-2074516607-line-6)">filter</text><text class="terminal-2074516607-r2" x="805.2" y="166.4" textLength="146.4" clip-path="url(#terminal-2074516607-line-6)">:&#160;0.542&#160;m&#160;&#160;&#160;</text><text class="terminal-2074516607-r2" x="963.8" y="166.4" textLength="12.2" clip-path="url(#terminal-2074516607-line-6)">│</text><text class="terminal-2074516607-r2" x="976" y="166.4" textLength="12.2" clip-path="url(#terminal-2074516607-line-6)">
+</text><text class="terminal-2074516607-r2" x="0" y="190.8" textLength="12.2" clip-path="url(#terminal-2074516607-line-7)">│</text><text class="terminal-2074516607-r2" x="48.8" y="190.8" textLength="12.2" clip-path="url(#terminal-2074516607-line-7)">│</text><text class="terminal-2074516607-r2" x="146.4" y="190.8" textLength="12.2" clip-path="url(#terminal-2074516607-line-7)">│</text><text class="terminal-2074516607-r2" x="170.8" y="190.8" textLength="170.8" clip-path="url(#terminal-2074516607-line-7)">velocity&#160;RMSE&#160;</text><text class="terminal-2074516607-r6" x="341.6" y="190.8" textLength="73.2" clip-path="url(#terminal-2074516607-line-7)">Kalman</text><text class="terminal-2074516607-r6" x="427" y="190.8" textLength="73.2" clip-path="url(#terminal-2074516607-line-7)">filter</text><text class="terminal-2074516607-r2" x="500.2" y="190.8" textLength="451.4" clip-path="url(#terminal-2074516607-line-7)">:&#160;0.616&#160;m/s&#160;mean&#160;NIS&#160;(dof&#160;2,&#160;expect&#160;&#160;</text><text class="terminal-2074516607-r2" x="963.8" y="190.8" textLength="12.2" clip-path="url(#terminal-2074516607-line-7)">│</text><text class="terminal-2074516607-r2" x="976" y="190.8" textLength="12.2" clip-path="url(#terminal-2074516607-line-7)">
+</text><text class="terminal-2074516607-r2" x="0" y="215.2" textLength="12.2" clip-path="url(#terminal-2074516607-line-8)">│</text><text class="terminal-2074516607-r2" x="48.8" y="215.2" textLength="12.2" clip-path="url(#terminal-2074516607-line-8)">│</text><text class="terminal-2074516607-r2" x="146.4" y="215.2" textLength="12.2" clip-path="url(#terminal-2074516607-line-8)">│</text><text class="terminal-2074516607-r2" x="170.8" y="215.2" textLength="780.8" clip-path="url(#terminal-2074516607-line-8)">~2):&#160;2.070&#160;mean&#160;NIS&#160;ti…&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="terminal-2074516607-r2" x="963.8" y="215.2" textLength="12.2" clip-path="url(#terminal-2074516607-line-8)">│</text><text class="terminal-2074516607-r2" x="976" y="215.2" textLength="12.2" clip-path="url(#terminal-2074516607-line-8)">
+</text><text class="terminal-2074516607-r2" x="0" y="239.6" textLength="976.0" clip-path="url(#terminal-2074516607-line-9)">├───┼───────┼──────────────────────────────────────────────────────────────────┤</text><text class="terminal-2074516607-r2" x="976" y="239.6" textLength="12.2" clip-path="url(#terminal-2074516607-line-9)">
+</text><text class="terminal-2074516607-r2" x="0" y="264" textLength="12.2" clip-path="url(#terminal-2074516607-line-10)">│</text><text class="terminal-2074516607-r2" x="24.4" y="264" textLength="12.2" clip-path="url(#terminal-2074516607-line-10)">2</text><text class="terminal-2074516607-r2" x="48.8" y="264" textLength="12.2" clip-path="url(#terminal-2074516607-line-10)">│</text><text class="terminal-2074516607-r2" x="73.2" y="264" textLength="61.0" clip-path="url(#terminal-2074516607-line-10)">7.872</text><text class="terminal-2074516607-r2" x="146.4" y="264" textLength="12.2" clip-path="url(#terminal-2074516607-line-10)">│</text><text class="terminal-2074516607-r4" x="170.8" y="264" textLength="414.8" clip-path="url(#terminal-2074516607-line-10)">无迹卡尔曼滤波，以及四个滤波器同台</text><text class="terminal-2074516607-r2" x="963.8" y="264" textLength="12.2" clip-path="url(#terminal-2074516607-line-10)">│</text><text class="terminal-2074516607-r2" x="976" y="264" textLength="12.2" clip-path="url(#terminal-2074516607-line-10)">
+</text><text class="terminal-2074516607-r2" x="0" y="288.4" textLength="12.2" clip-path="url(#terminal-2074516607-line-11)">│</text><text class="terminal-2074516607-r2" x="48.8" y="288.4" textLength="12.2" clip-path="url(#terminal-2074516607-line-11)">│</text><text class="terminal-2074516607-r2" x="146.4" y="288.4" textLength="12.2" clip-path="url(#terminal-2074516607-line-11)">│</text><text class="terminal-2074516607-r5" x="170.8" y="288.4" textLength="439.2" clip-path="url(#terminal-2074516607-line-11)">corpus/posts/kalman-filter-07-ukf.md</text><text class="terminal-2074516607-r2" x="963.8" y="288.4" textLength="12.2" clip-path="url(#terminal-2074516607-line-11)">│</text><text class="terminal-2074516607-r2" x="976" y="288.4" textLength="12.2" clip-path="url(#terminal-2074516607-line-11)">
+</text><text class="terminal-2074516607-r2" x="0" y="312.8" textLength="12.2" clip-path="url(#terminal-2074516607-line-12)">│</text><text class="terminal-2074516607-r2" x="48.8" y="312.8" textLength="12.2" clip-path="url(#terminal-2074516607-line-12)">│</text><text class="terminal-2074516607-r2" x="146.4" y="312.8" textLength="12.2" clip-path="url(#terminal-2074516607-line-12)">│</text><text class="terminal-2074516607-r2" x="170.8" y="312.8" textLength="524.6" clip-path="url(#terminal-2074516607-line-12)">…ier&#160;和&#160;Uhlmann&#160;的&#160;&quot;A&#160;new&#160;extension&#160;of&#160;the&#160;</text><text class="terminal-2074516607-r6" x="695.4" y="312.8" textLength="73.2" clip-path="url(#terminal-2074516607-line-12)">Kalman</text><text class="terminal-2074516607-r6" x="780.8" y="312.8" textLength="73.2" clip-path="url(#terminal-2074516607-line-12)">filter</text><text class="terminal-2074516607-r2" x="854" y="312.8" textLength="97.6" clip-path="url(#terminal-2074516607-line-12)">&#160;to&#160;&#160;&#160;&#160;&#160;</text><text class="terminal-2074516607-r2" x="963.8" y="312.8" textLength="12.2" clip-path="url(#terminal-2074516607-line-12)">│</text><text class="terminal-2074516607-r2" x="976" y="312.8" textLength="12.2" clip-path="url(#terminal-2074516607-line-12)">
+</text><text class="terminal-2074516607-r2" x="0" y="337.2" textLength="12.2" clip-path="url(#terminal-2074516607-line-13)">│</text><text class="terminal-2074516607-r2" x="48.8" y="337.2" textLength="12.2" clip-path="url(#terminal-2074516607-line-13)">│</text><text class="terminal-2074516607-r2" x="146.4" y="337.2" textLength="12.2" clip-path="url(#terminal-2074516607-line-13)">│</text><text class="terminal-2074516607-r2" x="170.8" y="337.2" textLength="780.8" clip-path="url(#terminal-2074516607-line-13)">nonlinear&#160;systems&quot;（1997），缩放参数的版本来自&#160;Wan&#160;和&#160;van&#160;der&#160;&#160;&#160;</text><text class="terminal-2074516607-r2" x="963.8" y="337.2" textLength="12.2" clip-path="url(#terminal-2074516607-line-13)">│</text><text class="terminal-2074516607-r2" x="976" y="337.2" textLength="12.2" clip-path="url(#terminal-2074516607-line-13)">
+</text><text class="terminal-2074516607-r2" x="0" y="361.6" textLength="12.2" clip-path="url(#terminal-2074516607-line-14)">│</text><text class="terminal-2074516607-r2" x="48.8" y="361.6" textLength="12.2" clip-path="url(#terminal-2074516607-line-14)">│</text><text class="terminal-2074516607-r2" x="146.4" y="361.6" textLength="12.2" clip-path="url(#terminal-2074516607-line-14)">│</text><text class="terminal-2074516607-r2" x="170.8" y="361.6" textLength="292.8" clip-path="url(#terminal-2074516607-line-14)">Merwe&#160;的&#160;&quot;The&#160;unscented&#160;</text><text class="terminal-2074516607-r6" x="463.6" y="361.6" textLength="73.2" clip-path="url(#terminal-2074516607-line-14)">Kalman</text><text class="terminal-2074516607-r6" x="549" y="361.6" textLength="73.2" clip-path="url(#terminal-2074516607-line-14)">filter</text><text class="terminal-2074516607-r2" x="622.2" y="361.6" textLength="329.4" clip-path="url(#terminal-2074516607-line-14)">&#160;for&#160;nonlinear&#160;est…&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="terminal-2074516607-r2" x="963.8" y="361.6" textLength="12.2" clip-path="url(#terminal-2074516607-line-14)">│</text><text class="terminal-2074516607-r2" x="976" y="361.6" textLength="12.2" clip-path="url(#terminal-2074516607-line-14)">
+</text><text class="terminal-2074516607-r2" x="0" y="386" textLength="976.0" clip-path="url(#terminal-2074516607-line-15)">├───┼───────┼──────────────────────────────────────────────────────────────────┤</text><text class="terminal-2074516607-r2" x="976" y="386" textLength="12.2" clip-path="url(#terminal-2074516607-line-15)">
+</text><text class="terminal-2074516607-r2" x="0" y="410.4" textLength="12.2" clip-path="url(#terminal-2074516607-line-16)">│</text><text class="terminal-2074516607-r2" x="24.4" y="410.4" textLength="12.2" clip-path="url(#terminal-2074516607-line-16)">3</text><text class="terminal-2074516607-r2" x="48.8" y="410.4" textLength="12.2" clip-path="url(#terminal-2074516607-line-16)">│</text><text class="terminal-2074516607-r2" x="73.2" y="410.4" textLength="61.0" clip-path="url(#terminal-2074516607-line-16)">7.833</text><text class="terminal-2074516607-r2" x="146.4" y="410.4" textLength="12.2" clip-path="url(#terminal-2074516607-line-16)">│</text><text class="terminal-2074516607-r4" x="170.8" y="410.4" textLength="488.0" clip-path="url(#terminal-2074516607-line-16)">误差状态卡尔曼滤波：四元数的正确打开方式</text><text class="terminal-2074516607-r2" x="963.8" y="410.4" textLength="12.2" clip-path="url(#terminal-2074516607-line-16)">│</text><text class="terminal-2074516607-r2" x="976" y="410.4" textLength="12.2" clip-path="url(#terminal-2074516607-line-16)">
+</text><text class="terminal-2074516607-r2" x="0" y="434.8" textLength="12.2" clip-path="url(#terminal-2074516607-line-17)">│</text><text class="terminal-2074516607-r2" x="48.8" y="434.8" textLength="12.2" clip-path="url(#terminal-2074516607-line-17)">│</text><text class="terminal-2074516607-r2" x="146.4" y="434.8" textLength="12.2" clip-path="url(#terminal-2074516607-line-17)">│</text><text class="terminal-2074516607-r5" x="170.8" y="434.8" textLength="451.4" clip-path="url(#terminal-2074516607-line-17)">corpus/posts/kalman-filter-06-eskf.md</text><text class="terminal-2074516607-r2" x="963.8" y="434.8" textLength="12.2" clip-path="url(#terminal-2074516607-line-17)">│</text><text class="terminal-2074516607-r2" x="976" y="434.8" textLength="12.2" clip-path="url(#terminal-2074516607-line-17)">
+</text><text class="terminal-2074516607-r2" x="0" y="459.2" textLength="12.2" clip-path="url(#terminal-2074516607-line-18)">│</text><text class="terminal-2074516607-r2" x="48.8" y="459.2" textLength="12.2" clip-path="url(#terminal-2074516607-line-18)">│</text><text class="terminal-2074516607-r2" x="146.4" y="459.2" textLength="12.2" clip-path="url(#terminal-2074516607-line-18)">│</text><text class="terminal-2074516607-r2" x="170.8" y="459.2" textLength="500.2" clip-path="url(#terminal-2074516607-line-18)">…aternion&#160;kinematics&#160;for&#160;the&#160;error-state&#160;</text><text class="terminal-2074516607-r6" x="671" y="459.2" textLength="73.2" clip-path="url(#terminal-2074516607-line-18)">Kalman</text><text class="terminal-2074516607-r2" x="963.8" y="459.2" textLength="12.2" clip-path="url(#terminal-2074516607-line-18)">│</text><text class="terminal-2074516607-r2" x="976" y="459.2" textLength="12.2" clip-path="url(#terminal-2074516607-line-18)">
+</text><text class="terminal-2074516607-r2" x="0" y="483.6" textLength="12.2" clip-path="url(#terminal-2074516607-line-19)">│</text><text class="terminal-2074516607-r2" x="48.8" y="483.6" textLength="12.2" clip-path="url(#terminal-2074516607-line-19)">│</text><text class="terminal-2074516607-r2" x="146.4" y="483.6" textLength="12.2" clip-path="url(#terminal-2074516607-line-19)">│</text><text class="terminal-2074516607-r6" x="170.8" y="483.6" textLength="73.2" clip-path="url(#terminal-2074516607-line-19)">filter</text><text class="terminal-2074516607-r2" x="244" y="483.6" textLength="707.6" clip-path="url(#terminal-2074516607-line-19)">&quot;（arXiv:1711.02508，2017），符号基本沿用它。&#160;数学&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="terminal-2074516607-r2" x="963.8" y="483.6" textLength="12.2" clip-path="url(#terminal-2074516607-line-19)">│</text><text class="terminal-2074516607-r2" x="976" y="483.6" textLength="12.2" clip-path="url(#terminal-2074516607-line-19)">
+</text><text class="terminal-2074516607-r2" x="0" y="508" textLength="12.2" clip-path="url(#terminal-2074516607-line-20)">│</text><text class="terminal-2074516607-r2" x="48.8" y="508" textLength="12.2" clip-path="url(#terminal-2074516607-line-20)">│</text><text class="terminal-2074516607-r2" x="146.4" y="508" textLength="12.2" clip-path="url(#terminal-2074516607-line-20)">│</text><text class="terminal-2074516607-r2" x="170.8" y="508" textLength="780.8" clip-path="url(#terminal-2074516607-line-20)">名义状态与误差状态&#160;EKF&#160;把四元数的&#160;4&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="terminal-2074516607-r2" x="963.8" y="508" textLength="12.2" clip-path="url(#terminal-2074516607-line-20)">│</text><text class="terminal-2074516607-r2" x="976" y="508" textLength="12.2" clip-path="url(#terminal-2074516607-line-20)">
+</text><text class="terminal-2074516607-r2" x="0" y="532.4" textLength="12.2" clip-path="url(#terminal-2074516607-line-21)">│</text><text class="terminal-2074516607-r2" x="48.8" y="532.4" textLength="12.2" clip-path="url(#terminal-2074516607-line-21)">│</text><text class="terminal-2074516607-r2" x="146.4" y="532.4" textLength="12.2" clip-path="url(#terminal-2074516607-line-21)">│</text><text class="terminal-2074516607-r2" x="170.8" y="532.4" textLength="780.8" clip-path="url(#terminal-2074516607-line-21)">个分量直接当成状态，带来了一个多余的自由度（第&#160;5&#160;篇最后看到的&#160;&#160;&#160;</text><text class="terminal-2074516607-r2" x="963.8" y="532.4" textLength="12.2" clip-path="url(#terminal-2074516607-line-21)">│</text><text class="terminal-2074516607-r2" x="976" y="532.4" textLength="12.2" clip-path="url(#terminal-2074516607-line-21)">
+</text><text class="terminal-2074516607-r2" x="0" y="556.8" textLength="12.2" clip-path="url(#terminal-2074516607-line-22)">│</text><text class="terminal-2074516607-r2" x="48.8" y="556.8" textLength="12.2" clip-path="url(#terminal-2074516607-line-22)">│</text><text class="terminal-2074516607-r2" x="146.4" y="556.8" textLength="12.2" clip-path="url(#terminal-2074516607-line-22)">│</text><text class="terminal-2074516607-r2" x="170.8" y="556.8" textLength="780.8" clip-path="url(#terminal-2074516607-line-22)">$P_{qq}$&#160;的第四…&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="terminal-2074516607-r2" x="963.8" y="556.8" textLength="12.2" clip-path="url(#terminal-2074516607-line-22)">│</text><text class="terminal-2074516607-r2" x="976" y="556.8" textLength="12.2" clip-path="url(#terminal-2074516607-line-22)">
+</text><text class="terminal-2074516607-r2" x="0" y="581.2" textLength="976.0" clip-path="url(#terminal-2074516607-line-23)">├───┼───────┼──────────────────────────────────────────────────────────────────┤</text><text class="terminal-2074516607-r2" x="976" y="581.2" textLength="12.2" clip-path="url(#terminal-2074516607-line-23)">
+</text><text class="terminal-2074516607-r2" x="0" y="605.6" textLength="12.2" clip-path="url(#terminal-2074516607-line-24)">│</text><text class="terminal-2074516607-r2" x="24.4" y="605.6" textLength="12.2" clip-path="url(#terminal-2074516607-line-24)">4</text><text class="terminal-2074516607-r2" x="48.8" y="605.6" textLength="12.2" clip-path="url(#terminal-2074516607-line-24)">│</text><text class="terminal-2074516607-r2" x="73.2" y="605.6" textLength="61.0" clip-path="url(#terminal-2074516607-line-24)">7.166</text><text class="terminal-2074516607-r2" x="146.4" y="605.6" textLength="12.2" clip-path="url(#terminal-2074516607-line-24)">│</text><text class="terminal-2074516607-r4" x="170.8" y="605.6" textLength="341.6" clip-path="url(#terminal-2074516607-line-24)">一维卡尔曼滤波：两个高斯相乘</text><text class="terminal-2074516607-r2" x="963.8" y="605.6" textLength="12.2" clip-path="url(#terminal-2074516607-line-24)">│</text><text class="terminal-2074516607-r2" x="976" y="605.6" textLength="12.2" clip-path="url(#terminal-2074516607-line-24)">
+</text><text class="terminal-2074516607-r2" x="0" y="630" textLength="12.2" clip-path="url(#terminal-2074516607-line-25)">│</text><text class="terminal-2074516607-r2" x="48.8" y="630" textLength="12.2" clip-path="url(#terminal-2074516607-line-25)">│</text><text class="terminal-2074516607-r2" x="146.4" y="630" textLength="12.2" clip-path="url(#terminal-2074516607-line-25)">│</text><text class="terminal-2074516607-r5" x="170.8" y="630" textLength="561.2" clip-path="url(#terminal-2074516607-line-25)">corpus/posts/kalman-filter-01-one-dimension.md</text><text class="terminal-2074516607-r2" x="963.8" y="630" textLength="12.2" clip-path="url(#terminal-2074516607-line-25)">│</text><text class="terminal-2074516607-r2" x="976" y="630" textLength="12.2" clip-path="url(#terminal-2074516607-line-25)">
+</text><text class="terminal-2074516607-r2" x="0" y="654.4" textLength="12.2" clip-path="url(#terminal-2074516607-line-26)">│</text><text class="terminal-2074516607-r2" x="48.8" y="654.4" textLength="12.2" clip-path="url(#terminal-2074516607-line-26)">│</text><text class="terminal-2074516607-r2" x="146.4" y="654.4" textLength="12.2" clip-path="url(#terminal-2074516607-line-26)">│</text><text class="terminal-2074516607-r2" x="170.8" y="654.4" textLength="500.2" clip-path="url(#terminal-2074516607-line-26)">…：&#160;git&#160;clone&#160;https://github.com/bfmhno3/</text><text class="terminal-2074516607-r6" x="671" y="654.4" textLength="73.2" clip-path="url(#terminal-2074516607-line-26)">kalman</text><text class="terminal-2074516607-r2" x="744.2" y="654.4" textLength="207.4" clip-path="url(#terminal-2074516607-line-26)">-lab.git&#160;cd&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="terminal-2074516607-r2" x="963.8" y="654.4" textLength="12.2" clip-path="url(#terminal-2074516607-line-26)">│</text><text class="terminal-2074516607-r2" x="976" y="654.4" textLength="12.2" clip-path="url(#terminal-2074516607-line-26)">
+</text><text class="terminal-2074516607-r2" x="0" y="678.8" textLength="12.2" clip-path="url(#terminal-2074516607-line-27)">│</text><text class="terminal-2074516607-r2" x="48.8" y="678.8" textLength="12.2" clip-path="url(#terminal-2074516607-line-27)">│</text><text class="terminal-2074516607-r2" x="146.4" y="678.8" textLength="12.2" clip-path="url(#terminal-2074516607-line-27)">│</text><text class="terminal-2074516607-r6" x="170.8" y="678.8" textLength="73.2" clip-path="url(#terminal-2074516607-line-27)">kalman</text><text class="terminal-2074516607-r2" x="244" y="678.8" textLength="512.4" clip-path="url(#terminal-2074516607-line-27)">-lab&#160;git&#160;checkout&#160;tutorial-v1&#160;nix&#160;develop&#160;</text><text class="terminal-2074516607-r6" x="756.4" y="678.8" textLength="73.2" clip-path="url(#terminal-2074516607-line-27)">kalman</text><text class="terminal-2074516607-r2" x="829.6" y="678.8" textLength="122.0" clip-path="url(#terminal-2074516607-line-27)">-lab&#160;dev&#160;&#160;</text><text class="terminal-2074516607-r2" x="963.8" y="678.8" textLength="12.2" clip-path="url(#terminal-2074516607-line-27)">│</text><text class="terminal-2074516607-r2" x="976" y="678.8" textLength="12.2" clip-path="url(#terminal-2074516607-line-27)">
+</text><text class="terminal-2074516607-r2" x="0" y="703.2" textLength="12.2" clip-path="url(#terminal-2074516607-line-28)">│</text><text class="terminal-2074516607-r2" x="48.8" y="703.2" textLength="12.2" clip-path="url(#terminal-2074516607-line-28)">│</text><text class="terminal-2074516607-r2" x="146.4" y="703.2" textLength="12.2" clip-path="url(#terminal-2074516607-line-28)">│</text><text class="terminal-2074516607-r2" x="170.8" y="703.2" textLength="780.8" clip-path="url(#terminal-2074516607-line-28)">shell:&#160;Python&#160;3.13.15,&#160;gcc&#160;(GCC)&#160;15.3.…&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="terminal-2074516607-r2" x="963.8" y="703.2" textLength="12.2" clip-path="url(#terminal-2074516607-line-28)">│</text><text class="terminal-2074516607-r2" x="976" y="703.2" textLength="12.2" clip-path="url(#terminal-2074516607-line-28)">
+</text><text class="terminal-2074516607-r2" x="0" y="727.6" textLength="976.0" clip-path="url(#terminal-2074516607-line-29)">├───┼───────┼──────────────────────────────────────────────────────────────────┤</text><text class="terminal-2074516607-r2" x="976" y="727.6" textLength="12.2" clip-path="url(#terminal-2074516607-line-29)">
+</text><text class="terminal-2074516607-r2" x="0" y="752" textLength="12.2" clip-path="url(#terminal-2074516607-line-30)">│</text><text class="terminal-2074516607-r2" x="24.4" y="752" textLength="12.2" clip-path="url(#terminal-2074516607-line-30)">5</text><text class="terminal-2074516607-r2" x="48.8" y="752" textLength="12.2" clip-path="url(#terminal-2074516607-line-30)">│</text><text class="terminal-2074516607-r2" x="73.2" y="752" textLength="61.0" clip-path="url(#terminal-2074516607-line-30)">6.993</text><text class="terminal-2074516607-r2" x="146.4" y="752" textLength="12.2" clip-path="url(#terminal-2074516607-line-30)">│</text><text class="terminal-2074516607-r4" x="170.8" y="752" textLength="451.4" clip-path="url(#terminal-2074516607-line-30)">移植之前：float32、定长内存与每步耗时</text><text class="terminal-2074516607-r2" x="963.8" y="752" textLength="12.2" clip-path="url(#terminal-2074516607-line-30)">│</text><text class="terminal-2074516607-r2" x="976" y="752" textLength="12.2" clip-path="url(#terminal-2074516607-line-30)">
+</text><text class="terminal-2074516607-r2" x="0" y="776.4" textLength="12.2" clip-path="url(#terminal-2074516607-line-31)">│</text><text class="terminal-2074516607-r2" x="48.8" y="776.4" textLength="12.2" clip-path="url(#terminal-2074516607-line-31)">│</text><text class="terminal-2074516607-r2" x="146.4" y="776.4" textLength="12.2" clip-path="url(#terminal-2074516607-line-31)">│</text><text class="terminal-2074516607-r5" x="170.8" y="776.4" textLength="488.0" clip-path="url(#terminal-2074516607-line-31)">corpus/posts/kalman-filter-08-porting.md</text><text class="terminal-2074516607-r2" x="963.8" y="776.4" textLength="12.2" clip-path="url(#terminal-2074516607-line-31)">│</text><text class="terminal-2074516607-r2" x="976" y="776.4" textLength="12.2" clip-path="url(#terminal-2074516607-line-31)">
+</text><text class="terminal-2074516607-r2" x="0" y="800.8" textLength="12.2" clip-path="url(#terminal-2074516607-line-32)">│</text><text class="terminal-2074516607-r2" x="48.8" y="800.8" textLength="12.2" clip-path="url(#terminal-2074516607-line-32)">│</text><text class="terminal-2074516607-r2" x="146.4" y="800.8" textLength="12.2" clip-path="url(#terminal-2074516607-line-32)">│</text><text class="terminal-2074516607-r2" x="170.8" y="800.8" textLength="658.8" clip-path="url(#terminal-2074516607-line-32)">…数，不含数据文件）的字节数：&#160;sizeof&#160;/&#160;size_of&#160;of&#160;the&#160;</text><text class="terminal-2074516607-r6" x="829.6" y="800.8" textLength="73.2" clip-path="url(#terminal-2074516607-line-32)">filter</text><text class="terminal-2074516607-r2" x="963.8" y="800.8" textLength="12.2" clip-path="url(#terminal-2074516607-line-32)">│</text><text class="terminal-2074516607-r2" x="976" y="800.8" textLength="12.2" clip-path="url(#terminal-2074516607-line-32)">
+</text><text class="terminal-2074516607-r2" x="0" y="825.2" textLength="12.2" clip-path="url(#terminal-2074516607-line-33)">│</text><text class="terminal-2074516607-r2" x="48.8" y="825.2" textLength="12.2" clip-path="url(#terminal-2074516607-line-33)">│</text><text class="terminal-2074516607-r2" x="146.4" y="825.2" textLength="12.2" clip-path="url(#terminal-2074516607-line-33)">│</text><text class="terminal-2074516607-r2" x="170.8" y="825.2" textLength="158.6" clip-path="url(#terminal-2074516607-line-33)">state,&#160;bytes&#160;</text><text class="terminal-2074516607-r6" x="329.4" y="825.2" textLength="73.2" clip-path="url(#terminal-2074516607-line-33)">filter</text><text class="terminal-2074516607-r2" x="402.6" y="825.2" textLength="549.0" clip-path="url(#terminal-2074516607-line-33)">&#160;c&#160;f64&#160;c&#160;f32&#160;cpp&#160;f64&#160;cpp&#160;f32&#160;rs&#160;f64&#160;rs&#160;f32&#160;&#160;&#160;</text><text class="terminal-2074516607-r2" x="963.8" y="825.2" textLength="12.2" clip-path="url(#terminal-2074516607-line-33)">│</text><text class="terminal-2074516607-r2" x="976" y="825.2" textLength="12.2" clip-path="url(#terminal-2074516607-line-33)">
+</text><text class="terminal-2074516607-r2" x="0" y="849.6" textLength="12.2" clip-path="url(#terminal-2074516607-line-34)">│</text><text class="terminal-2074516607-r2" x="48.8" y="849.6" textLength="12.2" clip-path="url(#terminal-2074516607-line-34)">│</text><text class="terminal-2074516607-r2" x="146.4" y="849.6" textLength="12.2" clip-path="url(#terminal-2074516607-line-34)">│</text><text class="terminal-2074516607-r2" x="170.8" y="849.6" textLength="780.8" clip-path="url(#terminal-2074516607-line-34)">kf1d&#160;40&#160;2…&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="terminal-2074516607-r2" x="963.8" y="849.6" textLength="12.2" clip-path="url(#terminal-2074516607-line-34)">│</text><text class="terminal-2074516607-r2" x="976" y="849.6" textLength="12.2" clip-path="url(#terminal-2074516607-line-34)">
+</text><text class="terminal-2074516607-r2" x="0" y="874" textLength="976.0" clip-path="url(#terminal-2074516607-line-35)">╰───┴───────┴──────────────────────────────────────────────────────────────────╯</text><text class="terminal-2074516607-r2" x="976" y="874" textLength="12.2" clip-path="url(#terminal-2074516607-line-35)">
+</text><text class="terminal-2074516607-r5" x="0" y="898.4" textLength="231.8" clip-path="url(#terminal-2074516607-line-36)">5&#160;hits&#160;in&#160;123&#160;files</text><text class="terminal-2074516607-r2" x="976" y="898.4" textLength="12.2" clip-path="url(#terminal-2074516607-line-36)">
+</text>
+    </g>
+    </g>
+</svg>
