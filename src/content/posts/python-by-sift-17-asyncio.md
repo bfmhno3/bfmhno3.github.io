@@ -1963,4 +1963,4 @@ $ python3 -m asyncio pstree 491407
 
 ## 下一篇
 
-下一篇是《Web：FastAPI、pydantic 与 httpx》。这一篇的请求头是我自己一行一行解析的，下一篇想看框架替我做了多少、又悄悄替我决定了多少。
+下一篇是《[Web：FastAPI、pydantic 与 httpx](/posts/python-by-sift-18-fastapi-pydantic-httpx/)》。这一篇的请求头是我自己一行一行解析的，下一篇想看框架替我做了多少、又悄悄替我决定了多少。
