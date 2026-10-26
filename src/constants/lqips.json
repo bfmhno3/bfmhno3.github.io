@@ -179,5 +179,9 @@
   "public:assets/images/python-by-sift/ch21-qt-light.webp": "e8e9eff5f5f8f2f2f2",
   "public:assets/images/python-by-sift/ch21-qt-error.webp": "1a161b18151c13141a",
   "public:assets/images/python-by-sift/ch21-qt-empty.webp": "f4f6f9f5f7faf6f8fa",
-  "public:assets/images/python-by-sift/ch21-qt-dark.webp": "282b3b1e212823262a"
+  "public:assets/images/python-by-sift/ch21-qt-dark.webp": "282b3b1e212823262a",
+  "public:assets/images/python-by-sift/ch22-zipf.png": "fbfafafafafaf9fbfd",
+  "public:assets/images/python-by-sift/ch22-posts-per-month.png": "fdfdfcf6f8fbf3f7fc",
+  "public:assets/images/python-by-sift/ch22-latency-hist.png": "eef3fbdee8f9b4cdf6",
+  "public:assets/images/python-by-sift/ch22-heaps.png": "fafafafbfbfbfdfdfd"
 }

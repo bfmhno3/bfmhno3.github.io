@@ -1756,4 +1756,4 @@ request to rows, median of 7: 246 ms
 
 ## 下一篇
 
-下一篇是《数据分析：numpy、pandas、matplotlib 与齐夫定律》。这一篇的窗口把搜索做得好看了，下一篇换个方向，退一步看整个语料：词频是不是服从齐夫定律，词表随文章数怎么增长，哪几篇文章彼此最像，我想用 numpy 的矩阵运算和 pandas 的表把这些数一个一个量出来。
+下一篇是《[数据分析：numpy、pandas、matplotlib 与齐夫定律](/posts/python-by-sift-22-numpy-pandas-matplotlib/)》。这一篇的窗口把搜索做得好看了，下一篇换个方向，退一步看整个语料：词频是不是服从齐夫定律，词表随文章数怎么增长，哪几篇文章彼此最像，我想用 numpy 的矩阵运算和 pandas 的表把这些数一个一个量出来。
