@@ -230,9 +230,9 @@ indexed 123 documents, 81167 terms
 - `varint.encode` 0.739 秒，1,696,302 次。
 - `encode_deltas` 0.370 秒，289,357 次。
 - `_positions` 0.357 秒。
-- `InvertedIndex.add`（`index.py:295`）0.337 秒。
+- `InvertedIndex.add` (`index.py:295`) 0.337 秒。
 
-没有一个是 BM25，因为索引构建里根本没有打分。分词、变长整数编码、给每个词建倒排表，这三件事占了前五名。调用次数更值得看：一次建索引调了 `varint.encode` 169 万次，`_encode_postings` 处理了 289,357 个 posting，平均每个 posting 约 5.9 次。优化之后 `encode` 还剩 831,248 次，少掉的 865,054 次（51%）都是值小于 128、编码出来只有一个字节的情形，它们现在不经过函数调用。这个数字在后面直接变成了一处改动。
+没有一个是 BM25，因为索引构建里根本没有打分。分词、变长整数编码、给每个词建倒排表，这三件事占了前五名。调用次数更值得看：一次建索引调了 `varint.encode` 169 万次，`_encode_postings` 处理了 289,357 个 posting，平均每个 posting 约 5.9 次。优化之后 `encode` 还剩 831,248 次，少掉的 865,054 次 (51%) 都是值小于 128、编码出来只有一个字节的情形，它们现在不经过函数调用。这个数字在后面直接变成了一处改动。
 
 优化之后同一个脚本（当前树，前后读数 `167 164 164 132 111` 和 `111 112 112 129 112`）：
 
@@ -253,11 +253,11 @@ indexed 123 documents, 81167 terms
     81167    0.297    0.000    1.066    0.000 segment.py:111(_encode_postings)
 ```
 
-前五名换了人：`iter_tokens` 从 0.779 降到 0.535 秒；`varint.encode` 的调用从 1,696,302 次降到 831,248 次，自身时间从 0.739 降到 0.424 秒；`encode_deltas` 掉出了前五，因为它的活儿现在由 `append_deltas` 干，而 `append_deltas` 对一个字节的值根本不调 `encode`；`InvertedIndex.add` 也掉出去了；NFKC 过滤器（`filters.py:35`）升到第三（0.373 秒），`_encode_postings` 升到第五（0.297 秒）。总时间从 6.310 秒降到 5.116 秒，函数调用从 18,522,273 次降到 15,211,986 次。
+前五名换了人：`iter_tokens` 从 0.779 降到 0.535 秒；`varint.encode` 的调用从 1,696,302 次降到 831,248 次，自身时间从 0.739 降到 0.424 秒；`encode_deltas` 掉出了前五，因为它的活儿现在由 `append_deltas` 干，而 `append_deltas` 对一个字节的值根本不调 `encode`；`InvertedIndex.add` 也掉出去了；NFKC 过滤器 (`filters.py:35`) 升到第三（0.373 秒），`_encode_postings` 升到第五（0.297 秒）。总时间从 6.310 秒降到 5.116 秒，函数调用从 18,522,273 次降到 15,211,986 次。
 
 这里有个读法上的陷阱：`cProfile` 的开销是每次调用都要付的，所以它高估调用多的代码。真实的 `sift index --full` 在这台机器上约 2.6 秒，开着 `cProfile` 是 5.5 秒，慢了 2.1 倍（详见下一节的开销表）；`cProfile` 看到的改进是 6.310 到 5.116 秒（1.23 倍），而不开剖析器时是 1.17 倍。方向对，倍数不能直接搬。拿 `cProfile` 找“哪里”，用 `hyperfine` 或 `timeit` 量“多少”。
 
-`cProfile` 在 3.14 里是怎么钩住每次调用的？`Lib/cProfile.py` 第 28 行 `class Profile(_lsprof.Profiler)`，真正干活的是 C 扩展 `Modules/_lsprof.c`。从 3.12 起它建在 `sys.monitoring`（PEP 669）上：第 771 到 783 行的 `callback_table` 把 `PY_START`、`PY_RESUME`、`PY_RETURN`、`PY_YIELD`、`CALL`、`C_RETURN` 等事件接到几个回调上，第 1013 行 `self->tool_id = PY_MONITORING_PROFILER_ID`。这意味着 `cProfile` 占着 `sys.monitoring` 的 `PROFILER_ID` 这个工具位。我验证了一下：先用 `use_tool_id(PROFILER_ID, ...)` 占住它，再启用 `cProfile`：
+`cProfile` 在 3.14 里是怎么钩住每次调用的？`Lib/cProfile.py` 第 28 行 `class Profile(_lsprof.Profiler)`，真正干活的是 C 扩展 `Modules/_lsprof.c`。从 3.12 起它建在 `sys.monitoring` (PEP 669) 上：第 771 到 783 行的 `callback_table` 把 `PY_START`、`PY_RESUME`、`PY_RETURN`、`PY_YIELD`、`CALL`、`C_RETURN` 等事件接到几个回调上，第 1013 行 `self->tool_id = PY_MONITORING_PROFILER_ID`。这意味着 `cProfile` 占着 `sys.monitoring` 的 `PROFILER_ID` 这个工具位。我验证了一下：先用 `use_tool_id(PROFILER_ID, ...)` 占住它，再启用 `cProfile`：
 
 ```text
 $ python3 /tmp/sift-scratch/ch23/tool_conflict.py
@@ -331,7 +331,7 @@ plain:       2630.2 ms
 
 | 工具 | 类型 | 毫秒 | 相对基线 |
 | --- | --- | --- | --- |
-| `cProfile`（`python3 -m cProfile`） | 确定性，钩每次调用 | 5533.7 | 2.12 倍 |
+| `cProfile` (`python3 -m cProfile`) | 确定性，钩每次调用 | 5533.7 | 2.12 倍 |
 | `pyinstrument` 5.1.3 | 采样（见下） | 4906.4 | 1.88 倍 |
 | memray 1.19.3 | 追踪每次分配 | 4415.0 | 1.69 倍 |
 | `py-spy` 0.4.2，20 Hz | 外部采样 | 2652.4 | 1.02 倍 |
@@ -405,7 +405,7 @@ Program: sift index --full
 这棵树给了 `cProfile` 表给不了的东西：
 
 - 导入的成本是看得见的。`sift/storage/store.py` 的导入（里面是 `sqlalchemy`）0.262 秒，占 5.1 秒的 5%。这是 `sift --help` 也要付的启动成本，第 22 篇讲过惰性导入。
-- 文档解析（`Document.from_markdown`）0.322 秒，比建倒排表小得多。
+- 文档解析 (`Document.from_markdown`) 0.322 秒，比建倒排表小得多。
 - `[self]` 一行是函数自己的时间，不含子节点。`iter_tokens` 自己的 `[self]` 是 0.439 秒，`tuple.__new__` 0.117 秒，`Match.span` 0.061 秒；NFKC 过滤器的 `[self]` 0.318 秒，`fold` 0.192 秒，`str.isascii` 0.057 秒。也就是说，优化之后 NFKC 过滤器里仍有一笔钱花在 `fold` 上，那是非 ASCII（中文）词元的折叠。
 
 这一次是在当前树上量的（`update_index` 4.657 秒，整个命令里 `took` 4849 毫秒，是开着 `pyinstrument` 的）。树里已经出现了 `append_deltas` 和 `_append_postings`，是这一章新加的。
@@ -439,7 +439,7 @@ Permission Denied: Try running again with elevated permissions by going 'sudo en
 
 第三，也是我没想到的：这张 SVG 没法当图片放进文章里。我用图片方式打开了仓库里生成的 `out/figures/ch23-flame.svg`（51,220 字节，1200×954，`inferno` 画的）。眼前是一叠彩色横条：顶上 14 条横贯全宽的色条，往下分成几支，最左边一支约 7% 宽，一路往下很深；中间一支约 43% 宽；右边一支约 39% 宽；其余是几块窄条。但**每条色条上都没有字**，标题也没有。原因在文件里：SVG 的根元素带 `onload="init(evt)"`，里面有一个 `<script>`，函数名是由这段脚本在浏览器里填进空的 `<text>` 元素的；用 `<img>` 加载 SVG 时浏览器不执行脚本，所以只剩色条。一张没有函数名的火焰图只是一张色块，我没有把它放进文章，也不想把带脚本的 SVG 内联进页面。想看的话，直接用浏览器打开那个 `.svg` 文件，可以点开缩放、搜索函数名。
 
-名字其实都在文件里，每个 `<rect>` 前面跟着一个 `<title>`。我把宽度不小于 5% 的框读出来，对上了刚才那几支：最左一支（3 个样本，6.8%）是 `_find_and_load` 一路到 `exec_module`，也就是导入；中间一支（19 个样本，43.2%）是 `update_index`（`store.py:341`）→ `index_items` → `_index_chunk` → `InvertedIndex.add` → `_positions` → 过滤器；右边一支（17 个样本，38.6%）是 `update_index`（`store.py:363`）→ `write_segment` → `_encode_postings` → `append_deltas`。图里找不到的是我没看出来的那 11% 的碎条。这和 `pyinstrument` 的树对得上：建倒排表约占 57%，写段文件约占 27%。
+名字其实都在文件里，每个 `<rect>` 前面跟着一个 `<title>`。我把宽度不小于 5% 的框读出来，对上了刚才那几支：最左一支（3 个样本，6.8%）是 `_find_and_load` 一路到 `exec_module`，也就是导入；中间一支（19 个样本，43.2%）是 `update_index` (`store.py:341`)→ `index_items` → `_index_chunk` → `InvertedIndex.add` → `_positions` → 过滤器；右边一支（17 个样本，38.6%）是 `update_index` (`store.py:363`)→ `write_segment` → `_encode_postings` → `append_deltas`。图里找不到的是我没看出来的那 11% 的碎条。这和 `pyinstrument` 的树对得上：建倒排表约占 57%，写段文件约占 27%。
 
 没有图，我再用 `py-spy` 的原始格式（`--format raw`，每行是一条栈加样本数）汇总叶子函数。这一次的运行共 67 个样本，汇总脚本 `leaf_counts.py` 十几行，按每条栈的最后一帧累加：
 
@@ -536,7 +536,7 @@ $ python3 /tmp/sift-scratch/ch23/line_times.py
 - 在 `ch22` 里，两条 `yield Token(...)`（第 55、65 行）合计 37.6% 的时间；`Token(...)` 要调用 `NamedTuple` 生成的 `__new__`，这在前面 `sys.monitoring` 一节会看到是 125 次 `<lambda>` 调用。当前树里，两条 `yield new(Token, (...))` 合计 26.7%。
 - 每次循环里，`ch22` 要做 `match["latin"]` 两次（第 54、55 行）、`match.start()` 和 `match.end()` 各一次；当前树做 `match[0]`、`match.span()`、`match.lastgroup` 各一次。
 
-这张表有两个陷阱，我要说明白。第一，`yield` 那一行的时间包含了消费者（`sum(1 for _ in ...)`）在恢复生成器之前做的事，所以这几行偏高。第二，回调本身开销不小，所有行都被拉长了，只有占比有参考意义。它不能代替 `line_profiler`，但命中次数这一列是准的，而且不用装任何东西。
+这张表有两个陷阱，我要说明白。第一，`yield` 那一行的时间包含了消费者 (`sum(1 for _ in ...)`) 在恢复生成器之前做的事，所以这几行偏高。第二，回调本身开销不小，所有行都被拉长了，只有占比有参考意义。它不能代替 `line_profiler`，但命中次数这一列是准的，而且不用装任何东西。
 
 ## 内存：tracemalloc 与 memray
 
@@ -585,7 +585,7 @@ $ python3 -m memray stats index.bin
 	- _strip_inline:/home/bfmhno3/Projects/sift/src/sift/markdown.py:41 -> 49.690MB
 ```
 
-（我只摘了 `stats` 输出里要用的几段，直方图和分配器分布省略。）两个数字摆在一起：一共分配了 1.327 GB，峰值只有 132.308 MB。差了 10 倍，说明大部分分配很快就释放了。最大的一项 `tokenize.py:61` 是 `for match in _TOKEN.finditer(folded)`，我猜每次迭代分配的是那个 `re.Match` 对象，共 461,866 次，加起来 506 MB，用完就丢。这就是“分配多”和“占用多”的区别：前者拖慢速度（每次分配和释放都要时间），后者决定会不会 OOM。memray 的峰值（132 MB）比 `tracemalloc` 的（84 MB）高，多半是因为 memray 看的是整个 `sift index --full`（包括解释器、SQLAlchemy 和写段文件），`tracemalloc` 只看 `load_index` 这一段；我没有把两边的范围对齐再量。
+（我只摘了 `stats` 输出里要用的几段，直方图和分配器分布省略。）两个数字摆在一起：一共分配了 1.327 GB，峰值只有 132.308 MB。差了 10 倍，说明大部分分配很快就释放了。最大的一项 `tokenize.py:61` 是 `for match in _TOKEN.finditer(folded)`，我猜每次迭代分配的是那个 `re.Match` 对象，共 461,866 次，加起来 506 MB，用完就丢。这就是“分配多”和“占用多”的区别：前者拖慢速度（每次分配和释放都要时间），后者决定会不会 OOM。memray 的峰值 (132 MB) 比 `tracemalloc` 的 (84 MB) 高，多半是因为 memray 看的是整个 `sift index --full`（包括解释器、SQLAlchemy 和写段文件），`tracemalloc` 只看 `load_index` 这一段；我没有把两边的范围对齐再量。
 
 这一章我没有动内存，只量了。这些短命的 `Match` 对象能不能省，我没有试；`finditer` 的循环就是分词本身，要换写法会让代码明显更难读，我宁可先看别处的账。
 
@@ -862,7 +862,7 @@ def append_deltas(out: bytearray, seq: Iterable[int]) -> None:
 
 `encode_deltas` 保留了它的合同，里面只是 `out = bytearray(); append_deltas(out, seq); return bytes(out)`；`_encode_postings` 里 `doc_id` 的差和 `tf` 同样先看是不是小于 0x80。`encode` 的调用从 1,696,302 次降到 831,248 次。测试用 hypothesis：`test_append_deltas_matches_encode_deltas` 给随机的非降序整数列表，外加一段随机的前缀字节，断言 `append_deltas` 追加出来的字节，等于前缀加上逐个 `encode` 的结果。前缀是为了证明函数追加而不是覆盖。
 
-这是六处里索引端到端收益最大的一步：中位数从 2832.5 毫秒到 2576.2 毫秒，省了 256 毫秒（9%）。
+这是六处里索引端到端收益最大的一步：中位数从 2832.5 毫秒到 2576.2 毫秒，省了 256 毫秒 (9%)。
 
 ### 5. 片段：折叠偏移只对不同的字符做一次
 
@@ -980,7 +980,7 @@ $ python3 -m pytest -p no:cacheprovider -o addopts='--doctest-modules' | tail -1
 
 ## 自适应解释器：字节码在运行时被改写
 
-到这里的优化都是“少做事”。接下来看另一半：解释器自己怎么让同样的事做得更快。Python 3.11 起，CPython 的字节码解释器是“自适应、可特化”的（PEP 659）：一条指令第一次出现时是通用形式，比如 `BINARY_OP`，它要在运行时看操作数的类型，再分派到整数加、浮点加或者字符串拼接。执行几次之后，解释器发现这条指令总是遇到同样的类型，就把它原地改写成特化形式，比如 `BINARY_OP_ADD_INT`，只检查“两边是不是整数”，是就直接加，不是就退回通用形式。
+到这里的优化都是“少做事”。接下来看另一半：解释器自己怎么让同样的事做得更快。Python 3.11 起，CPython 的字节码解释器是“自适应、可特化”的 (PEP 659)：一条指令第一次出现时是通用形式，比如 `BINARY_OP`，它要在运行时看操作数的类型，再分派到整数加、浮点加或者字符串拼接。执行几次之后，解释器发现这条指令总是遇到同样的类型，就把它原地改写成特化形式，比如 `BINARY_OP_ADD_INT`，只检查“两边是不是整数”，是就直接加，不是就退回通用形式。
 
 `dis.dis(f, adaptive=True)` 能看到解释器内存里当下的指令，而不是编译器最初生成的那份。`lab/ch23/specialization.py` 对一个小函数做热身前后各反汇编一次：
 
@@ -1078,7 +1078,7 @@ add after 2000 calls with floats: ['RESUME_CHECK', 'LOAD_FAST_BORROW_LOAD_FAST_B
 add after 2000 calls with str: ['RESUME_CHECK', 'LOAD_FAST_BORROW_LOAD_FAST_BORROW', 'BINARY_OP_ADD_UNICODE', 'RETURN_VALUE']
 ```
 
-这两个数字，2 和 53，在 CPython 3.14.7 的源码里都能找到。`Include/internal/pycore_code.h` 第 444 到 449 行：`ADAPTIVE_WARMUP_VALUE` 是 1，注释写着“1 表示在每条指令第二次执行时尝试特化”；第 451 到 458 行：`ADAPTIVE_COOLDOWN_VALUE` 是 52，注释写着“52 表示在 53 次未命中之后尝试重新特化（质数，避免每第 n 次类型都不同时出现的假象）”。特化本身在 `Python/specialize.c`：`_Py_Specialize_BinaryOp` 从第 2578 行开始，`NB_ADD` 的分支在第 2592 到 2615 行，先要求两个操作数类型相同（`Py_IS_TYPE(lhs, Py_TYPE(rhs))`），再按 `PyUnicode_CheckExact`、`PyLong_CheckExact`、`PyFloat_CheckExact` 选出特化后的指令；`specialize()`（第 739 到 750 行）改写操作码，同时把计数器设成冷却值；失败的情形走 `unspecialize()`（第 753 到 766 行）。指令的执行体在 `Python/bytecodes.c` 第 5052 到 5079 行：`_SPECIALIZE_BINARY_OP` 在计数器到点时调用 `_Py_Specialize_BinaryOp`，否则把计数器往前推一格，然后才是通用的 `_BINARY_OP`。
+这两个数字，2 和 53，在 CPython 3.14.7 的源码里都能找到。`Include/internal/pycore_code.h` 第 444 到 449 行：`ADAPTIVE_WARMUP_VALUE` 是 1，注释写着“1 表示在每条指令第二次执行时尝试特化”；第 451 到 458 行：`ADAPTIVE_COOLDOWN_VALUE` 是 52，注释写着“52 表示在 53 次未命中之后尝试重新特化（质数，避免每第 n 次类型都不同时出现的假象）”。特化本身在 `Python/specialize.c`：`_Py_Specialize_BinaryOp` 从第 2578 行开始，`NB_ADD` 的分支在第 2592 到 2615 行，先要求两个操作数类型相同 (`Py_IS_TYPE(lhs, Py_TYPE(rhs))`)，再按 `PyUnicode_CheckExact`、`PyLong_CheckExact`、`PyFloat_CheckExact` 选出特化后的指令；`specialize()`（第 739 到 750 行）改写操作码，同时把计数器设成冷却值；失败的情形走 `unspecialize()`（第 753 到 766 行）。指令的执行体在 `Python/bytecodes.c` 第 5052 到 5079 行：`_SPECIALIZE_BINARY_OP` 在计数器到点时调用 `_Py_Specialize_BinaryOp`，否则把计数器往前推一格，然后才是通用的 `_BINARY_OP`。
 
 这对写代码意味着什么？一，同一行代码里的类型最好稳定：函数里一个 `a + b`，一会儿加整数一会儿加字符串，特化的指令不断失败、重新特化。二，这些机制对你是透明的，源码不需要任何注释或标注，你写的是普通的 Python。三，收益有多大？我用最粗的办法量了一下：三个列表各 100 万个元素，一个全是整数，一个全是浮点，一个是整数和浮点交替，循环里只做 `a + b`：
 
@@ -1309,7 +1309,7 @@ cProfile          267.0 us per run (2.40x)
 
 **1.** 合并两次整篇折叠。`_origin` 和 `iter_hit_spans` 各自对命中文档的正文调一次 `fold`，`unicodedata.normalize` 因此是搜索剖析表里的第二名（0.148 秒）。设计一个让折叠只做一次的写法，注意 `_origin` 文档字符串里的警告：折叠两次不是幂等的，`ss` 加一个组合重音符，第二次折叠会再合成。先预测 `normalize` 的时间会降到多少，再动手；然后用 `test_search_stable.py`、`test_origin_matches_the_per_character_fold` 和 `cmp` 验证，最后用 `sift bench search` 的总和交替测量。
 
-**2.** 把 `line-profiler` 加进开发环境（`flake.nix`），跑 `extra.sh` 里 `kernprof` 的那一支。先写下预测：`iter_tokens` 里哪一行的占比最高？把它和我用 `sys.monitoring` 的 `LINE` 事件得到的占比（`yield` 那两行 11.6% 和 15.1%）比较。如果两者排名不一样，想想为什么：我的回调开销是每行一样的，`line_profiler` 的呢？
+**2.** 把 `line-profiler` 加进开发环境 (`flake.nix`)，跑 `extra.sh` 里 `kernprof` 的那一支。先写下预测：`iter_tokens` 里哪一行的占比最高？把它和我用 `sys.monitoring` 的 `LINE` 事件得到的占比（`yield` 那两行 11.6% 和 15.1%）比较。如果两者排名不一样，想想为什么：我的回调开销是每行一样的，`line_profiler` 的呢？
 
 **3.** 找一个带 `--enable-experimental-jit` 的 Python 3.14 构建（自己编译，或者官方 macOS 与 Windows 的二进制），用 `PYTHON_JIT=1` 和不开的两种方式，各交替跑 5 次 `sift index --full` 和 `sift bench search`。先写下预测：快还是慢？快多少？官方文档给的是“慢 10% 到快 20%”，你的结果落在范围的哪一端？用 `lab/ch23/jit_check.py` 先确认 `is_enabled()` 真的是 `True`。
 

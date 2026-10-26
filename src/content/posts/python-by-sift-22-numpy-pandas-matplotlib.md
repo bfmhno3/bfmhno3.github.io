@@ -138,7 +138,7 @@ u @ u = 25.0 (the dot product), u * u = [9.0, 16.0]
 
 一行一行读。`a` 是 3×4 的 int32，`itemsize` 4，所以步长是 `(16, 4)`：沿列走一步跳 4 字节，沿行走一步跳 4 列即 16 字节。`a.T`（转置）没有搬一个字节，只是把步长换成 `(4, 16)`，`shares_memory` 是 `True`，同时它不再是 C 连续的了：沿内存顺序读它，要在行之间跳。`a[1]`（一行）的步长是 `(4,)`，`a[:, 1]`（一列）是 `(16,)`，同一块内存，两种读法。
 
-切片得到的是视图，所以 `row[0] = 100` 直接写穿到了 `a`。而用整数列表（`a[[0, 2]]`）或布尔掩码（`a[a > 5]`）取元素，结果没法用一套步长描述，numpy 只能复制：`shares_memory` 都是 `False`，改副本不影响 `a`。`ravel()` 在 C 连续的 `a` 上返回视图，在转置的 `t` 上只能复制（输出里 `t.ravel() has to copy` 是 `True`）。判断一个操作是视图还是副本，不要靠猜，`np.shares_memory` 或者 `.base` 和 `.flags.owndata` 一查便知，上面 `mem.py` 里的 `row[::2]` 就是这样：`base` 是 `row`，不拥有数据，步长 `(8,)` 即跳着读，所以不是连续的。
+切片得到的是视图，所以 `row[0] = 100` 直接写穿到了 `a`。而用整数列表 (`a[[0, 2]]`) 或布尔掩码 (`a[a > 5]`) 取元素，结果没法用一套步长描述，numpy 只能复制：`shares_memory` 都是 `False`，改副本不影响 `a`。`ravel()` 在 C 连续的 `a` 上返回视图，在转置的 `t` 上只能复制（输出里 `t.ravel() has to copy` 是 `True`）。判断一个操作是视图还是副本，不要靠猜，`np.shares_memory` 或者 `.base` 和 `.flags.owndata` 一查便知，上面 `mem.py` 里的 `row[::2]` 就是这样：`base` 是 `row`，不拥有数据，步长 `(8,)` 即跳着读，所以不是连续的。
 
 这也是后面 `similar` 里 `matrix[row]` 不复制 81167 个数的原因：取一行是视图，`matrix @ matrix[row]` 读的是原来那块 38.1 MiB 的内存。
 
@@ -175,7 +175,7 @@ float32 + float64 -> float64
 2147483647 3.4028235e+38
 ```
 
-两个 `uint8` 标量相加仍然回绕成 44，但多了一个 `RuntimeWarning`。更有意思的是第二行：`np.uint8(200) + 300`，300 是个 Python `int`，装不进 `uint8`，直接 `OverflowError`。这是 NumPy 2 的类型提升规则（NEP 50）：Python 的 `int` 和 `float` 是“弱”类型，它们去适应 numpy 标量的 dtype，而不是反过来把结果提升到更宽的类型。所以 `np.float32(1) + 1.0` 仍是 `float32`，只有两个 numpy 类型才按宽度提升（`float32 + float64` 得 `float64`）。这条规则让 float32 的程序不会因为写了个 `1.0` 字面量就悄悄变成 float64，对 `tfidf_matrix` 全程保持 float32 很要紧，后面会看到它的写法。
+两个 `uint8` 标量相加仍然回绕成 44，但多了一个 `RuntimeWarning`。更有意思的是第二行：`np.uint8(200) + 300`，300 是个 Python `int`，装不进 `uint8`，直接 `OverflowError`。这是 NumPy 2 的类型提升规则 (NEP 50)：Python 的 `int` 和 `float` 是“弱”类型，它们去适应 numpy 标量的 dtype，而不是反过来把结果提升到更宽的类型。所以 `np.float32(1) + 1.0` 仍是 `float32`，只有两个 numpy 类型才按宽度提升（`float32 + float64` 得 `float64`）。这条规则让 float32 的程序不会因为写了个 `1.0` 字面量就悄悄变成 float64，对 `tfidf_matrix` 全程保持 float32 很要紧，后面会看到它的写法。
 
 ## 广播、通用函数、`@` 与随机数
 
@@ -224,7 +224,7 @@ exit 1
 
 ### 通用函数
 
-`np.sqrt`、`np.log`、`np.add` 这些叫通用函数（ufunc），对数组逐元素算。它们有几个别的函数没有的参数：`out=` 把结果写进已有的数组，`where=` 只算条件为真的位置，`dtype=` 指定内部计算的类型。输出里 `sqrt where x >= 0` 一行：`x` 里有个 `-1.0`，`np.sqrt(x, out=out, where=x >= 0)` 跳过它，`out` 在那个位置保持原来的 0.0。必须给 `out=`：numpy 文档写明，不给 `out=` 时，`where` 为假的位置是未初始化的，里面是什么都有可能。
+`np.sqrt`、`np.log`、`np.add` 这些叫通用函数 (ufunc)，对数组逐元素算。它们有几个别的函数没有的参数：`out=` 把结果写进已有的数组，`where=` 只算条件为真的位置，`dtype=` 指定内部计算的类型。输出里 `sqrt where x >= 0` 一行：`x` 里有个 `-1.0`，`np.sqrt(x, out=out, where=x >= 0)` 跳过它，`out` 在那个位置保持原来的 0.0。必须给 `out=`：numpy 文档写明，不给 `out=` 时，`where` 为假的位置是未初始化的，里面是什么都有可能。
 
 ufunc 还是一个对象，有方法。`np.add.reduce(x)` 和 `x.sum()` 是同一件事（求和就是用加法归约），`np.maximum.accumulate(x)` 给出“到目前为止的最大值” `[1.0, 4.0, 9.0, 9.0]`，`np.add.accumulate` 就是 `cumsum`。后面算词汇增长时，`np.cumsum` 就是这样一条累加。
 
@@ -311,7 +311,7 @@ def tfidf_matrix(index: TermIndex) -> tuple[NDArray[np.float32], list[str]]:
     return matrix, vocab
 ```
 
-分三段。**第一段**是纯 Python：`sorted(index.documents)` 给出活着的文档（被删除的文档倒排表里可能还有残留，`row_of.get(...)` 返回 `None` 就跳过），然后对每个词项、每条倒排记录，往三个列表里各追加一个数：行号、列号、词频。这是稀疏矩阵的“坐标格式”（COO）：三个等长的数组，第 $k$ 个非零元素在 `(rows[k], cols[k])`，值是 `freqs[k]`。`if len(rows) > before` 保证只有真有活文档的词才占一列。
+分三段。**第一段**是纯 Python：`sorted(index.documents)` 给出活着的文档（被删除的文档倒排表里可能还有残留，`row_of.get(...)` 返回 `None` 就跳过），然后对每个词项、每条倒排记录，往三个列表里各追加一个数：行号、列号、词频。这是稀疏矩阵的“坐标格式”(COO)：三个等长的数组，第 $k$ 个非零元素在 `(rows[k], cols[k])`，值是 `freqs[k]`。`if len(rows) > before` 保证只有真有活文档的词才占一列。
 
 **第二段**是 numpy，没有一个 Python 循环。`np.asarray(cols, dtype=np.intp)` 把列表一次转成整数数组（`intp` 是指针宽度的整数，做下标最合适）。`np.bincount(col, minlength=len(vocab))` 数每个列号出现几次，也就是每个词项的文档频率 $\mathrm{df}$；`astype(np.float32)` 转成浮点。`idf` 那一行把标量 `(1 + len(doc_ids))` 对数组 `(1 + df)` 广播，`dtype=np.float32` 在这里没有改变结果，`(1 + df)` 已经是 float32，`np.log` 默认也给 float32；它把“必须是 float32”写进了代码，因为 `np.log` 对整数数组会给 float64（我查过 `np.log(np.arange(3) + 1).dtype` 是 `float64`），将来有人把 `df` 改成整数就会悄悄变宽。
 
@@ -399,7 +399,7 @@ $ time sift similar 0 > /dev/null
 real 1.648s
 ```
 
-这几个数一起读才有意思。`cold_warm.py` 打开磁盘上的索引（`SegmentIndex`），连续调三次 `tfidf_matrix`：第一次 1036 毫秒，之后 152 毫秒上下。差的 0.9 秒是第一次要把 81167 条倒排表从段文件里解出来（`SegmentIndex.__getitem__` 有缓存，所以第二次不用了）；我拿 `cProfile` 看过一次 `sift similar 0`，`store.py` 的 `__getitem__` 占了大头。热了以后，`tfidf_matrix` 是 152.6 毫秒，而乘一次只要 1.17 毫秒，`similar(0)` 162.9 毫秒其实几乎全是构建。`top_pairs` 比构建多出的 26 毫秒是那个 123×123 的 `matrix @ matrix.T` 和排序。命令行里 `sift similar 0` 总共 1.648 秒：解码倒排表、构建、打开索引、加载 numpy，每次进程都重来一遍。
+这几个数一起读才有意思。`cold_warm.py` 打开磁盘上的索引 (`SegmentIndex`)，连续调三次 `tfidf_matrix`：第一次 1036 毫秒，之后 152 毫秒上下。差的 0.9 秒是第一次要把 81167 条倒排表从段文件里解出来（`SegmentIndex.__getitem__` 有缓存，所以第二次不用了）；我拿 `cProfile` 看过一次 `sift similar 0`，`store.py` 的 `__getitem__` 占了大头。热了以后，`tfidf_matrix` 是 152.6 毫秒，而乘一次只要 1.17 毫秒，`similar(0)` 162.9 毫秒其实几乎全是构建。`top_pairs` 比构建多出的 26 毫秒是那个 123×123 的 `matrix @ matrix.T` 和排序。命令行里 `sift similar 0` 总共 1.648 秒：解码倒排表、构建、打开索引、加载 numpy，每次进程都重来一遍。
 
 所以“numpy 比纯 Python 快几百倍”只对乘法这一步成立；整条命令的瓶颈在乘法之前，在 Python 的循环里，这是下一篇才轮到的话题。
 
@@ -602,7 +602,7 @@ $ run OMP_NUM_THREADS=2
 runs 100 slow(>3ms) 0 fastest 0.87 median 1.06 max 1.34
 ```
 
-默认设置下 200 个进程里 9 个是慢档（4.5%），限成 1 个线程或 2 个线程的各 100 个进程里一个都没有。限成 1 个线程中位数是 1.48 毫秒，比 16 线程的 1.32 到 1.34 慢一点，而 2 个线程的中位数 1.06 毫秒反而是最快的，最快一次 0.87。我另外把进程钉在 16 个核心上各跑了一次（`taskset -c N`），1.34 到 1.56 毫秒，没有一个慢档。钉住以后 `openblas_get_num_threads()` 仍然报 16，也就是 16 个线程挤在一个核心上跑：
+默认设置下 200 个进程里 9 个是慢档 (4.5%)，限成 1 个线程或 2 个线程的各 100 个进程里一个都没有。限成 1 个线程中位数是 1.48 毫秒，比 16 线程的 1.32 到 1.34 慢一点，而 2 个线程的中位数 1.06 毫秒反而是最快的，最快一次 0.87。我另外把进程钉在 16 个核心上各跑了一次 (`taskset -c N`)，1.34 到 1.56 毫秒，没有一个慢档。钉住以后 `openblas_get_num_threads()` 仍然报 16，也就是 16 个线程挤在一个核心上跑：
 
 ```text
 $ for c in $(seq 0 15); do echo -n "cpu $c: "; taskset -c $c python3 /tmp/sift-scratch/ch22/final/matvec_probe.py; done | sort -k4 -n | sed -n '1p;$p'
@@ -630,7 +630,7 @@ $ python3 /tmp/sift-scratch/cpu_state.py
 
 （表是我把 18 次运行的输出重排成三列的，数没有改。）纯 Python 一列很稳，434 到 465 毫秒，这是解释器的单线程速度，`cpu_state.py` 量的就是它。numpy 一列的变化来自 BLAS：默认 1.27 到 2.06 毫秒，外加一次 5.98 毫秒；1 个线程 1.50 到 2.14；2 个线程 1.22 到 1.48，没有离群值。折成倍数，除了那一次慢档的 74 倍，其余 17 次在 209 到 375 倍之间。我以后引用这个数会写“200 到 375 倍，偶尔 74 倍”，而不写某一个数。
 
-这件事教我的是：**一个比值有两个分母**。分子（纯 Python）是稳的，分母（numpy）是一个藏着线程池的黑盒。报告一个“加速比”之前，要多跑几个进程看分母分不分档，也要问 `cpu_state.py` 能量到的是哪一部分。
+这件事教我的是：**一个比值有两个分母**。分子（纯 Python）是稳的，分母 (numpy) 是一个藏着线程池的黑盒。报告一个“加速比”之前，要多跑几个进程看分母分不分档，也要问 `cpu_state.py` 能量到的是哪一部分。
 
 ## float32 还是 float64
 
@@ -707,7 +707,7 @@ def corpus_frame(index: TermIndex) -> pd.DataFrame:
     )
 ```
 
-一个字典，每个键是列名，值是等长的列表，`pd.DataFrame` 把每一列变成一个 `Series`（一列带类型和索引的数组）。`pd.to_datetime` 把一串带偏移的日期字符串（`2026-10-19 23:00:00 +08:00`）变成带时区的时间列。`columns=list(CORPUS_COLUMNS)` 固定列的顺序；顺带一个好处：索引为空时仍然得到一个有这 8 列的空表，不会是 0 列的怪东西。
+一个字典，每个键是列名，值是等长的列表，`pd.DataFrame` 把每一列变成一个 `Series`（一列带类型和索引的数组）。`pd.to_datetime` 把一串带偏移的日期字符串 (`2026-10-19 23:00:00 +08:00`) 变成带时区的时间列。`columns=list(CORPUS_COLUMNS)` 固定列的顺序；顺带一个好处：索引为空时仍然得到一个有这 8 列的空表，不会是 0 列的怪东西。
 
 `pandas_tour.py` 是一趟 API 游览。每一段我都对着输出说一下：
 
@@ -827,7 +827,7 @@ copy_on_write option: True
 Pandas4Warning - The 'mode.copy_on_write' option is deprecated. Copy-on-Write c
 ```
 
-`part = frame["tokens"]` 之后，两个对象共用同一块内存（`True`），一个字节也没复制；`part.iloc[0] = -1` 写入的一刻才复制，之后各是各的（`False`），`frame` 没变，`part` 变了。懒复制让“选几列”依然便宜，对象越大越重要。第四行：`.to_numpy()` 交出的数组是只读的，因为它和表共享内存，让你写进去就会改到原表。最后两行：`pd.options.mode.copy_on_write` 在 pandas 3 里只是个返回 `True` 的废弃选项（`Pandas4Warning`），不能再关。
+`part = frame["tokens"]` 之后，两个对象共用同一块内存 (`True`)，一个字节也没复制；`part.iloc[0] = -1` 写入的一刻才复制，之后各是各的 (`False`)，`frame` 没变，`part` 变了。懒复制让“选几列”依然便宜，对象越大越重要。第四行：`.to_numpy()` 交出的数组是只读的，因为它和表共享内存，让你写进去就会改到原表。最后两行：`pd.options.mode.copy_on_write` 在 pandas 3 里只是个返回 `True` 的废弃选项 (`Pandas4Warning`)，不能再关。
 
 链式赋值是旧习惯最容易踩的地方。`frame[frame["tokens"] > 0]["tokens"] = 0` 看起来像“把词数大于 0 的行的词数设成 0”，实际上第一个 `[...]` 先造出一个临时的新表，第二个 `["tokens"] = 0` 改的是这个临时表，随即被丢掉。写时复制下这个赋值**永远**不会改到 `frame`，pandas 发出 `ChainedAssignmentError` 提醒你。它是 `Warning` 的子类，不是异常（`ChainedAssignmentError.__mro__` 是 `(ChainedAssignmentError, Warning, Exception, ...)`），所以脚本不会崩，只是什么也没改。正确的写法是 `frame.loc[mask, "flag"] = True`，一次调用里同时说清行和列，输出最后一行 123 行被写入。
 
@@ -877,7 +877,7 @@ published
 busiest 3 months in a row: 97 posts
 ```
 
-从 2023-08 到 2026-10 是 39 个月，其中 23 个月一篇都没有；峰值是 2026-10，85 篇，占 123 篇的 69%；最忙的连续三个月是 97 篇（`rolling(3).sum()`）。我另外查了几件事，写成草稿 `resample_facts.py`（读 `corpus_frame`，试 `resample("M")`，把月份换到 UTC 重算，数 2026-10 每天的篇数）：
+从 2023-08 到 2026-10 是 39 个月，其中 23 个月一篇都没有；峰值是 2026-10，85 篇，占 123 篇的 69%；最忙的连续三个月是 97 篇 (`rolling(3).sum()`)。我另外查了几件事，写成草稿 `resample_facts.py`（读 `corpus_frame`，试 `resample("M")`，把月份换到 UTC 重算，数 2026-10 每天的篇数）：
 
 ```text
 $ python3 /tmp/sift-scratch/ch22/final/resample_facts.py 2>&1 | grep -v '^load_index took'
@@ -892,7 +892,7 @@ posts whose month changes in UTC: 0
 10-19     16
 ```
 
-三件事。pandas 3 不再接受 `resample("M")`，要明确写月初 `"MS"` 或月末 `"ME"`，旧写法直接 `ValueError`。时区方面，`published` 带 `Asia/Shanghai`，分月按北京时间；我把月份换到 UTC 重算，没有一篇文章换了月份（没有发在 1 号 8 点之前的），所以这份语料里时区不会影响图，但一般不能假设这一点。最后是 2026-10 的 85 篇：六天里 85 篇，一天（10-18）35 篇。这说明“每月发布的文章数”这张图反映的是文章的日期戳，博客那一个月集中放出了大批文章，多半不是写作的节奏；我没有去查是哪一种原因。图 3 要读成这个样子。
+三件事。pandas 3 不再接受 `resample("M")`，要明确写月初 `"MS"` 或月末 `"ME"`，旧写法直接 `ValueError`。时区方面，`published` 带 `Asia/Shanghai`，分月按北京时间；我把月份换到 UTC 重算，没有一篇文章换了月份（没有发在 1 号 8 点之前的），所以这份语料里时区不会影响图，但一般不能假设这一点。最后是 2026-10 的 85 篇：六天里 85 篇，一天 (10-18) 35 篇。这说明“每月发布的文章数”这张图反映的是文章的日期戳，博客那一个月集中放出了大批文章，多半不是写作的节奏；我没有去查是哪一种原因。图 3 要读成这个样子。
 
 ## `read_sql`：查询日志进 DataFrame
 
@@ -1125,7 +1125,7 @@ $ python3 /tmp/sift-scratch/ch22/final/zipf_stop.py 2>&1 | grep -v '^load_index 
   top terms  ['0', '1', '2', 'a', '一个', '3', 'n', 't', 'x', 'np']
 ```
 
-我的猜想错了。停用词表去掉的只有 19,418 个词元（`812338 - 792920`），多出来的一个高频词是 `a`；三个范围的指数几乎没动：$-0.639$ 对 $-0.642$，$-0.743$ 对 $-0.754$，$-0.988$ 对 $-0.997$。最该看的是榜首：这个语料的前三名是 `0`、`1`、`2`，第五名 `3`，再后面是 `n`、`t`、`x`、`np`、`c`：多半是代码块和公式里的数字和变量名，不是自然语言的功能词。这是一个混着教程代码、公式和中文散文的语料。
+我的猜想错了。停用词表去掉的只有 19,418 个词元 (`812338 - 792920`)，多出来的一个高频词是 `a`；三个范围的指数几乎没动：$-0.639$ 对 $-0.642$，$-0.743$ 对 $-0.754$，$-0.988$ 对 $-0.997$。最该看的是榜首：这个语料的前三名是 `0`、`1`、`2`，第五名 `3`，再后面是 `n`、`t`、`x`、`np`、`c`：多半是代码块和公式里的数字和变量名，不是自然语言的功能词。这是一个混着教程代码、公式和中文散文的语料。
 
 所以我换了个角度，按“有没有汉字”把词项分成两堆，各自量：
 
@@ -1163,7 +1163,7 @@ CJK    terms  66938 tokens  452028 seen once  53% top [4740, 1989, 1580, 1538] e
 other  terms  14229 tokens  340892 seen once  31% top [14594, 11405, 6620, 4572] exp(100, 1000) [-0.769, -0.941]
 ```
 
-含汉字的词项（基本就是二元组）有 66,938 个，占词表的 82%，但只占 452,028 个词元（57%）；它们 53% 只出现一次，指数很平，$-0.49$（前 100 名）和 $-0.66$（前 1000 名）。其余的（西文词、数字、变量名）只有 14,229 个词项，指数 $-0.77$ 和 $-0.94$，接近 1。把两堆放在同一张图里排队，就得到上面那条折线。这个解释和数据相容：整张图是两个分布的混合，中文二元组那一堆又多又平，西文那一堆更像经典的齐夫分布。我没有再往下证明，比如“二元组的指数本来就比词的低”这类说法，需要用一个已知的中文分词语料来验证，这一篇没做。
+含汉字的词项（基本就是二元组）有 66,938 个，占词表的 82%，但只占 452,028 个词元 (57%)；它们 53% 只出现一次，指数很平，$-0.49$（前 100 名）和 $-0.66$（前 1000 名）。其余的（西文词、数字、变量名）只有 14,229 个词项，指数 $-0.77$ 和 $-0.94$，接近 1。把两堆放在同一张图里排队，就得到上面那条折线。这个解释和数据相容：整张图是两个分布的混合，中文二元组那一堆又多又平，西文那一堆更像经典的齐夫分布。我没有再往下证明，比如“二元组的指数本来就比词的低”这类说法，需要用一个已知的中文分词语料来验证，这一篇没做。
 
 ## 希普斯定律：词表怎么长
 
@@ -1232,7 +1232,7 @@ Axes belongs to Figure, not to pyplot
 rcParams font.family: ['sans-serif']
 ```
 
-`plt.close()` 之后全局干净；不 `close`，`plt.figure()` 留在全局里（`[1]`）。用 `Figure()` 直接造的，`plt.get_fignums()` 里始终没有它，没人替你管，也没人替你忘。全局留着的图是会累积的，我另外起了 21 张：
+`plt.close()` 之后全局干净；不 `close`，`plt.figure()` 留在全局里 (`[1]`)。用 `Figure()` 直接造的，`plt.get_fignums()` 里始终没有它，没人替你管，也没人替你忘。全局留着的图是会累积的，我另外起了 21 张：
 
 ```text
 $ python3 /tmp/sift-scratch/ch22/final/mpl_pyplot_leak.py
@@ -1284,9 +1284,9 @@ def configure_matplotlib() -> str | None:
     return family
 ```
 
-`font_manager.fontManager.addfont(path)` 把字体文件登记进 matplotlib。我读了安装的 matplotlib 3.11.1 的 `font_manager.py` 第 1293 到 1306 行：它按路径打开字体，把第 0 个字体面加进 `ttflist`，再对字体集合里的其余每一面（`for face_index in range(1, font.num_faces)`）各加一条。这个文件是 `NotoSansCJK-VF.otf.ttc`，一个集合，里面有 5 个面（JP、KR、SC、TC、HK），`FontProperties(fname=path).get_name()` 取到的是第 0 个，所以家族名是 `Noto Sans CJK JP`。汉字在日文字形和简体字形之间有少数字形差异，我没有逐字比对图里用的是哪套。
+`font_manager.fontManager.addfont(path)` 把字体文件登记进 matplotlib。我读了安装的 matplotlib 3.11.1 的 `font_manager.py` 第 1293 到 1306 行：它按路径打开字体，把第 0 个字体面加进 `ttflist`，再对字体集合里的其余每一面 (`for face_index in range(1, font.num_faces)`) 各加一条。这个文件是 `NotoSansCJK-VF.otf.ttc`，一个集合，里面有 5 个面（JP、KR、SC、TC、HK），`FontProperties(fname=path).get_name()` 取到的是第 0 个，所以家族名是 `Noto Sans CJK JP`。汉字在日文字形和简体字形之间有少数字形差异，我没有逐字比对图里用的是哪套。
 
-那个 `dataclasses.replace(entry, weight=400)` 是个补丁，注释里写了原因：可变字体登记时的字重是第一个命名实例的 100（Thin），查“普通字重”时会报警告，所以把登记项的字重改成 400。我用 `fontTools` 读了字体的轴：
+那个 `dataclasses.replace(entry, weight=400)` 是个补丁，注释里写了原因：可变字体登记时的字重是第一个命名实例的 100 (Thin)，查“普通字重”时会报警告，所以把登记项的字重改成 400。我用 `fontTools` 读了字体的轴：
 
 ```text
 $ python3 /tmp/sift-scratch/ch22/final/font_axes.py
@@ -1348,7 +1348,7 @@ def plot_zipf(
 
 ![查询耗时分布的直方图：横轴是耗时 latency（毫秒，对数坐标），纵轴是查询数 queries。蓝色柱子大多高 5，分布在约 20 到 70 毫秒之间，约 80 毫秒处一根高 9、紧挨着约 90 毫秒一根高 1，约 110 毫秒一根高 5，约 120 毫秒一根高 10，约 220 毫秒处还有一根孤立的高 5。橙色竖线在 78.6 毫秒，图例写着“中位数 78.6 ms”](/assets/images/python-by-sift/ch22-latency-hist.png)
 
-直方图的桶是对数等宽的：`np.geomspace(low, high * 1.000001, 21)` 取 21 个边界，20 个桶，相邻边界的比值是 1.133。为什么不用默认桶？草稿 `hist_bins.py` 从查询日志读出同样的 60 个耗时，用两种桶各数一遍（`np.histogram`），再算每条查询 5 个读数的最大除以最小：
+直方图的桶是对数等宽的：`np.geomspace(low, high * 1.000001, 21)` 取 21 个边界，20 个桶，相邻边界的比值是 1.133。为什么不用默认桶？草稿 `hist_bins.py` 从查询日志读出同样的 60 个耗时，用两种桶各数一遍 (`np.histogram`)，再算每条查询 5 个读数的最大除以最小：
 
 ```text
 $ python3 /tmp/sift-scratch/ch22/final/hist_bins.py
@@ -1359,7 +1359,7 @@ linear bins: [10, 5, 0, 10, 1, 8, 6, 4, 6, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5]
 per query spread (max/min): 1.038
 ```
 
-线性桶每个 10.6 毫秒宽，第一个桶就装了 10 条，左边 10 个桶装了 55 条，中间 9 个桶全空，最后一个桶是慢查询 `rust 所有权` 的 5 次读数；对数桶把它们摊开了。对数桶的高度大多是 5，对得上前面的发现：12 条查询乘 5 次运行，每条查询的 5 个读数相差不到 4%（最大除以最小 1.038），比一个桶的宽度（13%）窄，所以一条查询的 5 次几乎总落在同一个桶里。高 10 是两条查询同桶；相邻两桶里 4 和 1、7 和 3 这样的拆分，是某条查询的读数落在了桶边界两侧（这是我对图的解读，图上数不出来是哪一条）。图里的中位数 78.6 毫秒来自 `extra.sh` 那一次运行；我重跑几次得到 76.8 到 77.1。直方图每次运行都会变，另外三张图不会：我在 `git archive` 出来的副本里重跑了 `lab/ch22/extra.sh`，退出码 0，`cmp` 比较，`zipf`、`heaps`、`posts-per-month` 三张与我打开看过的文件逐字节相同，只有 `latency-hist` 不同（34,761 对 35,266 字节）。四张 PNG 都远小于 400 KB（最大的 76,626 字节），所以我没有转 WebP。
+线性桶每个 10.6 毫秒宽，第一个桶就装了 10 条，左边 10 个桶装了 55 条，中间 9 个桶全空，最后一个桶是慢查询 `rust 所有权` 的 5 次读数；对数桶把它们摊开了。对数桶的高度大多是 5，对得上前面的发现：12 条查询乘 5 次运行，每条查询的 5 个读数相差不到 4%（最大除以最小 1.038），比一个桶的宽度 (13%) 窄，所以一条查询的 5 次几乎总落在同一个桶里。高 10 是两条查询同桶；相邻两桶里 4 和 1、7 和 3 这样的拆分，是某条查询的读数落在了桶边界两侧（这是我对图的解读，图上数不出来是哪一条）。图里的中位数 78.6 毫秒来自 `extra.sh` 那一次运行；我重跑几次得到 76.8 到 77.1。直方图每次运行都会变，另外三张图不会：我在 `git archive` 出来的副本里重跑了 `lab/ch22/extra.sh`，退出码 0，`cmp` 比较，`zipf`、`heaps`、`posts-per-month` 三张与我打开看过的文件逐字节相同，只有 `latency-hist` 不同（34,761 对 35,266 字节）。四张 PNG 都远小于 400 KB（最大的 76,626 字节），所以我没有转 WebP。
 
 ## `sift report`：一条命令
 
@@ -1435,7 +1435,7 @@ $ PYTHONPATH=/tmp/sift-scratch/ch22/nonumpy sift search --no-log kalman > /dev/n
 search exit 0
 ```
 
-我造了一个会抛 `ModuleNotFoundError` 的假 `numpy.py` 放在 `PYTHONPATH` 前面，`sift similar` 干净地报出安装提示、退出码 1，而不碰 numpy 的命令（`search`）照常。`data_import_error` 靠的是 `error.name`，所以提示里写的是缺失的那个模块。
+我造了一个会抛 `ModuleNotFoundError` 的假 `numpy.py` 放在 `PYTHONPATH` 前面，`sift similar` 干净地报出安装提示、退出码 1，而不碰 numpy 的命令 (`search`) 照常。`data_import_error` 靠的是 `error.name`，所以提示里写的是缺失的那个模块。
 
 ## polars
 
@@ -1463,7 +1463,7 @@ def test_power_law_fit_recovers_k_and_beta() -> None:
     assert fit(np.array([100.0]))[0] == pytest.approx(7.5 * 100**0.6)
 ```
 
-第一个造出完美的齐夫分布（`100_000 / rank`）验证指数是 $-1$，第二个用 $7.5 \cdot n^{0.6}$ 造数据，验证拟合找回 $K=7.5$、$\beta=0.6$，相对误差 $10^{-6}$。数据是我造的，所以我知道答案；这是测数值代码比“跑一遍看着像”可靠的地方。
+第一个造出完美的齐夫分布 (`100_000 / rank`) 验证指数是 $-1$，第二个用 $7.5 \cdot n^{0.6}$ 造数据，验证拟合找回 $K=7.5$、$\beta=0.6$，相对误差 $10^{-6}$。数据是我造的，所以我知道答案；这是测数值代码比“跑一遍看着像”可靠的地方。
 
 ```text
 $ python3 -m pytest tests/test_analytics.py
@@ -1495,7 +1495,7 @@ __annotations__: type 'Series' is not subscriptable
 这一章留下的几处，仓库里还没有改：
 
 - `query_log_frame` 的 `with sqlite3.connect(db) as conn:` 不关连接（练习 1）。
-- `corpus_frame` 的 docstring 说 `series` 缺失值是 `None`，实际是 `nan`（`float`）：`frame.loc[0, "series"]` 的 `repr` 是 `nan`，`is None` 为 `False`，而文档对象的 `series` 本身是 `None`。
+- `corpus_frame` 的 docstring 说 `series` 缺失值是 `None`，实际是 `nan` (`float`)：`frame.loc[0, "series"]` 的 `repr` 是 `nan`，`is None` 为 `False`，而文档对象的 `series` 本身是 `None`。
 - `posts_per_month` 的注解 `pd.Series[int]` 运行时读 `__annotations__` 会 `TypeError`。
 - 图里的汉字是可变字体的 Thin 默认实例，偏细（练习 4）；家族名是 `Noto Sans CJK JP`，字形差异没有核对。
 - 74 倍那一档的成因只证明了和线程数有关（练习 5）。

@@ -2,7 +2,7 @@
 title: "GUI（下）：用 PySide6 做一个好看的桌面客户端"
 commentId: "post:python-by-sift-21-pyside6"
 published: "2026-10-26 22:00:00 +08:00"
-description: "用 Sift 重学 Python 第 21 篇：我用 PySide6 6.11.1（Qt 6.11.1）和 qtawesome 1.4.1 把上一篇的搜索窗口重做了一遍：Fusion 样式加一份由设计令牌生成的 QSS，结果列表是自绘的卡片委托，搜索跑在 QThreadPool 上，后端一行没改。同一个后端、同一个查询，我的测量脚本量出 522.9 毫秒，Tk 版是 224.8 毫秒；错在脚本用 QTest.qWait 轮询，它把另一个线程里的纯 Python 拖慢了 2.4 到 2.7 倍，换成真正的事件循环后回到 221.6 毫秒。预览用一个编辑块把 1172 次文档变更通知压成 4 次，最长的一篇从 2848.7 毫秒降到 154.7 毫秒。从进程启动到第一帧，Qt 版 828 到 836 毫秒，Tk 版 650 到 696 毫秒；rust 所有权 从 Enter 到画好 Qt 版 295.1 毫秒、Tk 版 461.9 毫秒，20 次的中位数却是 170.5 对 150.1 毫秒。22 个 pytest-qt 测试在离屏平台上跑 4.76 秒。"
+description: "用 Sift 重学 Python 第 21 篇：我用 PySide6 6.11.1 (Qt 6.11.1) 和 qtawesome 1.4.1 把上一篇的搜索窗口重做了一遍：Fusion 样式加一份由设计令牌生成的 QSS，结果列表是自绘的卡片委托，搜索跑在 QThreadPool 上，后端一行没改。同一个后端、同一个查询，我的测量脚本量出 522.9 毫秒，Tk 版是 224.8 毫秒；错在脚本用 QTest.qWait 轮询，它把另一个线程里的纯 Python 拖慢了 2.4 到 2.7 倍，换成真正的事件循环后回到 221.6 毫秒。预览用一个编辑块把 1172 次文档变更通知压成 4 次，最长的一篇从 2848.7 毫秒降到 154.7 毫秒。从进程启动到第一帧，Qt 版 828 到 836 毫秒，Tk 版 650 到 696 毫秒；rust 所有权 从 Enter 到画好 Qt 版 295.1 毫秒、Tk 版 461.9 毫秒，20 次的中位数却是 170.5 对 150.1 毫秒。22 个 pytest-qt 测试在离屏平台上跑 4.76 秒。"
 category: Tutorial
 tags:
   - GUI
@@ -143,7 +143,7 @@ export SIFT_INDEX=/tmp/sift-scratch/ch21/idx
 
 第五张图是 900×600 的最小尺寸，缩放 1：
 
-![最小尺寸 900×600 下的浅色窗口：左边卡片变窄，第四张卡片的标题被省略号截断，摘要仍是两行；右边预览面板变窄，终端命令那两行在右边缘被直接切掉（examples/fib.pebb），没有横向滚动条；状态栏写着“10 条结果 · 232.7 ms · 查询日志已记录”](/assets/images/python-by-sift/ch21-qt-min.webp)
+![最小尺寸 900×600 下的浅色窗口：左边卡片变窄，第四张卡片的标题被省略号截断，摘要仍是两行；右边预览面板变窄，终端命令那两行在右边缘被直接切掉 (examples/fib.pebb)，没有横向滚动条；状态栏写着“10 条结果 · 232.7 ms · 查询日志已记录”](/assets/images/python-by-sift/ch21-qt-min.webp)
 
 卡片没有被裁，长标题带着省略号。预览里的终端命令却在右边缘被切掉了，没有横向滚动条：`PreviewBrowser` 把横向滚动条设成了 `ScrollBarAlwaysOff`，而围栏代码行不会折行。我读了横向滚动条的范围，窗口宽 900 时是 738 像素，1200 时是 570，1800 时是 445（都是 `rust 所有权` 第一篇文章的数）。这是个真缺口，留作练习。这张图的状态栏写的是 232.7 毫秒，因为这次是在真正的事件循环里等结果的，和前四张图里的 557 毫秒对照看就明白了。
 
@@ -684,7 +684,7 @@ minimum size: 900 x 600
 
 Qt 把一个列表拆成三个角色。模型管数据，并在数据变了的时候通知别人；视图管滚动、选择和布局，决定哪些行可见；委托管一行长什么样。一个比方就够了：模型是仓库，视图是橱窗，委托是橱窗里的陈列师。仓库不知道橱窗多宽，陈列师不知道仓库里还有什么，橱窗只管问陈列师“这一件要占多高”再把它摆上去。
 
-最小的例子是 `model_view.py`：一个只要实现 `rowCount` 和 `data` 的列表模型，一个自定义的角色（role）。角色回答的是“你要这一项的哪一面”：显示文字、提示文字，或者我自己定义的值。
+最小的例子是 `model_view.py`：一个只要实现 `rowCount` 和 `data` 的列表模型，一个自定义的角色 (role)。角色回答的是“你要这一项的哪一面”：显示文字、提示文字，或者我自己定义的值。
 
 ```python
 # lab/ch21/model_view.py, lines 25-37, 54-59
@@ -721,7 +721,7 @@ rows after reset: 0
 exit 0
 ```
 
-`dataChanged: [(1, [257])]` 里的 257 就是 `ScoreRole`，也就是 `Qt.UserRole`（256）加 1：模型改了第 1 行的分数，只通知“第 1 行的 257 号角色变了”，视图只需要重画这一格。最后的 `beginResetModel` 和 `endResetModel` 是批量替换：视图在这一对调用之间不会来问数据，之后丢掉自己的选择和滚动状态，从头开始。
+`dataChanged: [(1, [257])]` 里的 257 就是 `ScoreRole`，也就是 `Qt.UserRole` (256) 加 1：模型改了第 1 行的分数，只通知“第 1 行的 257 号角色变了”，视图只需要重画这一格。最后的 `beginResetModel` 和 `endResetModel` 是批量替换：视图在这一对调用之间不会来问数据，之后丢掉自己的选择和滚动状态，从头开始。
 
 真正的结果模型沿用这个套路。一张卡片的所有内容放进一个冻结的数据类 `Card`，模型用 `CardRole` 把整个 `Card` 对象交给委托；`Qt.DisplayRole` 和 `Qt.ToolTipRole` 另外返回标题和路径，是给不认识卡片的那部分 Qt（辅助功能桥和工具提示）用的：
 
@@ -775,7 +775,7 @@ class ResultsModel(QAbstractListModel):
         self.endResetModel()
 ```
 
-`set_cards` 是整体替换，所以选择会被丢掉，窗口在 `_on_finished` 里紧接着把当前行设成第 0 行（`self.list_view.setCurrentIndex(self.model.index(0))`），预览才有东西可看。`Card.score_text` 带一个 doctest，用 `--doctest-modules` 单独跑它：
+`set_cards` 是整体替换，所以选择会被丢掉，窗口在 `_on_finished` 里紧接着把当前行设成第 0 行 (`self.list_view.setCurrentIndex(self.model.index(0))`)，预览才有东西可看。`Card.score_text` 带一个 doctest，用 `--doctest-modules` 单独跑它：
 
 ```text
 $ python3 -m pytest --doctest-modules src/sift/gui/qt/model.py 2>&1 | tail -1
@@ -853,7 +853,7 @@ def fit_snippet(
     return Snippet(layout, spans, height)
 ```
 
-截断的逻辑要多看一眼。文字超过两行时，从第二行末尾开始，每次把文字往回缩一个字符、补上 `…`，重新排版，直到两行装得下。命中片段（`spans`）是按字符位置记的，截断之后必须跟着剪：落在被截掉部分里的命中直接丢，跨过截断点的命中缩到 `limit`。如果只截文字不剪片段，画出来的高亮框会超出文字。有一个测试专门钉这件事，一个 400 个 `x` 后面跟一个命中词的摘要，截断后 `snippet.spans == []`。
+截断的逻辑要多看一眼。文字超过两行时，从第二行末尾开始，每次把文字往回缩一个字符、补上 `…`，重新排版，直到两行装得下。命中片段 (`spans`) 是按字符位置记的，截断之后必须跟着剪：落在被截掉部分里的命中直接丢，跨过截断点的命中缩到 `limit`。如果只截文字不剪片段，画出来的高亮框会超出文字。有一个测试专门钉这件事，一个 400 个 `x` 后面跟一个命中词的摘要，截断后 `snippet.spans == []`。
 
 `sizeHint` 把这些加起来（上下内边距、标题行、标签行、摘要高度、卡片之间的 8 像素间隙），标题行取 15 像素粗体字高和 22 像素分数药丸的较大者：
 
@@ -923,7 +923,7 @@ exit 0
         )
 ```
 
-三种状态一目了然：选中是 2 像素的强调色边框加强调色的软底；悬停是强调色的 40% 透明度边框（`setAlphaF(0.4)`）；平时是 1 像素的 `border` 色加 `surface` 底。分数药丸和标签小药丸画法相同，一个圆角矩形，圆角半径取高度的一半，字居中。选中的卡片里药丸和标签的底色换成 `surface`，免得和 `accent_soft` 的卡片底撞色。
+三种状态一目了然：选中是 2 像素的强调色边框加强调色的软底；悬停是强调色的 40% 透明度边框 (`setAlphaF(0.4)`)；平时是 1 像素的 `border` 色加 `surface` 底。分数药丸和标签小药丸画法相同，一个圆角矩形，圆角半径取高度的一半，字居中。选中的卡片里药丸和标签的底色换成 `surface`，免得和 `accent_soft` 的卡片底撞色。
 
 最有意思的是命中词的高亮。我想要的是带 3 像素圆角的底色块，可 `QTextLayout.draw` 只能改字符的前景色，不会画圆角背景。所以分两步：先对每一行的每个命中片段算出它的左右 x 坐标，画一个圆角矩形，然后再把整段文字画上去，命中的部分用 `mark_text` 色。
 
@@ -1312,7 +1312,7 @@ focus=True  edit block, no cursor/scroll reset   scroll after each post: ['0/262
 
 ### 防抖：一个会被重启的计时器
 
-用户每敲一个字就搜一次，既浪费又会让结果列表闪个不停。办法是防抖（debounce）：每次按键都把一个单次计时器重新拨到 200 毫秒，计时器真到点了，才去搜。
+用户每敲一个字就搜一次，既浪费又会让结果列表闪个不停。办法是防抖 (debounce)：每次按键都把一个单次计时器重新拨到 200 毫秒，计时器真到点了，才去搜。
 
 ```python
 # src/sift/gui/qt/window.py, lines 243-246
@@ -1394,7 +1394,7 @@ focus=True  edit block, no cursor/scroll reset   scroll after each post: ['0/262
 
 ### 深色模式：跟随系统，直到用户自己点过
 
-主题的状态有三件：当前方案 `scheme`、是否被用户覆盖 `_override`、以及系统方案。窗口启动时问系统（`QGuiApplication.styleHints().colorScheme()`），系统一变（`colorSchemeChanged` 信号）就跟着变，除非用户点过切换按钮，从那一刻起这个会话里不再跟随：
+主题的状态有三件：当前方案 `scheme`、是否被用户覆盖 `_override`、以及系统方案。窗口启动时问系统 (`QGuiApplication.styleHints().colorScheme()`)，系统一变（`colorSchemeChanged` 信号）就跟着变，除非用户点过切换按钮，从那一刻起这个会话里不再跟随：
 
 ```python
 # src/sift/gui/qt/window.py, lines 449-466
@@ -1591,7 +1591,7 @@ last 1 queries:
 2026-10-26 14:36:06 UTC      5 hits    73.786 ms  kalman filter
 ```
 
-日志一开始是空的（`no queries logged`），窗口搜了一次 `kalman filter` 之后多了一行，命中数 5，耗时 73.786 毫秒，状态栏的 73.8 毫秒是同一个数。
+日志一开始是空的 (`no queries logged`)，窗口搜了一次 `kalman filter` 之后多了一行，命中数 5，耗时 73.786 毫秒，状态栏的 73.8 毫秒是同一个数。
 
 下面这张表里的数，都是这一篇里量出来的，Tk 和 Qt 交替跑过：
 
@@ -1692,7 +1692,7 @@ request to rows, median of 7: 246 ms
 
 ## 打包
 
-我没有打包这个应用，也没打算在这一篇里做。Qt for Python 官方的工具叫 `pyside6-deploy`，它是 Nuitka 的一层包装，把 Python 代码编译成 C，再和 libpython 链接成可执行文件，默认产出一个文件夹，`--mode onefile` 则是单个文件。文档里写着从 6.12 起默认的打包模式从 `onefile` 改成了 `standalone`，当前文档默认的 Nuitka 版本是 4.1.1（<https://doc.qt.io/qtforpython-6/deployment/deployment-pyside6-deploy.html>）。有一条我觉得值得抄下来的提醒：Nuitka 会跟着 import 往下走，所以部署一个项目会执行它模块级的代码，只该部署你信任的项目，`pysidedeploy.spec` 也算项目的一部分，它决定装哪些包、给 Nuitka 传什么参数。我这台环境里装的是 PySide6 6.11.1，包里没有这个命令（`which pyside6-deploy` 找不到，包文件里也没有叫 deploy 的），所以我没有、也没法在这里验证它。
+我没有打包这个应用，也没打算在这一篇里做。Qt for Python 官方的工具叫 `pyside6-deploy`，它是 Nuitka 的一层包装，把 Python 代码编译成 C，再和 libpython 链接成可执行文件，默认产出一个文件夹，`--mode onefile` 则是单个文件。文档里写着从 6.12 起默认的打包模式从 `onefile` 改成了 `standalone`，当前文档默认的 Nuitka 版本是 4.1.1 (<https://doc.qt.io/qtforpython-6/deployment/deployment-pyside6-deploy.html>)。有一条我觉得值得抄下来的提醒：Nuitka 会跟着 import 往下走，所以部署一个项目会执行它模块级的代码，只该部署你信任的项目，`pysidedeploy.spec` 也算项目的一部分，它决定装哪些包、给 Nuitka 传什么参数。我这台环境里装的是 PySide6 6.11.1，包里没有这个命令（`which pyside6-deploy` 找不到，包文件里也没有叫 deploy 的），所以我没有、也没法在这里验证它。
 
 ## 本篇文件
 
@@ -1738,7 +1738,7 @@ request to rows, median of 7: 246 ms
 - `ResultDelegate` 在每次 `sizeHint` 和 `paint` 都重新排版摘要；和搜索重叠时一张卡片的绘制比平时慢一个数量级左右。
 - 浅色主题里错误红对错误底的对比度是 4.41，略低于常被引用的 4.5；我没有改。
 - `Ctrl+O` 只用注入的打开函数测过；深浅色跟随系统只用 `setColorScheme` 冒充桌面测过，没有在真桌面上验证。
-- 预览里 GitHub 的提示块（`> [!NOTE]`）按字面显示，围栏代码没有底色；`setMarkdown` 做的是 Qt 自己那一套。
+- 预览里 GitHub 的提示块 (`> [!NOTE]`) 按字面显示，围栏代码没有底色；`setMarkdown` 做的是 Qt 自己那一套。
 - `run` 收的是 `argv` 加一个 `catalog`，而不是只收 `argv`：索引在 `sift gui` 里打开、关闭，窗口只借用它。`typings/qtawesome` 是我手写的一个函数的桩，`pyproject.toml` 里 `mypy_path` 加了 `typings`，pyright 的 `stubPath` 也指向它。
 - 平台上我只在 `offscreen` 上画过窗口。HiDPI 靠 `QT_SCALE_FACTOR=2` 模拟，没有在真正的高分屏上看过；Qt 启动时那几行 Gtk 的 `color-mix` 警告是无害的。
 

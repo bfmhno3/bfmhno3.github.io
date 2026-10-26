@@ -124,7 +124,7 @@ Success: no issues found in 35 source files
     PyObject *res = PyObject_Call(boot->func, boot->args, boot->kwargs);
 ```
 
-把线程状态绑到当前 OS 线程上，排队拿 GIL（`PyEval_AcquireThread`），然后才调你的函数。`start()` 在返回前还会 `self._started.wait()`（`threading.py` 第 1011 行），等新线程报到，所以 `start()` 之后 `is_alive()` 立刻是 `True`。`lab/ch16/threads_basics.py` 把线程的生命周期过了一遍，先看启动和 `join` 的那段，以及检查守护线程用的子进程：
+把线程状态绑到当前 OS 线程上，排队拿 GIL (`PyEval_AcquireThread`)，然后才调你的函数。`start()` 在返回前还会 `self._started.wait()`（`threading.py` 第 1011 行），等新线程报到，所以 `start()` 之后 `is_alive()` 立刻是 `True`。`lab/ch16/threads_basics.py` 把线程的生命周期过了一遍，先看启动和 `join` 的那段，以及检查守护线程用的子进程：
 
 ```python
 CHILD_DAEMON = (
@@ -663,7 +663,7 @@ python 3.14.7, GIL enabled: False
   entries: 9, maxsize 8
 ```
 
-带 GIL 的构建上，80 万次里零个错误，计数也精确；自由线程构建上有 26448 次（3.3%）`KeyError` 漏了出来，`hits + misses` 少了约 2.4 万，缓存一度有 9 个条目，超过了容量 8。我又各跑了一遍，第二次是 26032 次、774211、8 个条目，量级一致。`get_or_set` 的第一行是 `if key in self._data: return self[key]`，检查和使用之间可以被别的线程驱逐掉那个键（经典的先检查后动作），`self.hits += 1` 是读改写，和计数器同理。这两处问题在带 GIL 的构建上并不是不存在：`self[key]` 是一次 Python 方法调用，我从字节码推断进入 `__getitem__` 的 `RESUME` 是个检查点，也就是被切走的窗口是有的，只是 5 毫秒的时间片在 80 万次调用里一次也没碰到（这个推断我没有单独验证）。零不是证明，是运气好。这就是我说“GIL 替我挡掉了问题”的具体样子。修法最朴素：给缓存配一把锁，练习 1 让你做。`Searcher` 里另一个缓存是 `WeakValueDictionary`，我没有量它，这里只说 `LRUCache`。
+带 GIL 的构建上，80 万次里零个错误，计数也精确；自由线程构建上有 26448 次 (3.3%) `KeyError` 漏了出来，`hits + misses` 少了约 2.4 万，缓存一度有 9 个条目，超过了容量 8。我又各跑了一遍，第二次是 26032 次、774211、8 个条目，量级一致。`get_or_set` 的第一行是 `if key in self._data: return self[key]`，检查和使用之间可以被别的线程驱逐掉那个键（经典的先检查后动作），`self.hits += 1` 是读改写，和计数器同理。这两处问题在带 GIL 的构建上并不是不存在：`self[key]` 是一次 Python 方法调用，我从字节码推断进入 `__getitem__` 的 `RESUME` 是个检查点，也就是被切走的窗口是有的，只是 5 毫秒的时间片在 80 万次调用里一次也没碰到（这个推断我没有单独验证）。零不是证明，是运气好。这就是我说“GIL 替我挡掉了问题”的具体样子。修法最朴素：给缓存配一把锁，练习 1 让你做。`Searcher` 里另一个缓存是 `WeakValueDictionary`，我没有量它，这里只说 `LRUCache`。
 
 ## 同步原语：锁、条件、事件、信号量
 
@@ -867,7 +867,7 @@ bytes read, the same for every worker count: {4614185}
 active threads at the end: 1
 ```
 
-右边一列读文件就不一样了：全部 123 个文件加起来 4,614,185 字节，在页缓存里读完只要 5 毫秒上下，2 到 8 个线程和 1 个线程在噪声以内（4.65 到 6.16 ms），16 个线程才明显变慢（7.35 ms），我猜是线程启动成本，没有验证。线程帮得上忙的前提是“真的在等”，页缓存里的文件没有可等的。（`python3.14t` 上同一个脚本的 `sleep` 一列几乎一样，读文件一列是 5.30、3.39、2.42、2.99、4.31 ms，在 2 到 4 个线程时快了一点，因为没有 GIL 挡着，但绝对值小到不值得。）
+右边一列读文件就不一样了：全部 123 个文件加起来 4,614,185 字节，在页缓存里读完只要 5 毫秒上下，2 到 8 个线程和 1 个线程在噪声以内（4.65 到 6.16 ms），16 个线程才明显变慢 (7.35 ms)，我猜是线程启动成本，没有验证。线程帮得上忙的前提是“真的在等”，页缓存里的文件没有可等的。（`python3.14t` 上同一个脚本的 `sleep` 一列几乎一样，读文件一列是 5.30、3.39、2.42、2.99、4.31 ms，在 2 到 4 个线程时快了一点，因为没有 GIL 挡着，但绝对值小到不值得。）
 
 ## 进程：各有各的解释器
 
@@ -1072,7 +1072,7 @@ $ python3 lab/ch16/futures_tour.py
 
 ## 子解释器：进程的隔离，线程的价格
 
-一个进程里可以同时有好几个解释器。3.12 的 PEP 684 让每个解释器可以有自己的 GIL，3.14 的 PEP 734 把它们放进标准库（`concurrent.interpreters`），同时新增 `concurrent.futures.InterpreterPoolExecutor`。PEP 734 的 `Status:` 行是 `Final`，`Python-Version: 3.14`。先确认这个类在 3.14.7 里真的存在：
+一个进程里可以同时有好几个解释器。3.12 的 PEP 684 让每个解释器可以有自己的 GIL，3.14 的 PEP 734 把它们放进标准库 (`concurrent.interpreters`)，同时新增 `concurrent.futures.InterpreterPoolExecutor`。PEP 734 的 `Status:` 行是 `Final`，`Python-Version: 3.14`。先确认这个类在 3.14.7 里真的存在：
 
 ```text
 $ python3 -c \
@@ -1344,7 +1344,7 @@ ec3c74c4cdcaf49d
 
 ### 切块、并行、按序合并
 
-工作的单位是一块连续的文档，而不是一篇：每个工人拿到一块，解析并分析完，返回一个小的 `InvertedIndex`（`Part`），调用方按块的顺序把它们合起来，哪个工人先完成对结果没有影响。数据结构只有两个：
+工作的单位是一块连续的文档，而不是一篇：每个工人拿到一块，解析并分析完，返回一个小的 `InvertedIndex` (`Part`)，调用方按块的顺序把它们合起来，哪个工人先完成对结果没有影响。数据结构只有两个：
 
 ```python
 @dataclass(frozen=True, slots=True)
@@ -1415,7 +1415,7 @@ def _run_ordered[T, R](
 
 ```
 
-`pool.map` 本身就是按输入顺序产出，`finally` 里的 `shutdown(cancel_futures=True)` 保证出异常时尚未开始的块被取消、池被关掉以后异常才离开。工人死掉（`BrokenExecutor`）统一转成 `SiftError`。三种池只在 `make_executor` 里用一个 `match` 分叉，选 `ProcessPoolExecutor`、`ThreadPoolExecutor` 或 `InterpreterPoolExecutor`（第 128 到 137 行）。
+`pool.map` 本身就是按输入顺序产出，`finally` 里的 `shutdown(cancel_futures=True)` 保证出异常时尚未开始的块被取消、池被关掉以后异常才离开。工人死掉 (`BrokenExecutor`) 统一转成 `SiftError`。三种池只在 `make_executor` 里用一个 `match` 分叉，选 `ProcessPoolExecutor`、`ThreadPoolExecutor` 或 `InterpreterPoolExecutor`（第 128 到 137 行）。
 
 把它们串起来的是 `index_items`：切成最多 `jobs * 4` 块（`CHUNKS_PER_JOB = 4`，块多一点，工人之间的负载就均匀一点），逐块合并。
 
@@ -1455,7 +1455,7 @@ def index_items(
     return merged if merged is not None else InvertedIndex()
 ```
 
-有两个细节。第一，只要出现过错误，后面的块就不再合并（`continue`），但仍然把剩下的结果取完，错误才能按文档顺序收齐。第二，`jobs=1` 不建池：`_run_ordered` 在 `workers <= 1` 时直接 `yield from map(func, items)`（就是上面 `run_ordered` 那段的第一个分支），这个分支在选 mode 之前，所以三种 mode 一样；`tests/test_parallel.py` 里的 `test_run_ordered_with_one_job_runs_in_this_thread` 用 `mode="process"` 守着它，断言函数跑在调用线程里。
+有两个细节。第一，只要出现过错误，后面的块就不再合并 (`continue`)，但仍然把剩下的结果取完，错误才能按文档顺序收齐。第二，`jobs=1` 不建池：`_run_ordered` 在 `workers <= 1` 时直接 `yield from map(func, items)`（就是上面 `run_ordered` 那段的第一个分支），这个分支在选 mode 之前，所以三种 mode 一样；`tests/test_parallel.py` 里的 `test_run_ordered_with_one_job_runs_in_this_thread` 用 `mode="process"` 守着它，断言函数跑在调用线程里。
 
 ### 为什么要给 `InvertedIndex` 加 pickle 状态
 
@@ -1538,7 +1538,7 @@ $ python3 /tmp/sift-scratch/pickle_postings.py
 
 ### 暂停垃圾回收
 
-`index_chunk` 外面包着 `gc_paused()`，`index_items` 里合并那一段也包着。它是个 `contextmanager`（`src/sift/parallel.py` 第 177 到 213 行）。回收器是整个解释器共用的一个开关，而 `index_chunk` 在线程模式下会被好几个线程同时调用，所以它用一把锁 `_gc_lock` 保护一个深度计数 `_gc_depth`：第一个进入的线程记下回收器原来是不是开着（`_gc_was_on`）再关掉，只要还有线程在里面就一直关着，最后一个离开的线程只在原来是开着的时候才重新打开。进入和退出可以任意交错、嵌套。
+`index_chunk` 外面包着 `gc_paused()`，`index_items` 里合并那一段也包着。它是个 `contextmanager`（`src/sift/parallel.py` 第 177 到 213 行）。回收器是整个解释器共用的一个开关，而 `index_chunk` 在线程模式下会被好几个线程同时调用，所以它用一把锁 `_gc_lock` 保护一个深度计数 `_gc_depth`：第一个进入的线程记下回收器原来是不是开着 (`_gc_was_on`) 再关掉，只要还有线程在里面就一直关着，最后一个离开的线程只在原来是开着的时候才重新打开。进入和退出可以任意交错、嵌套。
 
 文档字符串现在写的是它自己的测量：分析几块要 3.4 秒（关）对 4.4 秒（开），父进程解包并合并 16 个结果要 1.2 秒对 2.6 到 2.8 秒，约 2.2 倍。我用一个脚本在这台机器上又量了两处（分析一块 246 篇文档；父进程把 16 个 `Part` 的 pickle 依次 `loads` 并 `merge`，共 79,179,842 字节），回收开和关交替做 3 轮取最小：
 

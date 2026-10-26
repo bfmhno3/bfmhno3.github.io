@@ -90,7 +90,7 @@ at() { (cd /tmp/p04/$1 && PYTHONPATH=/tmp/p04/$1/src:$SITE python3 "${@:2}"); }
 
 ## 函数是一个对象
 
-`def` 不是声明，是一条在运行时执行的语句：执行它，解释器就用编译好的代码对象（code object）和当时的默认值造出一个 `function` 对象，再把它绑定到名字上。这个对象上能看到的东西比想象的多。拿 Sift 里的 `search_index` 和 `tf_idf` 开刀：
+`def` 不是声明，是一条在运行时执行的语句：执行它，解释器就用编译好的代码对象 (code object) 和当时的默认值造出一个 `function` 对象，再把它绑定到名字上。这个对象上能看到的东西比想象的多。拿 Sift 里的 `search_index` 和 `tf_idf` 开刀：
 
 ```python
 """Look inside the function objects of Sift."""
@@ -213,7 +213,7 @@ hi ! hi-?
 
 第三行 `everything(1, d=4)` 得到 `(1, 2, 3, (), 4, 5, {})`：`a=1`，`b`、`c` 取默认值 2 和 3，`*args` 是空元组，`d` 必须给，`e` 取默认值 5。第四行里 `9, 8` 填 `b` 和 `c`，`7, 6` 进了 `*args`，没有对应形参的 `x=0` 进了 `**kwargs`。
 
-最后三行是看函数身上的记录：位置参数的默认值在 `__defaults__`（`(2, 3)`，对应 `b` 和 `c`），关键字专用参数的默认值在另一个字典 `__kwdefaults__`（`{'e': 5}`）；`co_varnames` 按“位置参数、关键字专用参数、`*args`、`**kwargs`”的顺序排；`co_posonlyargcount` 和 `co_kwonlyargcount` 都是 2。五种形态在代码对象里只是几个计数。
+最后三行是看函数身上的记录：位置参数的默认值在 `__defaults__`（`(2, 3)`，对应 `b` 和 `c`），关键字专用参数的默认值在另一个字典 `__kwdefaults__` (`{'e': 5}`)；`co_varnames` 按“位置参数、关键字专用参数、`*args`、`**kwargs`”的顺序排；`co_posonlyargcount` 和 `co_kwonlyargcount` 都是 2。五种形态在代码对象里只是几个计数。
 
 关键字专用参数不只是风格。`search(query, *, limit=10)` 保证调用处必须写 `limit=3`，读代码的人不用去猜那个孤零零的 `3` 是什么。传错的后果：
 
@@ -533,10 +533,10 @@ None (0,)
 
 打个比方：cell 像一个储物柜，闭包拿到的是柜子的编号，不是柜子里的东西。谁往柜子里放了新东西，所有拿着这个编号的人下次开柜子都会看到。比方就用这一次，下面回到字节码和对象。
 
-这个“拿的是柜子不是东西”的性质，就是闭包最著名的坑，输出从第五行开始。三个 `lambda` 在列表推导式里创建，它们引用的 `i` 是同一个 cell（输出的 `True` 就是 `late[0].__closure__[0] is late[1].__closure__[0]`）。推导式跑完时 `i` 是 2，所以三个 lambda 调用都返回 2，`[2, 2, 2]`，这叫晚绑定（late binding）。有两种修法，都在输出里：
+这个“拿的是柜子不是东西”的性质，就是闭包最著名的坑，输出从第五行开始。三个 `lambda` 在列表推导式里创建，它们引用的 `i` 是同一个 cell（输出的 `True` 就是 `late[0].__closure__[0] is late[1].__closure__[0]`）。推导式跑完时 `i` 是 2，所以三个 lambda 调用都返回 2，`[2, 2, 2]`，这叫晚绑定 (late binding)。有两种修法，都在输出里：
 
 - `lambda i=i: i`：用默认值在 `lambda` 创建的那一刻把 `i` 的当前值存进 `__defaults__`，`__closure__` 变成 `None`，这个 `lambda` 不再是闭包。输出 `[0, 1, 2]` 和 `None (0,)`。
-- 每次调用一次工厂函数（`make_multiplier(k)`），每次调用有自己的帧，所以有自己的 cell。输出 `[0, 10, 20]`。
+- 每次调用一次工厂函数 (`make_multiplier(k)`)，每次调用有自己的帧，所以有自己的 cell。输出 `[0, 10, 20]`。
 
 最后一个小实验：`outer()` 里 `read` 定义之后，`value` 才从 1 改成 2，`outer()()` 返回 2。cell 是共享的、可变的，读的是调用那一刻的内容。
 
@@ -617,7 +617,7 @@ $ python3 -c "print((lambda: 0).__name__)"
 <lambda>
 ```
 
-`map` 和 `filter` 对着已有的具名函数很短（`map(str.strip, ...)`），要写 `lambda` 的时候推导式更清楚，也更常见。最后一行 `print(map(len, words))` 打印的是 `<map object at ...>`：`map` 不立刻算，返回的是一个惰性对象。它是怎么做到的，是第 5 篇的内容。
+`map` 和 `filter` 对着已有的具名函数很短 (`map(str.strip, ...)`)，要写 `lambda` 的时候推导式更清楚，也更常见。最后一行 `print(map(len, words))` 打印的是 `<map object at ...>`：`map` 不立刻算，返回的是一个惰性对象。它是怎么做到的，是第 5 篇的内容。
 
 Sift 里这样的 `key` 也有：`search_index` 末尾 `hits.sort(key=lambda hit: (-hit[0], hit[1]))`，先按分数降序，同分按 `doc_id` 升序，用负号把降序变成升序的复合键。
 
@@ -889,7 +889,7 @@ $ python3 -c "import functools; print(functools.WRAPPER_ASSIGNMENTS, functools.W
 
 带参数的装饰器是三层函数：最外层（`repeat`、`tag`）接收参数，返回真正的装饰器，装饰器再返回包装器。输出的 `hello` 打印了三次，因为 `@repeat(3)` 先执行 `repeat(3)` 得到装饰器，再用它装饰 `hello`。叠放的顺序是离函数最近的先生效：`@tag("b")` 在 `@tag("i")` 上面，所以先用 `i` 包住 `"sift"`，再用 `b` 包住那个结果，输出 `<b><i>sift</i></b>`。`text.__name__` 仍然是 `text`，因为每一层都有 `wraps`。
 
-装饰器也可以是一个类，只要实例可调用（定义 `__call__`）。`CountCalls` 的状态（`self.calls`）存在实例属性上，闭包版本要靠 `nonlocal`。输出里 `2 square 25` 值得多看一眼：`print(square.calls, square.__name__, square(5))` 的参数从左到右求值，打印 `square.calls` 时第三次调用还没发生，所以是 2，不是 3。
+装饰器也可以是一个类，只要实例可调用（定义 `__call__`）。`CountCalls` 的状态 (`self.calls`) 存在实例属性上，闭包版本要靠 `nonlocal`。输出里 `2 square 25` 值得多看一眼：`print(square.calls, square.__name__, square(5))` 的参数从左到右求值，打印 `square.calls` 时第三次调用还没发生，所以是 2，不是 3。
 
 类实现有一个闭包版本没有的坑：实例不是函数，没有 `__get__`，所以用在方法上不会绑定 `self`。`method_decorator.py` 把两种实现装饰在同一个类的两个方法上：
 
@@ -1011,7 +1011,7 @@ def timed[**P, R](fn: Callable[P, R]) -> Callable[P, R]:
 - `wrapper` 用 `try`/`finally`，函数抛出异常时计时行也照样打印。
 - 计时行写到 `sys.stderr`，不污染 stdout 里的结果。
 - 名字用 `fn.__qualname__`，类里的方法会带上类名。
-- `def timed[**P, R](fn: Callable[P, R]) -> Callable[P, R]` 是 Python 3.12 起的类型参数语法：`P` 是参数规格（`ParamSpec`），`R` 是返回值类型。意思是“装饰后的函数接受和原函数相同的参数，返回相同的类型”，类型检查器据此知道 `load_index` 被装饰之后签名没变。这对运行时没有任何影响。
+- `def timed[**P, R](fn: Callable[P, R]) -> Callable[P, R]` 是 Python 3.12 起的类型参数语法：`P` 是参数规格 (`ParamSpec`)，`R` 是返回值类型。意思是“装饰后的函数接受和原函数相同的参数，返回相同的类型”，类型检查器据此知道 `load_index` 被装饰之后签名没变。这对运行时没有任何影响。
 
 两个流分开看：
 
@@ -1067,7 +1067,7 @@ boom took 0.0 ms
 caught: boom
 ```
 
-`boom` 的计时行照样打印了，异常也照样传了出去（`caught: boom`）；方法的名字是 `Index.build`。
+`boom` 的计时行照样打印了，异常也照样传了出去 (`caught: boom`)；方法的名字是 `Index.build`。
 
 `load_index` 现在是这个包装器，但从外面看几乎认不出：
 
@@ -1595,7 +1595,7 @@ $ curl -sL https://raw.githubusercontent.com/python/cpython/v3.14.7/Python/bytec
             _PUSH_FRAME;
 ```
 
-读这几行：先是五个“守卫”（没有人装 `eval_frame` 钩子；函数版本号和特化时一致，我的理解是函数的 `__code__` 之类被改写就会让它失效；实参个数正好；数据栈还有空间；递归深度没到上限），然后在线程自己的数据栈上预留一块帧空间并把实参拷进去（`_INIT_CALL_PY_EXACT_ARGS`），最后 `_PUSH_FRAME` 把“当前帧”指针指向它，**不递归调用 C 的求值函数**，继续在同一个解释器循环里取下一条指令。`_PUSH_FRAME` 里有这么几行：
+读这几行：先是五个“守卫”（没有人装 `eval_frame` 钩子；函数版本号和特化时一致，我的理解是函数的 `__code__` 之类被改写就会让它失效；实参个数正好；数据栈还有空间；递归深度没到上限），然后在线程自己的数据栈上预留一块帧空间并把实参拷进去 (`_INIT_CALL_PY_EXACT_ARGS`)，最后 `_PUSH_FRAME` 把“当前帧”指针指向它，**不递归调用 C 的求值函数**，继续在同一个解释器循环里取下一条指令。`_PUSH_FRAME` 里有这么几行：
 
 ```text
 $ curl -sL https://raw.githubusercontent.com/python/cpython/v3.14.7/Python/bytecodes.c \
@@ -1654,7 +1654,7 @@ $ echo $?
 0
 ```
 
-30 万层 Python 递归没有爆 C 栈，没有 `Segmentation fault`，退出码是 0。`1000` 是默认的递归限制（`sys.getrecursionlimit()`）；脚本后半段讲缓存，放到 functools 一节。
+30 万层 Python 递归没有爆 C 栈，没有 `Segmentation fault`，退出码是 0。`1000` 是默认的递归限制 (`sys.getrecursionlimit()`)；脚本后半段讲缓存，放到 functools 一节。
 
 这些都不意味着调用免费。把 `compose` 放到每个词元上，就是另一个故事：`per_token.py` 对语料的 812,338 个词元，每个调一次 `ident` 或一次 `compose` 三个 `ident`：
 
@@ -1746,7 +1746,7 @@ $$
 \mathrm{score}(d) = \sum_{t \in q} \mathrm{tf}(t, d) \cdot \mathrm{idf}(t)
 $$
 
-$N$ 是文档总数，$\mathrm{df}(t)$ 是含有词 $t$ 的文档数。加 1 再取对数，是为了让出现在每个文档里的词（$N = \mathrm{df}$）也有一个正的权重，而不是 $\ln 1 = 0$。验证开头的 19.570：
+$N$ 是文档总数，$\mathrm{df}(t)$ 是含有词 $t$ 的文档数。加 1 再取对数，是为了让出现在每个文档里的词 ($N = \mathrm{df}$) 也有一个正的权重，而不是 $\ln 1 = 0$。验证开头的 19.570：
 
 ```text
 $ python3 -c "from sift.scoring import tf_idf, idf; \
@@ -2162,7 +2162,7 @@ NameError: name 'Node' is not defined. Did you mean: 'None'?
 
 - `Node.__init__.__annotations__` 读出了 `Node | None`，没写引号，没有 `NameError`。
 - `link.__annotations__` 要求一个从未定义的 `Missing`，读的那一刻抛 `NameError: name 'Missing' is not defined`，这是 `Format.VALUE`（默认格式）。
-- `Format.FORWARDREF` 对读不出的名字返回 `ForwardRef('Missing', ...)`，读得出的（`Node`）仍然是真正的类。
+- `Format.FORWARDREF` 对读不出的名字返回 `ForwardRef('Missing', ...)`，读得出的 (`Node`) 仍然是真正的类。
 - `Format.STRING` 把所有注解都还原成源码字符串，`'Node | None'`、`'list[Node]'`，不求值。
 
 `annotationlib` 是 3.14 新加的标准库模块，专门用来读注解。

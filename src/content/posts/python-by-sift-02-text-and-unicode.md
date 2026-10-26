@@ -34,7 +34,7 @@ searched 123 files in 575.7 ms
 
 > [!NOTE] 本篇检查点
 > 这一篇结束时仓库处于标签 `ch02`：新增 `src/sift/markdown.py`（去掉 Markdown 标记，之后基本不再变）和 `src/sift/analysis/tokenize.py`（分词器：西文按词，中文按二元组，分词规则之后不变，但函数本身会被重新组织成迭代器和可插拔的分析器），`src/sift/__main__.py` 改成按词元精确匹配（之后会拆出索引，继续变）。`make ch02` 通过，`lab/ch02` 下 12 个 Python 实验按预期退出。
-> 涉及的 Python 特性：`str` 与码点、`bytes`/`bytearray`/`memoryview`、编码与错误处理器、`unicodedata`、NFC/NFD/NFKC/NFKD 与 `casefold`、切片、常用字符串方法、格式化迷你语言、t-string（PEP 750）、`str.join` 与 `+=`、`re` 全套、`textwrap` 与 `string`。
+> 涉及的 Python 特性：`str` 与码点、`bytes`/`bytearray`/`memoryview`、编码与错误处理器、`unicodedata`、NFC/NFD/NFKC/NFKD 与 `casefold`、切片、常用字符串方法、格式化迷你语言、t-string (PEP 750)、`str.join` 与 `+=`、`re` 全套、`textwrap` 与 `string`。
 > 前置：[第 1 篇](/posts/python-by-sift-01-first-search/)，需要会进 `nix develop`、会跑 `python3 -m sift`。
 
 ## 两个数字，一个原因
@@ -103,7 +103,7 @@ Ll Lo
 Nd Po
 ```
 
-`len("所有权")` 是 3，`len("所有权".encode())` 是 9。`str` 的长度数的是**码点**（code point）：Unicode 给每个字符分配的一个整数，写成 `U+6240` 这样。`ord` 把字符变成码点，`chr` 反过来，`"\N{...}"` 按 Unicode 官方名字写字符，`unicodedata.name` 反查名字。三个汉字是三个连续的码点，名字里没有“所”“有”“权”，只有码点十六进制：CJK 统一表意文字没有逐个起名。
+`len("所有权")` 是 3，`len("所有权".encode())` 是 9。`str` 的长度数的是**码点**(code point)：Unicode 给每个字符分配的一个整数，写成 `U+6240` 这样。`ord` 把字符变成码点，`chr` 反过来，`"\N{...}"` 按 Unicode 官方名字写字符，`unicodedata.name` 反查名字。三个汉字是三个连续的码点，名字里没有“所”“有”“权”，只有码点十六进制：CJK 统一表意文字没有逐个起名。
 
 码点不是字节。码点要变成字节才能存盘和传输，这一步叫编码，同一个码点在不同编码里字节数不同。后四行把 4 个字符各编成 UTF-8 和 UTF-16：
 
@@ -168,7 +168,7 @@ Rust 的 `String` 存的就是 UTF-8 字节，`len()` 给字节数 9，按字节
 2 🇨🇳
 ```
 
-一个人眼里的字符，两个码点。Unicode 把“人眼里的一个字符”叫字素簇（grapheme cluster），标准库里没有按字素簇切分的工具，连正则里的 `\X` 都不认：
+一个人眼里的字符，两个码点。Unicode 把“人眼里的一个字符”叫字素簇 (grapheme cluster)，标准库里没有按字素簇切分的工具，连正则里的 `\X` 都不认：
 
 ```text
 $ python3 -c 'import re; re.compile(r"\X")' 2>&1 | tail -1
@@ -195,7 +195,7 @@ Nd Po
 
 ### `str` 在内存里长什么样
 
-既然 `str` 是码点序列，`s[i]` 就应该是 $O(1)$ 的：直接按下标取第 `i` 个码点。要做到这一点，每个码点必须占一样宽。CPython 的做法（PEP 393）是**按字符串里最宽的那个码点选宽度**：全是 Latin-1 以内的占 1 字节一个，最大码点不超过 U+FFFF 的占 2 字节，更大的占 4 字节。我量一下：
+既然 `str` 是码点序列，`s[i]` 就应该是 $O(1)$ 的：直接按下标取第 `i` 个码点。要做到这一点，每个码点必须占一样宽。CPython 的做法 (PEP 393) 是**按字符串里最宽的那个码点选宽度**：全是 Latin-1 以内的占 1 字节一个，最大码点不超过 U+FFFF 的占 2 字节，更大的占 4 字节。我量一下：
 
 ```python
 """How big is a str in memory? PEP 393 picks 1, 2 or 4 bytes per char."""
@@ -280,7 +280,7 @@ Jython 与 Unicode Python 与 Unicode
 
 `TypeError: 'str' object does not support item assignment`，要“改”只能造一个新的：`"J" + s[1:]`，原来的 `s` 不动。不可变换来三样东西：可以做字典的键（第 3 篇），可以在多处共享而不用担心被改，哈希值可以缓存在对象里。第三样后面会救我们一命，也会坑我们一次，先记着。
 
-共享的一个极端形式是**驻留**（interning）：解释器保证某些内容相同的字符串只存一份。`str_methods.py` 里：
+共享的一个极端形式是**驻留**(interning)：解释器保证某些内容相同的字符串只存一份。`str_methods.py` 里：
 
 ```python
     # ...
@@ -308,7 +308,7 @@ True False
 
 ## 字节与编码
 
-`str` 是意思，`bytes` 是纸面。同一份稿子可以排成宋体，也可以排成楷体，纸面不同，稿子没变；拿到一叠纸却不知道字体，就只能猜。编码（encode）是排版，解码（decode）是认字，Python 3 把这两个动作分开成了两个类型，所以 `str` 和 `bytes` 之间不会悄悄地互相转换。
+`str` 是意思，`bytes` 是纸面。同一份稿子可以排成宋体，也可以排成楷体，纸面不同，稿子没变；拿到一叠纸却不知道字体，就只能猜。编码 (encode) 是排版，解码 (decode) 是认字，Python 3 把这两个动作分开成了两个类型，所以 `str` 和 `bytes` 之间不会悄悄地互相转换。
 
 ### `encode` 与 `decode`
 
@@ -333,7 +333,7 @@ utf-32-le  12 40 62 00 00 09 67 00 00 43 67 00 00
 ```
 
 - UTF-8 是 9 字节。`所` 的码点 U+6240 是二进制 `0110 0010 0100 0000`，UTF-8 把它切成 4 位、6 位、6 位，前面分别垫上 `1110`、`10`、`10`，得到 `1110 0110`、`1000 1001`、`1000 0000`，也就是 `e6 89 80`。第一个字节的高位 `1110` 说“我后面还跟两个字节”，后面的字节高位都是 `10`。这个设计让你从任意一个字节开始，最多往回看三个字节就能找到字符的起点（续字节永远是 `10xxxxxx`，一个字符最多 3 个续字节）。
-- `utf-16` 是 8 字节：开头 `ff fe` 是字节序标记（BOM），告诉读的人后面是小端序（低字节在前）；`utf-16-le` 明说小端，就没有 BOM，6 字节。
+- `utf-16` 是 8 字节：开头 `ff fe` 是字节序标记 (BOM)，告诉读的人后面是小端序（低字节在前）；`utf-16-le` 明说小端，就没有 BOM，6 字节。
 - GBK 是 6 字节，每个汉字 2 个，比 UTF-8 省，但它的字节和 UTF-8 完全对不上，下面马上会因此出事。
 - `utf-32-le` 12 字节，每个码点固定 4 字节，和 Python 内部 4 字节宽的 `str` 是同一个思路。
 
@@ -451,7 +451,7 @@ invalid continuation byte 0 1
 
 前三行：把 UTF-8 的 `所有权` 当 GBK 读，得到 5 个乱码字符（这个现象有个日语名字，mojibake），第 2 个字符 `�` 是因为 `0x80` 在 GBK 里不是合法字节，被 `replace` 换成了 U+FFFD，这个信息已经永久丢了。反过来 `latin-1` 是个特例：它把 256 个字节值一一映射到 256 个码点，所以**永远解得出来**（第 2 行，九个字节变成九个码点），解出来的东西再用 `latin-1` 编回去，字节完全还原，最后一步 `.decode("utf-8")` 就得到正确的文字（第 3 行）。很多“修乱码”的技巧都是这么回事：先找到当初错误解码用的是哪个编码，再倒着做一遍。
 
-后三行是同一个异常对象上的 `reason`、`start`、`end`：`e6 89` 是被截断的三字节序列，`e6 89 80 e6` 是第二个字符被截断，`e6 41 80` 的起始字节后面跟了个 `0x41`（`A`），不是续字节。文件被截断时报的是 `unexpected end of data`，和乱码的 `invalid continuation byte` 不是一回事。
+后三行是同一个异常对象上的 `reason`、`start`、`end`：`e6 89` 是被截断的三字节序列，`e6 89 80 e6` 是第二个字符被截断，`e6 41 80` 的起始字节后面跟了个 `0x41` (`A`)，不是续字节。文件被截断时报的是 `unexpected end of data`，和乱码的 `invalid continuation byte` 不是一回事。
 
 第 4 行是 `gbk` 和 `gb18030` 解同一串字节，结果相同。`gb18030` 是 GBK 的超集，覆盖全部 Unicode；GBK 没有 emoji，编码 `😀` 会失败，`gb18030` 可以：
 
@@ -492,7 +492,7 @@ bytearray(b'jello!!') b'jello!!'
 TypeError: 'bytes' object does not support item assignment
 ```
 
-`b[0]` 是 230（`0xe6`）。`b[:3]` 是 `bytes`，`.decode()` 才变回 `所`。`bytes(3)` 是三个零字节，`bytes([104, 105])` 是 `b'hi'`。`bytearray` 是可变版本：改一个字节，`extend` 追加，`bytes(ba)` 冻结成不可变的拷贝。试图给 `bytes` 赋值，和 `str` 一样是 `TypeError`。
+`b[0]` 是 230 (`0xe6`)。`b[:3]` 是 `bytes`，`.decode()` 才变回 `所`。`bytes(3)` 是三个零字节，`bytes([104, 105])` 是 `b'hi'`。`bytearray` 是可变版本：改一个字节，`extend` 追加，`bytes(ba)` 冻结成不可变的拷贝。试图给 `bytes` 赋值，和 `str` 一样是 `TypeError`。
 
 `bytes` 一个关键的代价：切片是**拷贝**。切 1 MiB 的 `bytes` 的前 `n - 1` 个字节，要复制 1 MiB。`memoryview` 是零拷贝的视图，切片只是调整了起点和长度：
 
@@ -547,7 +547,7 @@ slice 1048576 bytes x2000: copy 41.02 ms,
 
 ### 同一个字符的多种写法
 
-回到 `é`。Unicode 允许“预组合”和“分解”两种写法，所以字符串比较前需要把它们变成同一种形式，这叫归一化（normalization）。`unicodedata.normalize` 支持四种形式，`normalize.py` 在几个典型输入上各跑一遍：
+回到 `é`。Unicode 允许“预组合”和“分解”两种写法，所以字符串比较前需要把它们变成同一种形式，这叫归一化 (normalization)。`unicodedata.normalize` 支持四种形式，`normalize.py` 在几个典型输入上各跑一遍：
 
 ```python
 def show(label: str, text: str) -> None:
@@ -610,7 +610,7 @@ b'i\\u0307'
 ａｐｐｌｅ apple
 ```
 
-德语的 `ß` 小写还是 `ß`，大写是 `SS`，`casefold` 把它折叠成 `ss`。所以 `"STRASSE".lower() == "straße".lower()` 是 `False`，换成 `casefold()` 才是 `True`。`casefold` 就是为“忽略大小写比较”设计的，比 `lower` 更激进；`lower` 是为“显示成小写”设计的。再看土耳其语带点的大写 `İ`，`lower()` 得到的是 `i` 加一个组合点（U+0307），两个码点，`b'i\u0307'`，这也是为什么不能假设 `len(s.lower()) == len(s)`。
+德语的 `ß` 小写还是 `ß`，大写是 `SS`，`casefold` 把它折叠成 `ss`。所以 `"STRASSE".lower() == "straße".lower()` 是 `False`，换成 `casefold()` 才是 `True`。`casefold` 就是为“忽略大小写比较”设计的，比 `lower` 更激进；`lower` 是为“显示成小写”设计的。再看土耳其语带点的大写 `İ`，`lower()` 得到的是 `i` 加一个组合点 (U+0307)，两个码点，`b'i\u0307'`，这也是为什么不能假设 `len(s.lower()) == len(s)`。
 
 最后一行是两步的顺序：`casefold` 不处理全角，`"Ａｐｐｌｅ".casefold()` 只是变成全角的小写 `ａｐｐｌｅ`；先 NFKC 再 `casefold` 才是 `apple`。Sift 的分词器就是这两步，顺序也是这个顺序，代价到后面“为什么慢了 33 倍”一节再算。
 
@@ -748,7 +748,7 @@ Sift reads every Markdown...
 
 `string` 里的常量只管 ASCII：`"é" in string.ascii_letters` 是 `False`，而 `"é".isalpha()` 是 `True`。这和后面分词器里为什么要把字母写成 `[0-9a-z_]` 是同一个考虑。`textwrap.wrap` 按宽度折行，`shorten` 折成一行并加省略号，`dedent` 去掉每行共有的缩进，这三个我猜在展示搜索结果的片段时用得上。
 
-它们有一个坑，输出的最后三行说得很清楚：`textwrap.wrap(cjk, 10)` 数的是**码点**，所以每行 10 个汉字，在终端里占 20 列。`unicodedata.east_asian_width` 给每个码点一个宽度类别：`Na` 是窄的（`a`），`W` 是宽的（`所`），`F` 是全角（`，` 和 `Ａ`）。把 `W` 和 `F` 算成 2 列，18 个码点就是 36 列。Python 标准库不替你做这个换算；终端里对齐中文表格的时候，这是个绕不过去的事。
+它们有一个坑，输出的最后三行说得很清楚：`textwrap.wrap(cjk, 10)` 数的是**码点**，所以每行 10 个汉字，在终端里占 20 列。`unicodedata.east_asian_width` 给每个码点一个宽度类别：`Na` 是窄的 (`a`)，`W` 是宽的（`所`），`F` 是全角（`，` 和 `Ａ`）。把 `W` 和 `F` 算成 2 列，18 个码点就是 36 列。Python 标准库不替你做这个换算；终端里对齐中文表格的时候，这是个绕不过去的事。
 
 ### 格式化迷你语言
 
@@ -807,11 +807,11 @@ a b a tea is 3
 - `!r`、`!s`、`!a` 在格式化之前先调 `repr`、`str`、`ascii`：`{name!r}` 把 `"tea\n"` 显示成 `'tea\n'`，`{'é'!a}` 显示成 `'\xe9'`。输出里 `tea` 后面那个莫名其妙的换行不是排版错误：`{name!s:>6}` 把真正的换行符也打印出来了，`'\xe9'` 因此跑到了下一行。
 - 你自己的类可以定义 `__format__(self, spec)` 接管冒号后面那一段：`Point` 把它转手交给两个坐标，`{Point(1.5, 2.25):.1f}` 得到 `(1.5, 2.2)`。注意是 2.2，不是 2.3：`2.25` 在二进制里正好表示得出来，恰好在中间，`format` 对这种数取偶数（和 IEEE 754 默认的舍入方式一致）。
 
-`str.format`（`"{0} {1} {0}".format(...)`）和 `%` 格式化（`"%s is %d" % (...)`）仍然能用，输出在上面倒数第二行，`ruff` 的 `UP031` 会建议把 `%` 换成 f-string，所以实验里那一行带了 `noqa`。它们还有价值的一个场合是：模板和数据不在同一个地方，比如存在配置文件里的模板字符串，f-string 做不到延迟求值。下一节讲的东西正好是针对这个缺口的。
+`str.format` (`"{0} {1} {0}".format(...)`) 和 `%` 格式化 (`"%s is %d" % (...)`) 仍然能用，输出在上面倒数第二行，`ruff` 的 `UP031` 会建议把 `%` 换成 f-string，所以实验里那一行带了 `noqa`。它们还有价值的一个场合是：模板和数据不在同一个地方，比如存在配置文件里的模板字符串，f-string 做不到延迟求值。下一节讲的东西正好是针对这个缺口的。
 
 ### t-string：模板，不是字符串
 
-Python 3.14 加了一个新的字符串前缀：`t"..."`（PEP 750）。它长得像 f-string，但**不立刻拼成 `str`**，而是产出一个 `string.templatelib.Template` 对象，里面把静态文字和插值分开存着，让接收它的函数决定怎么拼。
+Python 3.14 加了一个新的字符串前缀：`t"..."` (PEP 750)。它长得像 f-string，但**不立刻拼成 `str`**，而是产出一个 `string.templatelib.Template` 对象，里面把静态文字和插值分开存着，让接收它的函数决定怎么拼。
 
 ```python
 def main() -> None:
@@ -1037,7 +1037,7 @@ aliased             23.3 ms     101.0 ms    1172.6 ms
 
 ### 为什么局部变量是例外
 
-字节码给出线索。`dis` 默认显示的是编译器生成的原始指令；传 `adaptive=True` 可以看到解释器热身之后**特化**（specialize）过的指令，下面这个脚本先把两个循环各跑 100 次热身，再把 `BINARY_OP` 和 `STORE_*` 那几行挑出来：
+字节码给出线索。`dis` 默认显示的是编译器生成的原始指令；传 `adaptive=True` 可以看到解释器热身之后**特化**(specialize) 过的指令，下面这个脚本先把两个循环各跑 100 次热身，再把 `BINARY_OP` 和 `STORE_*` 那几行挑出来：
 
 ```python
 """Is the string really resized in place? Look at the bytecode and at id."""
@@ -1104,7 +1104,7 @@ attribute:
  */
 ```
 
-意思是：解释器看到 `BINARY_OP` 后面紧跟一个 `STORE_FAST` 且目标就是左操作数本身，就把整个 `out += x` 当成一条超级指令，先把栈上那一份引用扔掉，让局部变量成为字符串**唯一**的持有者（引用计数 1），然后调 `PyUnicode_Append`。`PyUnicode_Append`（`Objects/unicodeobject.c`）自己再检查一遍，能不能原地修改：
+意思是：解释器看到 `BINARY_OP` 后面紧跟一个 `STORE_FAST` 且目标就是左操作数本身，就把整个 `out += x` 当成一条超级指令，先把栈上那一份引用扔掉，让局部变量成为字符串**唯一**的持有者（引用计数 1），然后调 `PyUnicode_Append`。`PyUnicode_Append` (`Objects/unicodeobject.c`) 自己再检查一遍，能不能原地修改：
 
 ```c
 static int
@@ -1255,7 +1255,7 @@ attribute  address changed 2000 times in 2000 appends
 {'year': '2024', 'month': '10', 'day': '07'} 43 53
 ```
 
-- `re.compile` 把模式字符串编译成 `Pattern` 对象，之后反复用。模式前面的 `r` 是**原始字符串**（raw string）：反斜杠不被 Python 当转义符处理，`r"\d"` 和 `"\\d"` 是同一个字符串，`len(r"\n")` 是 2（反斜杠加 `n`），`len("\n")` 是 1，实验最后几行的 `True 2 1` 就是这个。写正则不用 `r` 前缀，迟早会被 `\b` 咬到：
+- `re.compile` 把模式字符串编译成 `Pattern` 对象，之后反复用。模式前面的 `r` 是**原始字符串**(raw string)：反斜杠不被 Python 当转义符处理，`r"\d"` 和 `"\\d"` 是同一个字符串，`len(r"\n")` 是 2（反斜杠加 `n`），`len("\n")` 是 1，实验最后几行的 `True 2 1` 就是这个。写正则不用 `r` 前缀，迟早会被 `\b` 咬到：
 
 ```text
 $ python3 -c 'print(ascii("\b"), r"\b" == "\\b")'
@@ -1325,7 +1325,7 @@ True 2 1
 - 标志：`re.IGNORECASE` 让 `\bsift\b` 同时匹配 `Sift` 和 `SIFT`，但不匹配 `sifted`（`\b` 是词边界）；`re.MULTILINE` 让 `^` 匹配每一行的开头，而不只是整个字符串的开头。
 - **`\w` 是 Unicode 感知的**：`re.findall(r"\w+", "所有权 abc_1")` 得到 `['所有权', 'abc_1']`，汉字也算“单词字符”；加 `re.A`（ASCII 模式）以后，`re.findall(r"\w+", "é", re.A)` 是空的。这一点决定了分词器不能偷懒用 `\w+`：我们想区别对待汉字和字母，所以字符集要自己写。
 
-`re` 模块函数（`re.search(pattern, text)`）每次调用要先到模块内部的缓存里查一遍这个模式有没有编译过，`compile` 之后的对象省掉这一步。差多少，我用 `timeit` 量了一次：
+`re` 模块函数 (`re.search(pattern, text)`) 每次调用要先到模块内部的缓存里查一遍这个模式有没有编译过，`compile` 之后的对象省掉这一步。差多少，我用 `timeit` 量了一次：
 
 ```text
 $ python3 -m timeit -s 'import re; p = re.compile(r"\d+")' 'p.search("abc 123")'
@@ -1372,7 +1372,7 @@ stop: n=24 took 1.25 s >= 1.0 s
 
 补救有三种：
 
-1. 把模式改写成不歧义的（`a+$`）。最好，不总是做得到。
+1. 把模式改写成不歧义的 (`a+$`)。最好，不总是做得到。
 2. 用**原子组** `(?>a+)` 或**占有量词** `a++`：一旦匹配成功，就不允许引擎回头重新分配。这是 Python 3.11 新增的语法。
 3. 限制输入长度，因为 `re` 没有超时参数：
 
@@ -1524,7 +1524,7 @@ $ python3 -c 'from sift.markdown import strip_markdown; print(strip_markdown("a 
 a snake_case_name, em and bold and b and code and text.
 ```
 
-`snake_case_name` 原样保留，`_em_` 变成 `em`，`**bold**` 和 `__b__` 都剥掉了，行内代码留下 `code`，链接留下 `text`。这些模式有已知的缺口：URL 里带括号的链接会被 `[^)]*` 提前截断，嵌套强调、引用式链接（`[text][ref]`）、HTML 块都没处理。
+`snake_case_name` 原样保留，`_em_` 变成 `em`，`**bold**` 和 `__b__` 都剥掉了，行内代码留下 `code`，链接留下 `text`。这些模式有已知的缺口：URL 里带括号的链接会被 `[^)]*` 提前截断，嵌套强调、引用式链接 (`[text][ref]`)、HTML 块都没处理。
 
 还有一个我是写完才发现的缺口，而且比这些都严重：`_strip_inline` 先剥 `_HTML_TAG`，再剥 `_CODE_SPAN`，剥掉反引号之后，`_BOLD`、`_ITALIC_*` 接着在**代码片段的内容**上运行。于是行内代码里的 `<...>`、`*`、`__` 会被当成标记吃掉：
 
@@ -1710,7 +1710,7 @@ latin rust2 (8, 13)
 `tokenize` 的循环做的事：
 
 - `match["latin"] is not None`：`Match` 对象支持下标取组，命中的那一组返回字符串，另一组返回 `None`。拉丁词直接 `append`，用 `continue` 跳过后面。
-- 汉字段 `run`：长度为 1 就保留单字；否则 `run[i : i + 2] for i in range(len(run) - 1)` 产生所有相邻两字，也就是二元组（bigram），`"所有权"` 变成 `所有` 和 `有权`。`tokens.extend(...)` 里那个括号是生成器表达式，`extend` 一边迭代一边追加，不先造一个中间列表。
+- 汉字段 `run`：长度为 1 就保留单字；否则 `run[i : i + 2] for i in range(len(run) - 1)` 产生所有相邻两字，也就是二元组 (bigram)，`"所有权"` 变成 `所有` 和 `有权`。`tokens.extend(...)` 里那个括号是生成器表达式，`extend` 一边迭代一边追加，不先造一个中间列表。
 
 跑几个例子，顺便把它的毛病也看一遍。脚本的后半段数被丢掉的字符，下面马上用到：
 
@@ -2156,13 +2156,13 @@ searched 123 files in 921.9 ms
    127364    0.030    0.000    0.030    0.000 {method 'match' of 're.Pattern' objects}
 ```
 
-`tokenize` 被调用 246 次：123 个文档，加上 `count_words` 每处理一个文档就重新给查询词分一次词，又是 123 次。后者几乎免费（查询只有一个词），但它说明 `count_words` 把“准备查询”和“扫描文档”搅在了一起。我没有改它：这一篇只换了比较的方式，没有动 `count_words` 的形状，这笔账留着，等后面真的要碰它的时候再算。`re.Pattern.sub` 被调用 362,505 次，`match` 127,364 次。这两个数都能对上源码：`_strip_inline` 被调了 32,955 次，每次 9 个 `sub`，再加上每个这样的行还要过一次标题和一次引用的 `sub`，$32955 \times 11 = 362505$；`match` 是 94,189 行每行一次 `_FENCE`，加上 32,955 行加 220 个表格分隔线各一次 `_TABLE_RULE`，$94189 + 32955 + 220 = 127364$。也就是说，`strip_markdown` 的 94,189 行里，只有 32,955 行（35%）真的走了行内剥离，其余的差不多都是围栏里的代码行和围栏行自己：这份语料有大约三分之二的行是代码。
+`tokenize` 被调用 246 次：123 个文档，加上 `count_words` 每处理一个文档就重新给查询词分一次词，又是 123 次。后者几乎免费（查询只有一个词），但它说明 `count_words` 把“准备查询”和“扫描文档”搅在了一起。我没有改它：这一篇只换了比较的方式，没有动 `count_words` 的形状，这笔账留着，等后面真的要碰它的时候再算。`re.Pattern.sub` 被调用 362,505 次，`match` 127,364 次。这两个数都能对上源码：`_strip_inline` 被调了 32,955 次，每次 9 个 `sub`，再加上每个这样的行还要过一次标题和一次引用的 `sub`，$32955 \times 11 = 362505$；`match` 是 94,189 行每行一次 `_FENCE`，加上 32,955 行加 220 个表格分隔线各一次 `_TABLE_RULE`，$94189 + 32955 + 220 = 127364$。也就是说，`strip_markdown` 的 94,189 行里，只有 32,955 行 (35%) 真的走了行内剥离，其余的差不多都是围栏里的代码行和围栏行自己：这份语料有大约三分之二的行是代码。
 
 ### 账单里的每一项
 
-**正则，逐行逐模式（154 ms）。** 每次 `pattern.sub(...)` 或 `pattern.match(...)` 是一次从 Python 到 C 的调用，参数打包、结果字符串分配，每次大约 0.3 µs（153.9 ms 除以大约 49 万次调用，含循环自己的开销）。单次不贵，贵在次数：94,189 行乘以每行一次围栏检查，加上 32,955 行乘以 11 次。这是“用一个 Python 层的 `for` 逐行调用正则”的天然代价；一个更聪明的写法是给整篇文章写一个巨大的正则一次扫完，但那样可读性会差得多，我没有试。
+**正则，逐行逐模式 (154 ms)。** 每次 `pattern.sub(...)` 或 `pattern.match(...)` 是一次从 Python 到 C 的调用，参数打包、结果字符串分配，每次大约 0.3 µs（153.9 ms 除以大约 49 万次调用，含循环自己的开销）。单次不贵，贵在次数：94,189 行乘以每行一次围栏检查，加上 32,955 行乘以 11 次。这是“用一个 Python 层的 `for` 逐行调用正则”的天然代价；一个更聪明的写法是给整篇文章写一个巨大的正则一次扫完，但那样可读性会差得多，我没有试。
 
-**NFKC（84 ms）。** 这一项最让我意外，因为 `str.lower` 这类操作整个语料只要 5.7 ms。我查了 CPython 的源码（`Modules/unicodedata.c`，3.14.7 的标签）：
+**NFKC (84 ms)。** 这一项最让我意外，因为 `str.lower` 这类操作整个语料只要 5.7 ms。我查了 CPython 的源码（`Modules/unicodedata.c`，3.14.7 的标签）：
 
 ```c
 static QuickcheckResult
@@ -2247,9 +2247,9 @@ NFKC 把它们换成了半角的对应字符。所以每篇都走完整路径，
 
 纯英文的博客会走快路径，几乎不花钱；一篇中文文章里只要出现一个 `，`，就得付全价。
 
-**`casefold`（5.4 ms）。** 和 `lower` 几乎一样（5.7 ms）：对整块内存做一次 C 循环，每字符 1.8 ns（`lower` 是 1.7 ns）。同一个步骤，上面的 NFKC 是 28 ns，所以这一步没有任何值得优化的地方。
+**`casefold` (5.4 ms)。** 和 `lower` 几乎一样 (5.7 ms)：对整块内存做一次 C 循环，每字符 1.8 ns（`lower` 是 1.7 ns）。同一个步骤，上面的 NFKC 是 28 ns，所以这一步没有任何值得优化的地方。
 
-**`finditer` 和循环体（121.8 + 137.0 ms）。** 这是整张账单里最典型的 CPython 开销。`_TOKEN.finditer` 每找到一次匹配，就在堆上分配一个 `Match` 对象（它要记住原字符串、模式和每个组的起止位置），461,146 次，每次 264 ns。然后循环体里：`match["latin"]` 从原字符串里**切出一个新的 `str`**，`append` 把它放进列表；汉字段则是创建一个生成器，每个二元组 `run[i : i + 2]` 又是一次切片、一个新 `str`。我用 `tracemalloc` 量了 812,338 个词元占的内存：
+**`finditer` 和循环体 (121.8 + 137.0 ms)。** 这是整张账单里最典型的 CPython 开销。`_TOKEN.finditer` 每找到一次匹配，就在堆上分配一个 `Match` 对象（它要记住原字符串、模式和每个组的起止位置），461,146 次，每次 264 ns。然后循环体里：`match["latin"]` 从原字符串里**切出一个新的 `str`**，`append` 把它放进列表；汉字段则是创建一个生成器，每个二元组 `run[i : i + 2]` 又是一次切片、一个新 `str`。我用 `tracemalloc` 量了 812,338 个词元占的内存：
 
 ```python
 """How much memory do 812k token objects take?"""
@@ -2286,7 +2286,7 @@ single-char latin-1 tokens: 99715, kinds: 37
 
 46.8 MB，每个词元 58 字节（含列表里 8 字节的指针）；812,338 个词元里只有 712,660 个不同的 `str` 对象，差的 99,678 个是共享：Latin-1 范围内的单字符 `str` 在 CPython 里是缓存好的单例，脚本最后一行说有 99,715 个这样的单字符词元，一共 37 种，$99715 - 37 = 99678$，刚好对上。（这是我故意把整个语料的词元都留着才量出来的；`count_words` 实际上一篇一篇地处理，用完就丢。即便如此，每篇文章都要造一遍这些小对象。）整个语料读进内存是 7,071,249 字节，词元占的是它的 6.6 倍。
 
-**`Counter`（37.0 ms）。** `Counter(list)` 内部调用 C 实现的 `_collections._count_elements`（上面 `cProfile` 里的那一行），对每个词元算哈希、查字典、加一。每个新造出来的 `str` 对象都没有缓存过哈希，所以要现算一遍，这是它占 6.7% 的主要原因，我猜，没有单独验证。
+**`Counter` (37.0 ms)。** `Counter(list)` 内部调用 C 实现的 `_collections._count_elements`（上面 `cProfile` 里的那一行），对每个词元算哈希、查字典、加一。每个新造出来的 `str` 对象都没有缓存过哈希，所以要现算一遍，这是它占 6.7% 的主要原因，我猜，没有单独验证。
 
 ### 一个量级的比较
 

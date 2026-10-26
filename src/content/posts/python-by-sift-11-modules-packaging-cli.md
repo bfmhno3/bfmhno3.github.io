@@ -1693,7 +1693,7 @@ $ python3 lab/ch11/lazy_import.py
    65.7 ms  (+ 49.1)  LazyLoader, one attribute read
 ```
 
-`asyncio` 的 import 要多花约 48 毫秒；放进函数或用 `LazyLoader` 而没用到时，几乎不花钱（+0.5 和 +1.1）；`LazyLoader` 读了一个属性，又付了全价（+49.1）。懒加载是把钱挪到第一次用的时候，不是省钱。`cli.py` 里别的标准库 import（`subprocess`、`shlex`、`statistics`）我没有逐个量，我猜都很轻，所以 Sift 现在没有值得挪的。
+`asyncio` 的 import 要多花约 48 毫秒；放进函数或用 `LazyLoader` 而没用到时，几乎不花钱（+0.5 和 +1.1）；`LazyLoader` 读了一个属性，又付了全价 (+49.1)。懒加载是把钱挪到第一次用的时候，不是省钱。`cli.py` 里别的标准库 import（`subprocess`、`shlex`、`statistics`）我没有逐个量，我猜都很轻，所以 Sift 现在没有值得挪的。
 ## argparse
 
 `cli.py` 是新文件，375 行，里面 `build_parser()` 一个函数约 70 行，建出整个命令行。节选它的骨架：

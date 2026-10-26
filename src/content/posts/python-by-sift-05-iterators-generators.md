@@ -67,7 +67,7 @@ at() { (cd /tmp/p05/$1 && PYTHONPATH=/tmp/p05/$1/src:$SITE python3 "${@:2}"); }
 
 ## for 循环背后的两个方法
 
-`for x in obj` 在字节码里是两件事：先对 `obj` 调一次 `iter()` 拿到迭代器，然后反复对迭代器调 `next()`，直到它抛 `StopIteration`。可迭代对象（iterable）是“能给我一个迭代器”的东西，有 `__iter__`；迭代器（iterator）是“能一个一个给我值”的东西，有 `__next__`，而且它自己的 `__iter__` 返回它自己。
+`for x in obj` 在字节码里是两件事：先对 `obj` 调一次 `iter()` 拿到迭代器，然后反复对迭代器调 `next()`，直到它抛 `StopIteration`。可迭代对象 (iterable) 是“能给我一个迭代器”的东西，有 `__iter__`；迭代器 (iterator) 是“能一个一个给我值”的东西，有 `__next__`，而且它自己的 `__iter__` 返回它自己。
 
 `lab/ch05/iter_protocol.py` 先手写一个迭代器类（第 6 到 20 行）：
 
@@ -315,7 +315,7 @@ $ python3 -c 'import sys; print(repr(sys.abiflags), sys._is_gil_enabled())'
 
 ## 生成器是一个挂起的帧
 
-手写 `Countdown` 要十几行，因为状态（`current`）得放在对象的属性里。生成器的想法是反过来：状态就放在函数自己的局部变量里，函数在 `yield` 处暂停，下次 `next()` 从那里接着跑。一个生成器像一本夹着书签的书：书是函数的代码，书签是“读到哪一行，局部变量各是什么”。`lab/ch05/generator_state.py` 把这个书签摆出来。生成器函数（第 6 到 11 行）：
+手写 `Countdown` 要十几行，因为状态 (`current`) 得放在对象的属性里。生成器的想法是反过来：状态就放在函数自己的局部变量里，函数在 `yield` 处暂停，下次 `next()` 从那里接着跑。一个生成器像一本夹着书签的书：书是函数的代码，书签是“读到哪一行，局部变量各是什么”。`lab/ch05/generator_state.py` 把这个书签摆出来。生成器函数（第 6 到 11 行）：
 
 ```python
 def counter(limit: int):
@@ -441,7 +441,7 @@ if __name__ == "__main__":
     main()
 ```
 
-前半部分（`counter`）的输出：
+前半部分 (`counter`) 的输出：
 
 ```text
 $ python3 /tmp/p05/scratch/gen_dis.py | sed -n 1,30p
@@ -516,7 +516,7 @@ $ curl -sL https://raw.githubusercontent.com/python/cpython/v3.14.7/Python/bytec
             gen_frame->previous = NULL;
 ```
 
-它不销毁帧：记下下一条指令的位置（`instr_ptr++`），把状态改成 `FRAME_SUSPENDED`，然后让线程的“当前帧”回到调用者，生成器的帧原地不动，带着栈和局部变量。`oparg` 为 1 的时候状态是 `FRAME_SUSPENDED + 1`，下一节的 `yield from` 用得上。状态枚举在 `Include/internal/pycore_frame.h`：
+它不销毁帧：记下下一条指令的位置 (`instr_ptr++`)，把状态改成 `FRAME_SUSPENDED`，然后让线程的“当前帧”回到调用者，生成器的帧原地不动，带着栈和局部变量。`oparg` 为 1 的时候状态是 `FRAME_SUSPENDED + 1`，下一节的 `yield from` 用得上。状态枚举在 `Include/internal/pycore_frame.h`：
 
 ```text
 $ curl -sL https://raw.githubusercontent.com/python/cpython/v3.14.7/Include/internal/pycore_frame.h \
@@ -531,7 +531,7 @@ typedef enum _framestate {
 } PyFrameState;
 ```
 
-它和上面 `inspect.getgeneratorstate` 的四个名字大致对应：`CREATED`、`SUSPENDED`、`RUNNING`（`EXECUTING`），以及 `CLOSED`。我猜 `CLOSED` 对应 `COMPLETED` 和 `CLEARED`，没有去读 `inspect.py` 确认。
+它和上面 `inspect.getgeneratorstate` 的四个名字大致对应：`CREATED`、`SUSPENDED`、`RUNNING` (`EXECUTING`)，以及 `CLOSED`。我猜 `CLOSED` 对应 `COMPLETED` 和 `CLEARED`，没有去读 `inspect.py` 确认。
 
 最后那段 `L4` 是个异常处理入口：整个函数体被 `ExceptionTable` 包住，任何异常经过这里都要先过一道 `INTRINSIC_STOPITERATION_ERROR`。这是 PEP 479 的实现，下面会回来。
 
@@ -678,7 +678,7 @@ gen_iternext(PyObject *self)
 }
 ```
 
-帧跑完返回（`PYGEN_RETURN`）时，如果返回值不是 `None`，就把它塞进一个新建的 `StopIteration`；返回 `None`（没有写 `return` 的生成器）则不带值。`yield from` 在字节码里是一个 `SEND` 循环：
+帧跑完返回 (`PYGEN_RETURN`) 时，如果返回值不是 `None`，就把它塞进一个新建的 `StopIteration`；返回 `None`（没有写 `return` 的生成器）则不带值。`yield from` 在字节码里是一个 `SEND` 循环：
 
 ```text
 $ python3 -c 'import dis, sys; sys.path.insert(0, "lab/ch05"); from yield_from import chars; dis.dis(chars)' | sed -n 1,16p
@@ -1490,7 +1490,7 @@ ch05: 123 files, 81192 terms
 
 开头那个 18.8 倍是只数词元的实验，没有建索引；建索引之后这部分被 28.8 MiB 的索引盖住，所以整条链上只剩 2.4 倍。我把内存省了一半以上，时间多花了六成，这和我预期的方向不一样：我原以为生成器只是“省内存、不省时间”，没想到会更慢。
 
-慢在哪儿？嫌疑人是 `Token`：`load_index` 只用 `.text`，却为 81 万个词元每个都造了一个四字段的 `NamedTuple`。我写了个脚本只量分词这一步，在同一份预先读好的正文上比三种写法：产出 `Token` 的 `iter_tokens`、产出裸字符串的同样的生成器 `iter_strings`、以及第 4 篇那种每个文档收成一个列表的写法 `list_strings`（`token_cost.py`）：
+慢在哪儿？嫌疑人是 `Token`：`load_index` 只用 `.text`，却为 81 万个词元每个都造了一个四字段的 `NamedTuple`。我写了个脚本只量分词这一步，在同一份预先读好的正文上比三种写法：产出 `Token` 的 `iter_tokens`、产出裸字符串的同样的生成器 `iter_strings`、以及第 4 篇那种每个文档收成一个列表的写法 `list_strings` (`token_cost.py`)：
 
 ```python
 """Where the time goes: Token objects, generators or the regex."""
@@ -1581,7 +1581,7 @@ iter_strings (str only)          812338 tokens   394.6 ms
 list_strings (one list per doc)  812338 tokens   378.9 ms
 ```
 
-三种写法数出同样的词元。产出裸字符串的生成器（394.6 ms）和第 4 篇那种列表写法（378.9 ms）几乎一样快，生成器的暂停和恢复在这个粒度上不算贵；多出来的时间几乎全在 `Token`：差 376 ms，摊到 812338 个词元上每个 0.46 μs。`namedtuple` 生成的 `__new__` 是一个 Python 函数，每造一个 `Token` 就是一次 Python 层的函数调用，反汇编能看到：
+三种写法数出同样的词元。产出裸字符串的生成器 (394.6 ms) 和第 4 篇那种列表写法 (378.9 ms) 几乎一样快，生成器的暂停和恢复在这个粒度上不算贵；多出来的时间几乎全在 `Token`：差 376 ms，摊到 812338 个词元上每个 0.46 μs。`namedtuple` 生成的 `__new__` 是一个 Python 函数，每造一个 `Token` 就是一次 Python 层的函数调用，反汇编能看到：
 
 ```text
 $ python3 -c 'import dis; from sift.analysis.tokenize import Token; dis.dis(Token.__new__)'
@@ -1739,7 +1739,7 @@ tokens: 859485 distinct: 82594
 top 5: [('0', 14801), ('1', 11678), ('2', 6787), ('a', 6376), ('一个', 4822)]
 ```
 
-两个版本数出完全相同的计数（`same counts: True`）。这里的词元总数 859485 比前面的 812338 多，因为这个脚本没有去掉 front matter 和 Markdown 标记，整个文件逐行分词。惰性版峰值 6956 KiB，急切版 58334 KiB，约 8.4 倍；时间反过来，惰性版 1062 ms 比急切版 970 ms 慢约一成。我猜多出来的是三层嵌套生成器加 `map` 加 `chain` 让每个元素一路传下去的开销，没有拆开量。和前面的结论一致：省的是内存。
+两个版本数出完全相同的计数 (`same counts: True`)。这里的词元总数 859485 比前面的 812338 多，因为这个脚本没有去掉 front matter 和 Markdown 标记，整个文件逐行分词。惰性版峰值 6956 KiB，急切版 58334 KiB，约 8.4 倍；时间反过来，惰性版 1062 ms 比急切版 970 ms 慢约一成。我猜多出来的是三层嵌套生成器加 `map` 加 `chain` 让每个元素一路传下去的开销，没有拆开量。和前面的结论一致：省的是内存。
 
 这条流水线最让我满意的一点不在内存，在资源管理上。`lines` 里的 `with` 在生成器暂停的时候是开着的，那么中途放弃这个生成器，文件会不会关？我写了一个脚本来看，`lazy_close.py`，读两行，然后用两种方式结束：
 
