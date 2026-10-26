@@ -64,35 +64,35 @@ CPU 是 AMD Ryzen 7 PRO 6850U（16 个线程），内存 30 GiB。计时用 `tim
 
 **我假设你已经会写脚本。** 变量、循环、函数，不会从“什么是变量”讲起。我们直接问：它在 CPython 里是怎么实现的，代价是什么，为什么这样设计。我在学 Rust（见 [Pebble 系列](/posts/rust-by-pebble-01-first-crate/)），所以会偶尔拿 Rust 或 C++ 做一句话的对照，但它们不是叙述的框架。
 
-下面是 25 篇的地图。标题现在是纯文本，因为大部分文章还没写出来；系列写完时我会把它们全部链起来。
+下面是 25 篇的地图，每个标题都链到对应的文章。
 
 | 篇 | 标题 | 仓库标签 |
 | --- | --- | --- |
-| 1 | 第一次搜索：解释器、对象与 123 篇文章 | `ch01` |
-| 2 | 文本：str、bytes、Unicode 与正则 | `ch02` |
-| 3 | 容器：list、dict、set 的实现与代价 | `ch03` |
-| 4 | 函数：参数、作用域、闭包与装饰器 | `ch04` |
-| 5 | 迭代器与生成器：惰性的建索引流水线 | `ch05` |
-| 6 | 类与数据模型：让倒排表像内置类型 | `ch06` |
-| 7 | 继承、ABC 与 Protocol：分析器插件 | `ch07` |
-| 8 | BM25 与查询语言：match/case 和递归下降 | `ch08` |
-| 9 | 异常、上下文管理器、日志与调试 | `ch09` |
-| 10 | 测试：pytest、hypothesis 与 CI | `ch10` |
-| 11 | 模块、包、导入系统与命令行 | `ch11` |
-| 12 | 文件与二进制格式：struct、varint、mmap 与压缩 | `ch12` |
-| 13 | 数据库：sqlite3、FTS5 与 SQLAlchemy | `ch13` |
-| 14 | 类型系统：从注解到 mypy --strict | `ch14` |
-| 15 | 对象模型与元编程：描述符、元类、字节码 | `ch15` |
-| 16 | 并发（上）：线程、进程、GIL 与自由线程 | `ch16` |
-| 17 | 并发（下）：asyncio 与手写 HTTP 服务器 | `ch17` |
-| 18 | Web：FastAPI、pydantic 与 httpx | `ch18` |
-| 19 | 命令行体验与分发：typer、rich、uv 与 wheel | `ch19` |
-| 20 | GUI（上）：tkinter 与事件循环 | `ch20` |
-| 21 | GUI（下）：用 PySide6 做一个好看的桌面客户端 | `ch21` |
-| 22 | 数据分析：numpy、pandas、matplotlib 与齐夫定律 | `ch22` |
-| 23 | 性能：剖析、字节码特化与优化 | `ch23` |
-| 24 | 原生扩展（上）：C、ctypes、cffi、Cython 与 C API | `ch24` |
-| 25 | 原生扩展（下）：用 PyO3 写 Rust 扩展 | `ch25` |
+| 1 | [第一次搜索：解释器、对象与 123 篇文章](/posts/python-by-sift-01-first-search/) | `ch01` |
+| 2 | [文本：str、bytes、Unicode 与正则](/posts/python-by-sift-02-text-and-unicode/) | `ch02` |
+| 3 | [容器：list、dict、set 的实现与代价](/posts/python-by-sift-03-containers/) | `ch03` |
+| 4 | [函数：参数、作用域、闭包与装饰器](/posts/python-by-sift-04-functions/) | `ch04` |
+| 5 | [迭代器与生成器：惰性的建索引流水线](/posts/python-by-sift-05-iterators-generators/) | `ch05` |
+| 6 | [类与数据模型：让倒排表像内置类型](/posts/python-by-sift-06-classes-data-model/) | `ch06` |
+| 7 | [继承、ABC 与 Protocol：分析器插件](/posts/python-by-sift-07-inheritance-protocols/) | `ch07` |
+| 8 | [BM25 与查询语言：match/case 和递归下降](/posts/python-by-sift-08-bm25-query-language/) | `ch08` |
+| 9 | [异常、上下文管理器、日志与调试：把错误收成一个层次](/posts/python-by-sift-09-exceptions-context-logging/) | `ch09` |
+| 10 | [测试：pytest、hypothesis 与 CI：让机器替我去找没想到的输入](/posts/python-by-sift-10-testing/) | `ch10` |
+| 11 | [模块、包、导入系统与命令行：把 PYTHONPATH 换成 pip install -e](/posts/python-by-sift-11-modules-packaging-cli/) | `ch11` |
+| 12 | [文件与二进制格式：struct、varint、mmap 与压缩](/posts/python-by-sift-12-files-binary-format/) | `ch12` |
+| 13 | [数据库：sqlite3、FTS5 与 SQLAlchemy](/posts/python-by-sift-13-sqlite-sqlalchemy/) | `ch13` |
+| 14 | [类型系统：从注解到 mypy --strict](/posts/python-by-sift-14-type-system/) | `ch14` |
+| 15 | [对象模型与元编程：描述符、元类、字节码](/posts/python-by-sift-15-metaprogramming/) | `ch15` |
+| 16 | [并发（上）：线程、进程、GIL 与自由线程](/posts/python-by-sift-16-threads-processes-gil/) | `ch16` |
+| 17 | [并发（下）：asyncio 与手写 HTTP 服务器](/posts/python-by-sift-17-asyncio/) | `ch17` |
+| 18 | [Web：FastAPI、pydantic 与 httpx](/posts/python-by-sift-18-fastapi-pydantic-httpx/) | `ch18` |
+| 19 | [命令行体验与分发：typer、rich、uv 与 wheel](/posts/python-by-sift-19-typer-rich-uv/) | `ch19` |
+| 20 | [GUI（上）：tkinter 与事件循环](/posts/python-by-sift-20-tkinter/) | `ch20` |
+| 21 | [GUI（下）：用 PySide6 做一个好看的桌面客户端](/posts/python-by-sift-21-pyside6/) | `ch21` |
+| 22 | [数据分析：numpy、pandas、matplotlib 与齐夫定律](/posts/python-by-sift-22-numpy-pandas-matplotlib/) | `ch22` |
+| 23 | [性能：剖析、字节码特化与优化](/posts/python-by-sift-23-profiling-performance/) | `ch23` |
+| 24 | [原生扩展（上）：C、ctypes、cffi、Cython 与 C API](/posts/python-by-sift-24-c-extensions/) | `ch24` |
+| 25 | [原生扩展（下）：用 PyO3 写 Rust 扩展](/posts/python-by-sift-25-pyo3-rust/) | `ch25` |
 
 没有哪一篇是选读，顺序就是依赖顺序。第 N 篇只会用到前 N-1 篇讲过的东西；偶尔要提前露个脸，我会写明“先当成 X，第 M 篇细讲”。
 
@@ -582,7 +582,7 @@ $ python3 -c 'import sys; print(sys.getrefcount(None), sys.getrefcount(1))'
 3221225472 3221225472
 ```
 
-`None` 和小整数的“引用计数”是 3221225472，也就是 0xC0000000，一个固定的大数。3.12 起这些对象是**永生**的（PEP 683）：解释器永远不会释放它们，所以也就不用再维护计数，加一减一变成了空操作。这个常量大到不会被加减到边界，是一种标记。
+`None` 和小整数的“引用计数”是 3221225472，也就是 0xC0000000，一个固定的大数。3.12 起这些对象是**永生**的 (PEP 683)：解释器永远不会释放它们，所以也就不用再维护计数，加一减一变成了空操作。这个常量大到不会被加减到边界，是一种标记。
 
 最后一个实验是 `del`。`del name` 删除的是**名字**，不是对象：
 
@@ -724,7 +724,7 @@ Flag      <__main__.Flag object at 0x7ffff6f  False
 Flag      <__main__.Flag object at 0x7ffff6f  True
 ```
 
-规则是：数字零、空容器、`None`、`False` 是假，其他都是真。`'0'` 是真（它是一个非空字符串），`[0]` 是真（它是一个非空列表）。自己的类可以通过 `__bool__`（`Flag`）或者 `__len__`（`Empty`，长度 0 就是假）来决定自己的真值，第 6 篇会正式讲。
+规则是：数字零、空容器、`None`、`False` 是假，其他都是真。`'0'` 是真（它是一个非空字符串），`[0]` 是真（它是一个非空列表）。自己的类可以通过 `__bool__` (`Flag`) 或者 `__len__`（`Empty`，长度 0 就是假）来决定自己的真值，第 6 篇会正式讲。
 
 真值转换让 `and` 和 `or` 返回的是**操作数本身**，而不是 `True`/`False`：
 
@@ -778,7 +778,7 @@ attempt to add with overflow
 note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 ```
 
-发布模式悄悄回绕成最小值（`-9223372036854775808`），调试模式 panic。Python 里 `2**63` 就是 `9223372036854775808`，`(2**63) * (2**63)` 也不会出事：
+发布模式悄悄回绕成最小值 (`-9223372036854775808`)，调试模式 panic。Python 里 `2**63` 就是 `9223372036854775808`，`(2**63) * (2**63)` 也不会出事：
 
 ```text
 $ python3 -c 'print(2**63, 2**64 + 1, (2**63) * (2**63))'
@@ -1097,7 +1097,7 @@ $ python3 -m sift kalman filter | sed -n '1,6p'
     28  corpus/posts/rust-by-pebble-12-vm-backends.md
 ```
 
-一篇 Pebble 的文章排到了第 6，因为它提到了很多次 `filter`（Rust 的 `Iterator::filter`），但一次 `kalman` 都没有。搜索引擎应该要求两个词同时出现，并且让不常见的词（`kalman`）比常见的词（`filter`）更重要。这就是后面的 AND、TF-IDF 和 BM25。
+一篇 Pebble 的文章排到了第 6，因为它提到了很多次 `filter`（Rust 的 `Iterator::filter`），但一次 `kalman` 都没有。搜索引擎应该要求两个词同时出现，并且让不常见的词 (`kalman`) 比常见的词 (`filter`) 更重要。这就是后面的 AND、TF-IDF 和 BM25。
 
 **中文碰巧能用，但不是因为它对。** 子串匹配不需要分词，所以 `所有权` 搜得到：
 
@@ -1161,10 +1161,10 @@ read+decode 14.1 ms, lower+count 8.8 ms, total kalman 124, chars 3320875
 
 | 步骤 | 耗时 |
 | --- | --- |
-| 解释器启动（`python3 -c pass`） | 22.4 ms |
+| 解释器启动 (`python3 -c pass`) | 22.4 ms |
 | `search()` 本身（程序自己的计时器） | 20.0 ms |
 | 其余：`import`、`runpy` 之类 | 约 8 ms（50.4 减去前两行，没有单独量，大概是导入 `pathlib` 等标准库模块） |
-| 合计（`python3 -m sift kalman`） | 50.4 ms |
+| 合计 (`python3 -m sift kalman`) | 50.4 ms |
 
 `search()` 那 20 ms 里，拆分脚本给出读文件加 UTF-8 解码 14.1 ms、`lower()` 加 `count()` 8.8 ms，加起来是 22.9 ms，比 20.0 多 2.9 ms：它们是不同的两次运行，而且拆分脚本一次性把所有文本留在内存里，不是同一个程序，所以只能当成大致的比例，读文件占六成多，计数占不到四成。
 

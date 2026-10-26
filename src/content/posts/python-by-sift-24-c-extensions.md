@@ -2,7 +2,7 @@
 title: "原生扩展（上）：C、ctypes、cffi、Cython 与 C API"
 commentId: "post:python-by-sift-24-c-extensions"
 published: "2026-10-27 05:00:00 +08:00"
-description: "用 Sift 重学 Python 第 24 篇：我在 Python 3.14.7、gcc 15.3.0、Cython 3.2.5 和 cffi 2.1.0 上，把 Sift 分词的扫描循环用 C 重写一遍，再分别用 ctypes、cffi、Cython 和手写的 C API 模块接回 Python。我本以为 C 会快一个数量级，结果在 4.6 MB 的语料上（859485 个词元，3 轮交替测量取中位数），纯 Python 664.2 毫秒，ctypes 727.6 毫秒（0.91 倍），cffi 688.0 毫秒（0.97 倍），只有 Cython 到了 342.0 毫秒（1.94 倍）：C 函数本身只要 15.3 毫秒，时间都花在为 859485 个词元造 Python 对象上。数 CJK 字符这种几乎不造对象的活，C API 模块 1.0 毫秒，比 Python 的 38.2 毫秒快约 38 倍。一次调用的固定开销从 34 纳秒（空函数）到 702 纳秒（ctypes），决定了多短的字符串不值得过边界。中途我还让 ctypes 段错误一次，看 faulthandler 怎么说，用 hypothesis 重现了一类偏移映射的 bug，并确认四种实现建出的 segment.sft 逐字节相同。"
+description: "用 Sift 重学 Python 第 24 篇：我在 Python 3.14.7、gcc 15.3.0、Cython 3.2.5 和 cffi 2.1.0 上，把 Sift 分词的扫描循环用 C 重写一遍，再分别用 ctypes、cffi、Cython 和手写的 C API 模块接回 Python。我本以为 C 会快一个数量级，结果在 4.6 MB 的语料上（859485 个词元，3 轮交替测量取中位数），纯 Python 664.2 毫秒，ctypes 727.6 毫秒（0.91 倍），cffi 688.0 毫秒（0.97 倍），只有 Cython 到了 342.0 毫秒（1.94 倍）：C 函数本身只要 15.3 毫秒，时间都花在为 859485 个词元造 Python 对象上。数 CJK 字符这种几乎不造对象的活，C API 模块 1.0 毫秒，比 Python 的 38.2 毫秒快约 38 倍。一次调用的固定开销从 34 纳秒（空函数）到 702 纳秒 (ctypes)，决定了多短的字符串不值得过边界。中途我还让 ctypes 段错误一次，看 faulthandler 怎么说，用 hypothesis 重现了一类偏移映射的 bug，并确认四种实现建出的 segment.sft 逐字节相同。"
 category: Tutorial
 tags:
   - C 语言
@@ -1496,5 +1496,5 @@ $ python3 /tmp/sift-scratch/cpu_state.py
 
 ## 下一篇
 
-下一篇是《原生扩展（下）：用 PyO3 写 Rust 扩展》。这一篇留下的问题我想原样再问一遍：同一个扫描循环，换成 Rust 来写，经 PyO3 和 `maturin` 变成 Python 模块，内存安全由类型系统而不是 ASan 来守，引用计数和 GIL 由 `Bound` 和 `Python<'py>` 这样的类型来表达，而不是 `Py_INCREF` 和宏。边界的价格会变吗？859485 个 `Token` 对象的账呢？我会像这一篇一样，先跑再量，不预设答案。
+下一篇是《[原生扩展（下）：用 PyO3 写 Rust 扩展](/posts/python-by-sift-25-pyo3-rust/)》。这一篇留下的问题我想原样再问一遍：同一个扫描循环，换成 Rust 来写，经 PyO3 和 `maturin` 变成 Python 模块，内存安全由类型系统而不是 ASan 来守，引用计数和 GIL 由 `Bound` 和 `Python<'py>` 这样的类型来表达，而不是 `Py_INCREF` 和宏。边界的价格会变吗？859485 个 `Token` 对象的账呢？我会像这一篇一样，先跑再量，不预设答案。
 
