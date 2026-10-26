@@ -1319,4 +1319,4 @@ cProfile          267.0 us per run (2.40x)
 
 ## 下一篇
 
-下一篇是《原生扩展（上）：C、ctypes、cffi、Cython 与 C API》。这一篇优化完之后，剖析表剩下的前几名，`iter_tokens`、`varint.encode`、`unicodedata.normalize`，都是对字符或字节的紧凑循环，这类循环我在纯 Python 里已经没有明显的冗余可以再删。下一篇我想量一量：把其中一个最小的循环换成 C，要付出什么（构建、内存安全、调用开销），换回多少时间，再对比 `ctypes`、`cffi`、Cython 和直接用 C API 这几条路各自的成本。
+下一篇是《[原生扩展（上）：C、ctypes、cffi、Cython 与 C API](/posts/python-by-sift-24-c-extensions/)》。这一篇优化完之后，剖析表剩下的前几名，`iter_tokens`、`varint.encode`、`unicodedata.normalize`，都是对字符或字节的紧凑循环，这类循环我在纯 Python 里已经没有明显的冗余可以再删。下一篇我想量一量：把其中一个最小的循环换成 C，要付出什么（构建、内存安全、调用开销），换回多少时间，再对比 `ctypes`、`cffi`、Cython 和直接用 C API 这几条路各自的成本。
