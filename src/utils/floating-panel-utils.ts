@@ -6,7 +6,10 @@ export const FLOATING_PANEL_CLOSE_EVENT = "floating-panel:close";
 const panelObservers = new Map<HTMLElement, MutationObserver>();
 const panelOpenStates = new WeakMap<HTMLElement, boolean>();
 let escapeListenerAttached = false;
-const mobileMenuViewports = new WeakMap<HTMLElement, { width: number; scale: number; orientation: string }>();
+const mobileMenuViewports = new WeakMap<
+	HTMLElement,
+	{ width: number; scale: number; orientation: string }
+>();
 const scrollUnlockCleanup = new WeakMap<HTMLElement, () => void>();
 
 function getPanelTriggers(panel: HTMLElement): HTMLElement[] {
@@ -39,17 +42,29 @@ function updateMobileMenuBounds(panel: HTMLElement, force = false): void {
 	const bounds = {
 		width: window.innerWidth,
 		scale: viewport?.scale ?? 1,
-		orientation: window.screen.orientation?.type ?? `${window.screen.width}x${window.screen.height}`,
+		orientation:
+			window.screen.orientation?.type ??
+			`${window.screen.width}x${window.screen.height}`,
 	};
 	const previous = mobileMenuViewports.get(panel);
-	if (!force && coarsePointer && previous && previous.width === bounds.width &&
-		previous.scale === bounds.scale && previous.orientation === bounds.orientation) return;
+	if (
+		!force &&
+		coarsePointer &&
+		previous &&
+		previous.width === bounds.width &&
+		previous.scale === bounds.scale &&
+		previous.orientation === bounds.orientation
+	)
+		return;
 	mobileMenuViewports.set(panel, bounds);
 	const visibleHeight = viewport?.height ?? window.innerHeight;
 	const paintHeight = coarsePointer
 		? Math.max(window.screen.height, window.innerHeight, visibleHeight)
 		: Math.max(window.innerHeight, visibleHeight);
-	panel.style.setProperty("--mobile-menu-document-top", `${window.scrollY + (viewport?.offsetTop ?? 0)}px`);
+	panel.style.setProperty(
+		"--mobile-menu-document-top",
+		`${window.scrollY + (viewport?.offsetTop ?? 0)}px`,
+	);
 	panel.style.setProperty("--mobile-menu-paint-height", `${paintHeight}px`);
 	panel.style.setProperty("--mobile-menu-visible-height", `${visibleHeight}px`);
 }
@@ -84,7 +99,8 @@ function syncFloatingPanelState(panel: HTMLElement): void {
 			document.body.classList.add("menu-open");
 		} else if (wasOpen === true) {
 			// 保持关闭动画期间视口稳定，避免 iOS 滚动解锁触发工具栏/布局跳动。
-			const delay = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+			const delay = window.matchMedia("(prefers-reduced-motion: reduce)")
+				.matches
 				? 0
 				: Number(panel.dataset.floatingPanelCloseDelay) || 0;
 			const unlock = () => {
@@ -108,7 +124,8 @@ function syncFloatingPanelState(panel: HTMLElement): void {
 					});
 				};
 				const onEnd = (event: TransitionEvent) => {
-					if (event.target === panel && event.propertyName === "visibility") afterHiddenPaint();
+					if (event.target === panel && event.propertyName === "visibility")
+						afterHiddenPaint();
 				};
 				const timer = setTimeout(afterHiddenPaint, delay + 100);
 				panel.addEventListener("transitionend", onEnd);
@@ -199,10 +216,13 @@ export function initializeFloatingPanels(root: ParentNode = document): void {
 		document.addEventListener("keydown", handleEscape);
 		const updateOpenMenu = () => {
 			const panel = document.getElementById("nav-menu-panel");
-			if (panel && !panel.classList.contains(CLOSED_CLASS)) updateMobileMenuBounds(panel);
+			if (panel && !panel.classList.contains(CLOSED_CLASS))
+				updateMobileMenuBounds(panel);
 		};
 		window.addEventListener("resize", updateOpenMenu, { passive: true });
-		window.visualViewport?.addEventListener("resize", updateOpenMenu, { passive: true });
+		window.visualViewport?.addEventListener("resize", updateOpenMenu, {
+			passive: true,
+		});
 		escapeListenerAttached = true;
 	}
 }
