@@ -100,7 +100,7 @@ git clone https://github.com/bfmhno3/cairn ~/cairn-ref
 | --- | --- | --- |
 | 1 | [第一个脚本：shebang、fork/exec 与退出码](/posts/shell-by-cairn-01-first-script/) | shebang、`type`/`hash`、内建与外部命令、fork 与 exec、退出码、实验运行器 |
 | 2 | [展开：bash 怎样把一行字拆成参数](/posts/shell-by-cairn-02-expansion-and-quoting/) | 展开顺序、引用、分词与 `IFS`、通配符、数组、`--` |
-| 3 | 变量与参数展开：一门只有字符串的语言 | 环境变量、`declare`、参数展开运算符、关联数组、`set -u`、配置文件解析 |
+| 3 | [变量与参数展开：一门只有字符串的语言](/posts/shell-by-cairn-03-variables-and-parameters/) | 环境变量、`declare`、参数展开运算符、关联数组、`set -u`、配置文件解析 |
 | 4 | 控制流与函数：if 后面跟的是命令 | `if`/`[[`/`case`/循环、`read`、函数、算术、`getopts`、保留规则算法 |
 | 5 | 重定向、管道与进程：用硬链接存 30 份快照 | 文件描述符、重定向、here-document、进程替换、管道、`&`/`wait`、`xargs -P`、硬链接 |
 | 6 | 文本处理：sed、awk 与一份备份日志 | `printf`、`sort`、locale、`sed`、`awk`、`report` 与 `diff` |
