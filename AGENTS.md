@@ -135,6 +135,21 @@ Every code block under `src/content/posts/` follows the rules in [`docs/code-sty
 - Atomic commits: one logical change each.
 - Conventional Commits, for example `feat(posts): add new freeRTOS tutorial post`, `fix(styles): repair notice box margin misalignment`.
 
+## Querying Markdown with mq
+
+`mq` is a jq-like query language for Markdown. Query first, then read only the matching lines; never dump whole files or several posts at once.
+
+- Skills: [`.agents/skills/processing-markdown/SKILL.md`](.agents/skills/processing-markdown/SKILL.md) with its `EXAMPLES.md` for selectors and flags, [`.agents/skills/web-scraping/SKILL.md`](.agents/skills/web-scraping/SKILL.md) for fetching pages.
+- Start broad, then narrow:
+  - `mq '.h | to_text()' file.md`: outline; `mq '.yaml | to_text()' file.md`: front matter.
+  - `mq -A 'section::section("标题") | section::bodies() | first()' file.md`: one section body.
+  - `mq '.code("bash") | .code.value' file.md`, `mq '.link.url' file.md`: code and links.
+  - `mq -F grep --context 2 'select(contains("关键字"))' file.md`: grep-style search.
+  - `mq '.h | to_text()' src/content/posts/*.md`: multiple files in one call, no shell loop.
+- Delegate broad surveys to a subagent instead of bulk-reading posts.
+- `-I html` converts to Markdown first; use Markdown selectors (`.h`, `.text`, `.link`), not HTML tags.
+- No `-U` on `src/content/**` (mq re-serializes formatting); use `edit` instead. Full flags: `mq --help`; per function: `mq help <name>`.
+
 ## Security
 
 - Do not commit secrets, tokens, or service keys.
@@ -144,7 +159,7 @@ Every code block under `src/content/posts/` follows the rules in [`docs/code-sty
 ## Additional Notes
 
 - Read existing files before writing. Do not re-read unless changed.
-- Do not read whole files over 100KB (many posts exceed this). Use line ranges or search.
+- Do not read whole files over 100KB (many posts exceed this). Query outlines, front matter, or sections with `mq` first (see [Querying Markdown with mq](#querying-markdown-with-mq)), then read only the matching line ranges. Never dump several posts at once.
 - Thorough in reasoning, concise in output. No sycophantic openers or closing fluff.
 - No emojis or em-dashes.
 - Do not guess APIs, versions, flags, commit SHAs, or package names. Verify by reading code or docs.
