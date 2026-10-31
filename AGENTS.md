@@ -147,6 +147,10 @@ Every code block under `src/content/posts/` follows the rules in [`docs/code-sty
   - `mq -F grep --context 2 'select(contains("关键字"))' file.md`: grep-style search.
   - `mq '.h | to_text()' src/content/posts/*.md`: multiple files in one call, no shell loop.
 - Delegate broad surveys to a subagent instead of bulk-reading posts.
+- Need line offsets? Do not re-grep headings; mq nodes carry positions (`.line`, `.end_line`, `get_location()`):
+  - `mq '.h | [to_text(self), get_location(self)]' file.md`: heading plus start/end line.
+  - `mq -F json '.h' file.md | jq -r '.[] | "\(.values[0].value)\t\(.position.start.line)"'`: heading-to-line table.
+- Prefer structured output over raw text: `-F json` plus `jq`/`yq` to project only needed fields, and `mq` selectors to narrow before reading. Never dump Markdown just to count, locate, or search it.
 - `-I html` converts to Markdown first; use Markdown selectors (`.h`, `.text`, `.link`), not HTML tags.
 - No `-U` on `src/content/**` (mq re-serializes formatting); use `edit` instead. Full flags: `mq --help`; per function: `mq help <name>`.
 
