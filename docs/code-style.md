@@ -82,3 +82,19 @@ References: the Rust Style Guide, RFC 430, Rust API Guidelines.
 - **Idioms**: omit `return` on the final expression; take `&str` and `&[T]` over `&String` and `&Vec<T>`; no glob imports except preludes and `use super::*` in tests.
 - **Toolchain**: state the `rustc` version and edition in the prose.
 - **Verification**: `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`. Snippets that intentionally show an error or lint are exempt and must be labeled.
+
+## Shell: Google Shell Style Guide
+
+Reference: https://google.github.io/styleguide/shellguide.html. Applies to shell script files and to multi-line scripts and functions in posts. One-off interactive commands (a `$ cmd` line in a `text` block, or a `bash` block of commands typed at a prompt) are exempt. Older posts are not retrofitted.
+
+- **Shell**: Bash for everything; POSIX `sh` only when the target forces it (installers, `/bin/sh` hooks, embedded systems), fenced as `sh`. Bash blocks are fenced as `bash`.
+- **Shebang**: `#!/usr/bin/env bash`. This deviates from the guide's `#!/bin/bash` because NixOS has no `/bin/bash`. Set options with `set` inside the script, never as shebang flags.
+- **Files**: executables on `PATH` have no extension, other executables `.sh`; libraries end in `.sh` and are not executable. File names are lowercase with underscores. No SUID/SGID.
+- **Comments**: every file starts with a header comment describing it. Every library function, and every function that is not both short and obvious, has a header comment with `Globals:`, `Arguments:`, `Outputs:`, `Returns:` as applicable. `TODO(name):` for temporary code.
+- **Layout**: 2 spaces, never tabs (except the body of a `<<-` here-document); 80 columns, long strings via here-documents or embedded newlines. A pipeline that does not fit on one line has one segment per line, the `|` (or `&&`, `||`) leading the continuation line, indented 2. `; then` and `; do` on the `if`/`for`/`while` line; `else`, `fi`, `done` on their own lines. `case` alternatives indented 2; one-line alternatives are `pattern) cmd ;;`; no `;&` or `;;&`.
+- **Expansion and quoting**: quote every expansion; write `"${var}"`, but `$1`, `$@`, `$?`, `$#`, `$$`, `$!` without braces (`${10}` needs them). `"$@"` to pass arguments. Lists of arguments live in arrays and expand as `"${array[@]}"`. `$(command)`, never backticks.
+- **Tests and arithmetic**: `[[ ... ]]` instead of `[`/`test`; `==` for string equality; `-z`/`-n` for empty checks; `(( ... ))` and `$(( ... ))` for arithmetic and numeric comparison; never `let`, `expr`, `$[ ]`. Do not use a bare `(( i++ ))` that can evaluate to 0 under `set -e`.
+- **Features**: glob with an explicit path (`./*`); no `eval`; no aliases in scripts; feed loops with process substitution or `readarray` instead of piping into `while`; prefer builtins (parameter expansion, `[[ =~ ]]`, `printf '%(...)T'`) over spawning `sed`, `expr`, `date` in loops.
+- **Naming**: functions and variables `lower_snake_case`; library functions `package::function`; parentheses after the name, brace on the same line, no `function` keyword. Constants and exported variables `UPPER_SNAKE_CASE`, declared at the top with `readonly`/`export`. Function variables are `local`; declare and assign separately when the value comes from a command substitution (`local x` then `x="$(cmd)"`).
+- **Structure**: constants, then all functions, then the call to `main "$@"` as the last non-comment line once a script has a second function. Error messages go to stderr through one helper. Check every return value; use `PIPESTATUS` for pipelines.
+- **Verification**: `shellcheck` (0.11 or newer) prints nothing; `shfmt -i 2 -bn -ci -d <file>` prints nothing. Code that breaks a rule on purpose is labeled `# BAD` and carries the matching `# shellcheck disable=SCxxxx` directive.
