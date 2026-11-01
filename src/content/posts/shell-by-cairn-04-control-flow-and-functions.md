@@ -1874,4 +1874,4 @@ status 0
 
 ## 下一篇
 
-`cairn list` 能列名字了，`cairn prune` 能按三个数字删快照了，但是它们面对的快照都是 `snapshot` 命令用 `rsync` 一次完整拷贝出来的：一份快照就是一整份数据，三十天的备份就是三十份完整的拷贝。让 `rsync` 只存变化的部分，其余用硬链接指回上一份快照，才是 Cairn 真正要做的事；而硬链接、`.partial` 目录、日志文件、清单文件，每一样都要求我们先弄明白 shell 怎么处理文件描述符、重定向、管道里的并发进程，以及 `find -print0 | xargs -0 -P` 为什么是对的。下一篇是第 5 篇，重定向、管道与进程：用硬链接存 30 份快照，我们让第二份快照只占变化的那部分；我猜到那时 `cairn::prune::remove` 里的 `chmod -R u+w` 会惹点麻烦：权限位存在 inode 里，所有指向同一个 inode 的快照共享它。
+`cairn list` 能列名字了，`cairn prune` 能按三个数字删快照了，但是它们面对的快照都是 `snapshot` 命令用 `rsync` 一次完整拷贝出来的：一份快照就是一整份数据，三十天的备份就是三十份完整的拷贝。让 `rsync` 只存变化的部分，其余用硬链接指回上一份快照，才是 Cairn 真正要做的事；而硬链接、`.partial` 目录、日志文件、清单文件，每一样都要求我们先弄明白 shell 怎么处理文件描述符、重定向、管道里的并发进程，以及 `find -print0 | xargs -0 -P` 为什么是对的。下一篇是第 5 篇，[重定向、管道与进程：用硬链接存 30 份快照](/posts/shell-by-cairn-05-redirection-pipes-processes/)，我们让第二份快照只占变化的那部分；我猜到那时 `cairn::prune::remove` 里的 `chmod -R u+w` 会惹点麻烦：权限位存在 inode 里，所有指向同一个 inode 的快照共享它。
