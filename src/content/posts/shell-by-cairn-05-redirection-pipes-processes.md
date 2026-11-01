@@ -1633,4 +1633,4 @@ files=5 bytes=3145742
 
 ## 下一篇
 
-`cairn snapshot` 现在能把 30 份快照存成一份多一点的空间，`cairn verify` 能发现哪怕只多出两个字节的篡改，`logs/cairn.log` 里每次快照一行。但这些日志和清单现在只是躺在那里：我想知道每天存了多少、哪些文件变了、平均花几秒，答案都在这两种文本里，要靠 `sort`、`sed` 和 `awk` 取出来。下一篇是第 6 篇，文本处理：sed、awk 与一份备份日志，我们会写 `cairn report` 和 `cairn diff`，并且把 `cairn list` 的 `SIZE` 列补上；我猜到那时候最麻烦的不是 awk 的语法，而是 `sha256sum` 对带空格的文件名的输出格式，以及 `sed -i` 悄悄换掉 inode 这件事，在一个满是硬链接的仓库里意味着什么。
+`cairn snapshot` 现在能把 30 份快照存成一份多一点的空间，`cairn verify` 能发现哪怕只多出两个字节的篡改，`logs/cairn.log` 里每次快照一行。但这些日志和清单现在只是躺在那里：我想知道每天存了多少、哪些文件变了、平均花几秒，答案都在这两种文本里，要靠 `sort`、`sed` 和 `awk` 取出来。下一篇是第 6 篇，[文本处理：sed、awk 与一份备份日志](/posts/shell-by-cairn-06-text-processing/)，我们会写 `cairn report` 和 `cairn diff`，并且把 `cairn list` 的 `SIZE` 列补上；我猜到那时候最麻烦的不是 awk 的语法，而是 `sha256sum` 对带空格的文件名的输出格式，以及 `sed -i` 悄悄换掉 inode 这件事，在一个满是硬链接的仓库里意味着什么。
