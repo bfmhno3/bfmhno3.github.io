@@ -1787,4 +1787,4 @@ $ pgrep -c -x rsync
 
 ## 下一篇
 
-下一篇是第 8 篇，测试与工程化：bats、ShellCheck、shfmt 与定时运行。要做的是给每一个退出码和每一条错误消息写测试，包括锁和信号；我猜最难的不是 bats 的语法，而是怎样不用 `sleep 1` 去等一个后台进程，还不让测试时灵时不灵。
+下一篇是第 8 篇，[测试与工程化：bats、ShellCheck、shfmt 与定时运行](/posts/shell-by-cairn-08-testing-and-tooling/)。要做的是给每一个退出码和每一条错误消息写测试，包括锁和信号；我猜最难的不是 bats 的语法，而是怎样不用 `sleep 1` 去等一个后台进程，还不让测试时灵时不灵。

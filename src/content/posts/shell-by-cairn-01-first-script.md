@@ -105,7 +105,7 @@ git clone https://github.com/bfmhno3/cairn ~/cairn-ref
 | 5 | [重定向、管道与进程：用硬链接存 30 份快照](/posts/shell-by-cairn-05-redirection-pipes-processes/) | 文件描述符、重定向、here-document、进程替换、管道、`&`/`wait`、`xargs -P`、硬链接 |
 | 6 | [文本处理：sed、awk 与一份备份日志](/posts/shell-by-cairn-06-text-processing/) | `printf`、`sort`、locale、`sed`、`awk`、`report` 与 `diff` |
 | 7 | [出错时：set -e、trap 与信号](/posts/shell-by-cairn-07-errors-traps-signals/) | `set -e` 及其例外、`trap`、信号、`flock`、可中断的快照 |
-| 8 | 测试与工程化：bats、ShellCheck、shfmt 与定时运行 | bats、ShellCheck、shfmt、`bash -x`、kcov、CI、systemd 定时器 |
+| 8 | [测试与工程化：bats、ShellCheck、shfmt 与定时运行](/posts/shell-by-cairn-08-testing-and-tooling/) | bats、ShellCheck、shfmt、`bash -x`、kcov、CI、systemd 定时器 |
 | 9 | 交互式 bash：启动文件、提示符、作业控制与补全 | 启动文件、提示符、历史、作业控制、readline、可编程补全 |
 | 10 | POSIX sh：当你没有 bash 的时候 | POSIX、bashism、dash、`install.sh`、什么时候该换一门语言 |
 
@@ -754,7 +754,7 @@ source "${CAIRN_LIB}/log.sh"
 
 `CAIRN_LIB` 那一行是整个文件里最难读的，我拆开：
 
-- `${CAIRN_LIB:-默认值}`：如果环境变量 `CAIRN_LIB` 已设置且非空，就用它，否则用默认值。这给测试留一个后门：第 8 篇的 bats 测试会用它指向别处。
+- `${CAIRN_LIB:-默认值}`：如果环境变量 `CAIRN_LIB` 已设置且非空，就用它，否则用默认值。这让你能把 `bin/cairn` 指向别处的库目录；第 8 篇的 bats 测试不用这个后门，它们只保证运行前这个变量没有设置。
 - `$(...)` 是命令替换：运行里面的命令，把标准输出换进来。这里嵌套了两层。
 - `${BASH_SOURCE[0]}` 是“当前正在执行的这个文件的路径”。为什么不直接用 `$0`？因为当文件被 `source` 的时候 `$0` 还是那个 shell 的名字。我验证过：
 
