@@ -104,7 +104,7 @@ git clone https://github.com/bfmhno3/cairn ~/cairn-ref
 | 4 | [控制流与函数：if 后面跟的是命令](/posts/shell-by-cairn-04-control-flow-and-functions/) | `if`/`[[`/`case`/循环、`read`、函数、算术、`getopts`、保留规则算法 |
 | 5 | [重定向、管道与进程：用硬链接存 30 份快照](/posts/shell-by-cairn-05-redirection-pipes-processes/) | 文件描述符、重定向、here-document、进程替换、管道、`&`/`wait`、`xargs -P`、硬链接 |
 | 6 | [文本处理：sed、awk 与一份备份日志](/posts/shell-by-cairn-06-text-processing/) | `printf`、`sort`、locale、`sed`、`awk`、`report` 与 `diff` |
-| 7 | 出错时：set -e、trap 与信号 | `set -e` 及其例外、`trap`、信号、`flock`、可中断的快照 |
+| 7 | [出错时：set -e、trap 与信号](/posts/shell-by-cairn-07-errors-traps-signals/) | `set -e` 及其例外、`trap`、信号、`flock`、可中断的快照 |
 | 8 | 测试与工程化：bats、ShellCheck、shfmt 与定时运行 | bats、ShellCheck、shfmt、`bash -x`、kcov、CI、systemd 定时器 |
 | 9 | 交互式 bash：启动文件、提示符、作业控制与补全 | 启动文件、提示符、历史、作业控制、readline、可编程补全 |
 | 10 | POSIX sh：当你没有 bash 的时候 | POSIX、bashism、dash、`install.sh`、什么时候该换一门语言 |

@@ -2227,4 +2227,4 @@ same as diff.awk
 
 ## 下一篇
 
-`cairn report` 里有一行 `interrupted  0`，它现在永远是 0：`cairn snapshot` 被 Ctrl-C 打断的时候，rsync 还在前台，`.partial` 目录留在原地，日志里什么也不会记。下一篇是第 7 篇，出错时：set -e、trap 与信号，我们会让 `snapshot` 在收到 INT 和 TERM 时清理自己、记下 `status=interrupted`，给 `snapshot` 和 `prune` 加上锁，并且给 `bin/cairn` 打开 `set -e`；我猜到那时候最麻烦的不是 `trap` 的语法，而是 `set -e` 的例外规则比规则本身还要长，以及一个前台的 `sleep 5` 会让 `trap` 晚上整整 5 秒才有机会运行。
+`cairn report` 里有一行 `interrupted  0`，它现在永远是 0：`cairn snapshot` 被 Ctrl-C 打断的时候，rsync 还在前台，`.partial` 目录留在原地，日志里什么也不会记。下一篇是第 7 篇，[出错时：set -e、trap 与信号](/posts/shell-by-cairn-07-errors-traps-signals/)，我们会让 `snapshot` 在收到 INT 和 TERM 时清理自己、记下 `status=interrupted`，给 `snapshot` 和 `prune` 加上锁，并且给 `bin/cairn` 打开 `set -e`；我猜到那时候最麻烦的不是 `trap` 的语法，而是 `set -e` 的例外规则比规则本身还要长，以及一个前台的 `sleep 5` 会让 `trap` 晚上整整 5 秒才有机会运行。
