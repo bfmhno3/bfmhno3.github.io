@@ -914,7 +914,7 @@ ok 40 SIGTERM: exit 143, partial removed, status=interrupted logged in 615ms
 93 个测试抓住了 `ch07` 的两个错，这件事我愿意高兴一会儿，然后马上做一件更重要的事：找出它没抓住什么。`ch07` 留下的已知缺口（第 4 篇到第 7 篇各自披露过）有四个：
 
 - 信号落在 `mv` 和 `CAIRN_SNAP_PARTIAL` 复位之间，或者落在 `manifest::write` 期间，会留下一个没有清单的快照。
-- 没有 HUP 陷阱：终端关闭时 `cairn` 以 129 退出，rsync 还活着，锁一直被它持有。
+- 没有 HUP 陷阱：只给 `cairn` 脚本的 PID 发 HUP 时，它以 129 退出，rsync 还活着，锁一直被它们握着；真的关掉终端时 shell 会把 HUP 发给整个作业，rsync 一起死，锁释放，但 `.partial` 和 `status=interrupted` 日志留不下（见[第 9 篇](/posts/shell-by-cairn-09-interactive-shell/)“关掉终端会怎样”）。
 - `prune::run` 里 `readarray < <(cairn::prune::select ...)` 把 `select` 的失败藏在了进程替换里。
 - `prune::remove` 用 `chmod -R` 去动硬链接共享的文件。
 
@@ -1797,5 +1797,5 @@ Normalized form: Mon..Fri *-*-* 02:30:00
 
 ## 下一篇
 
-下一篇是第 9 篇，交互式 bash：启动文件、提示符、作业控制与补全。到这里 Cairn 已经有了测试、检查和定时器，但它还不能被敲出来：补全没有，你每次都得整个单词打完。我猜最有意思的不是 `complete -F` 怎么写，而是 `.bashrc`、`.bash_profile`、`.profile` 究竟哪一个会在你的终端里跑，以及我这台 NixOS 上的真实答案。
+下一篇是第 9 篇，[交互式 bash：启动文件、提示符、作业控制与补全](/posts/shell-by-cairn-09-interactive-shell/)。到这里 Cairn 已经有了测试、检查和定时器，但它还不能被敲出来：补全没有，你每次都得整个单词打完。我猜最有意思的不是 `complete -F` 怎么写，而是 `.bashrc`、`.bash_profile`、`.profile` 究竟哪一个会在你的终端里跑，以及我这台 NixOS 上的真实答案。
 

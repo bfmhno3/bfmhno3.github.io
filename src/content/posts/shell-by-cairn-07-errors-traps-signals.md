@@ -1668,7 +1668,7 @@ rsync processes alive: 3
 lock: held
 ```
 
-出乎我的意料：`.partial` 没有留下。HUP 没有陷阱，默认动作是杀死 shell，退出码 129；但“EXIT 陷阱：清理放在一个地方”一节说过，被信号杀死的 shell 仍然会运行 `EXIT` 陷阱（SIGINT 的那一行实验就是证据），`cleanup` 在那里删掉了 partial。我没有预料到的是它没做到的事：日志里没有 `status=interrupted`（最后一行是空的），而且 3 个 rsync 还活着，仓库的锁还被它们握着。接着加 HUP，改动只有两处，用 `diff -u` 看：
+出乎我的意料（只给脚本的 PID 发 HUP 时）：`.partial` 没有留下。HUP 没有陷阱，默认动作是杀死 shell，退出码 129；但“EXIT 陷阱：清理放在一个地方”一节说过，被信号杀死的 shell 仍然会运行 `EXIT` 陷阱（SIGINT 的那一行实验就是证据），`cleanup` 在那里删掉了 partial。我没有预料到的是它没做到的事：日志里没有 `status=interrupted`（最后一行是空的），而且 3 个 rsync 还活着，仓库的锁还被它们握着。接着加 HUP，改动只有两处，用 `diff -u` 看：
 
 ```text
 --- /tmp/cairn-ch07/lib/cairn/snapshot.sh

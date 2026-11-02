@@ -106,7 +106,7 @@ git clone https://github.com/bfmhno3/cairn ~/cairn-ref
 | 6 | [文本处理：sed、awk 与一份备份日志](/posts/shell-by-cairn-06-text-processing/) | `printf`、`sort`、locale、`sed`、`awk`、`report` 与 `diff` |
 | 7 | [出错时：set -e、trap 与信号](/posts/shell-by-cairn-07-errors-traps-signals/) | `set -e` 及其例外、`trap`、信号、`flock`、可中断的快照 |
 | 8 | [测试与工程化：bats、ShellCheck、shfmt 与定时运行](/posts/shell-by-cairn-08-testing-and-tooling/) | bats、ShellCheck、shfmt、`bash -x`、kcov、CI、systemd 定时器 |
-| 9 | 交互式 bash：启动文件、提示符、作业控制与补全 | 启动文件、提示符、历史、作业控制、readline、可编程补全 |
+| 9 | [交互式 bash：启动文件、提示符、作业控制与补全](/posts/shell-by-cairn-09-interactive-shell/) | 启动文件、提示符、历史、作业控制、readline、可编程补全 |
 | 10 | POSIX sh：当你没有 bash 的时候 | POSIX、bashism、dash、`install.sh`、什么时候该换一门语言 |
 
 读者假设：你写 C、C++、Rust 或 Python，每天用终端，但 shell 命令基本是复制来的。所以我不解释“文件是什么”，而是一上来讲机制：shell 做了什么，哪个进程在跑，为什么。拿别的语言做的对照只在旁白里出现一句。
