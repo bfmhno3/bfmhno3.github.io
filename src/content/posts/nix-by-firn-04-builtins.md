@@ -1361,4 +1361,4 @@ ok: src/result kept; result, result-1, .git, src/out dropped
 
 ## 下一篇
 
-这一篇里我一直在用 Firn 的 `lib`，却只验证过它的几个用例。下一篇，第 5 篇《自己写一个 lib：递归、错误处理与测试》，我们回到 `lib` 本身：写 `lists`、`generators` 和 `debug`，让 `foldl'` 和朴素递归在栈上拉开差距，用 `--show-trace` 和 `--debugger` 读错误，把 `tests/lib.nix` 改写成 `runTests`，接进 `nix flake check`。第 6 篇才轮到 `derivation` 和 `/nix/store` 本身，到那时，这一篇里“上下文指向 `.drv`”这件事会有一个完整的解释。
+这一篇里我一直在用 Firn 的 `lib`，却只验证过它的几个用例。下一篇，第 5 篇[《自己写一个 lib：递归、错误处理与测试》](/posts/nix-by-firn-05-own-lib/)，我们回到 `lib` 本身：写 `lists`、`generators` 和 `debug`，让 `foldl'` 和朴素递归在栈上拉开差距，用 `--show-trace` 和 `--debugger` 读错误，把 `tests/lib.nix` 改写成 `runTests`，接进 `nix flake check`。第 6 篇才轮到 `derivation` 和 `/nix/store` 本身，到那时，这一篇里“上下文指向 `.drv`”这件事会有一个完整的解释。
