@@ -1514,4 +1514,4 @@ $ nix eval --expr 'rec { a = { b = a; }; }.a.b.b.b'
 
 ## 下一篇
 
-这一篇里有几处我故意没有往下问：`constIgnoresSecond` 那个用例里的 `throw` 为什么没有炸，`rec { a = { b = a; }; }` 为什么能走三步，`attrByPath` 里的 `&&` 为什么能挡住后面那一半。它们是同一个问题的三个面孔：Nix 什么时候才真的去算一个表达式。下一篇，第 3 篇《函数与惰性求值：thunk、seq 与不动点》，我们先把函数讲清楚（柯里化、pattern 参数、`...`），再用 `NIX_SHOW_STATS` 去数求值 `hello.name` 到底造了多少个 thunk，最后从零写出 `fix`，看看 nixpkgs 为什么是一个巨大的不动点。
+这一篇里有几处我故意没有往下问：`constIgnoresSecond` 那个用例里的 `throw` 为什么没有炸，`rec { a = { b = a; }; }` 为什么能走三步，`attrByPath` 里的 `&&` 为什么能挡住后面那一半。它们是同一个问题的三个面孔：Nix 什么时候才真的去算一个表达式。下一篇，第 3 篇《[函数与惰性求值：thunk、seq 与不动点](/posts/nix-by-firn-03-functions-and-laziness/)》，我们先把函数讲清楚（柯里化、pattern 参数、`...`），再用 `NIX_SHOW_STATS` 去数求值 `hello.name` 到底造了多少个 thunk，最后从零写出 `fix`，看看 nixpkgs 为什么是一个巨大的不动点。

@@ -81,7 +81,7 @@ nix develop
 | --- | --- | --- |
 | 1 | [第一次求值：nix repl、三副面孔与一段历史](/posts/nix-by-firn-01-first-eval/) | `nix repl`、`nix eval`、Nix 的三层结构、`nix.conf`、历史 |
 | 2 | [值与类型：attrset、list、字符串与路径](/posts/nix-by-firn-02-values-and-types/) | 值类型、attrset、字符串插值、路径、`//`、`with` |
-| 3 | 函数与惰性求值：thunk、seq 与不动点 | 函数、pattern 参数、thunk、`seq`、`fix`、`extends` |
+| 3 | [函数与惰性求值：thunk、seq 与不动点](/posts/nix-by-firn-03-functions-and-laziness/) | 函数、pattern 参数、thunk、`seq`、`fix`、`extends` |
 | 4 | builtins 深挖：import、文件、JSON、正则与字符串上下文 | `import`、文件与 JSON/TOML、正则、字符串上下文、IFD |
 | 5 | 自己写一个 lib：递归、错误处理与测试 | 递归与栈、`foldl'`、`runTests`、`--show-trace`、`--debugger` |
 | 6 | derivation 与 /nix/store：.drv、哈希与沙箱 | `.drv`、store 路径、固定输出、沙箱、闭包、GC 根 |
