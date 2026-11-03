@@ -2292,4 +2292,4 @@ $ echo alpha
 
 ## 下一篇
 
-下一篇是第 10 篇，POSIX sh：当你没有 bash 的时候。这一篇做出来的所有东西，补全、`PS0`、`bind`、作业控制的细节，都是 bash 的；而明天某台 Cairn 要装上去的机器，`/bin/sh` 也许根本不是 bash。我猜最麻烦的不是哪个 `[[` 要换成 `[`，而是你一直以为 “shell 脚本” 就是 bash 脚本。
+下一篇是第 10 篇，[POSIX sh：当你没有 bash 的时候](/posts/shell-by-cairn-10-posix-sh/)。这一篇做出来的所有东西，补全、`PS0`、`bind`、作业控制的细节，都是 bash 的；而明天某台 Cairn 要装上去的机器，`/bin/sh` 也许根本不是 bash。我猜最麻烦的不是哪个 `[[` 要换成 `[`，而是你一直以为 “shell 脚本” 就是 bash 脚本。
