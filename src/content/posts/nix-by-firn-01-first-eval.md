@@ -80,7 +80,7 @@ nix develop
 | 章 | 标题 | 主要的 Nix 内容 |
 | --- | --- | --- |
 | 1 | [第一次求值：nix repl、三副面孔与一段历史](/posts/nix-by-firn-01-first-eval/) | `nix repl`、`nix eval`、Nix 的三层结构、`nix.conf`、历史 |
-| 2 | 值与类型：attrset、list、字符串与路径 | 值类型、attrset、字符串插值、路径、`//`、`with` |
+| 2 | [值与类型：attrset、list、字符串与路径](/posts/nix-by-firn-02-values-and-types/) | 值类型、attrset、字符串插值、路径、`//`、`with` |
 | 3 | 函数与惰性求值：thunk、seq 与不动点 | 函数、pattern 参数、thunk、`seq`、`fix`、`extends` |
 | 4 | builtins 深挖：import、文件、JSON、正则与字符串上下文 | `import`、文件与 JSON/TOML、正则、字符串上下文、IFD |
 | 5 | 自己写一个 lib：递归、错误处理与测试 | 递归与栈、`foldl'`、`runTests`、`--show-trace`、`--debugger` |
@@ -1485,4 +1485,4 @@ error:
 
 ## 下一篇
 
-今天的实验里，`{ a = 2; b = [ ... ]; }` 的 `...`、`"${./.}"` 被纯求值模式拒绝、`1.0` 打印成 `1`，都是“一个值到底是什么”的零碎问题，我一直在绕着走。下一篇，第 2 篇《值与类型：attrset、list、字符串与路径》，我们坐下来把 Nix 的每一种值过一遍：`rec { a = a; }` 会怎样，`//` 为什么会丢掉嵌套的属性，`"${./note.txt}"` 怎样悄悄地把一个文件拷进 store，改一个字节之后那个路径的哈希怎样变。Firn 的第一个模块 `lib/` 也在那一篇出生，从 `attrByPath` 和 `recursiveUpdate` 开始。
+今天的实验里，`{ a = 2; b = [ ... ]; }` 的 `...`、`"${./.}"` 被纯求值模式拒绝、`1.0` 打印成 `1`，都是“一个值到底是什么”的零碎问题，我一直在绕着走。下一篇，第 2 篇《[值与类型：attrset、list、字符串与路径](/posts/nix-by-firn-02-values-and-types/)》，我们坐下来把 Nix 的每一种值过一遍：`rec { a = a; }` 会怎样，`//` 为什么会丢掉嵌套的属性，`"${./note.txt}"` 怎样悄悄地把一个文件拷进 store，改一个字节之后那个路径的哈希怎样变。Firn 的第一个模块 `lib/` 也在那一篇出生，从 `attrByPath` 和 `recursiveUpdate` 开始。
