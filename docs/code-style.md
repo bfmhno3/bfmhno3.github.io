@@ -98,3 +98,16 @@ Reference: https://google.github.io/styleguide/shellguide.html. Applies to shell
 - **Naming**: functions and variables `lower_snake_case`; library functions `package::function`; parentheses after the name, brace on the same line, no `function` keyword. Constants and exported variables `UPPER_SNAKE_CASE`, declared at the top with `readonly`/`export`. Function variables are `local`; declare and assign separately when the value comes from a command substitution (`local x` then `x="$(cmd)"`).
 - **Structure**: constants, then all functions, then the call to `main "$@"` as the last non-comment line once a script has a second function. Error messages go to stderr through one helper. Check every return value; use `PIPESTATUS` for pipelines.
 - **Verification**: `shellcheck` (0.11 or newer) prints nothing; `shfmt -i 2 -bn -ci -d <file>` prints nothing. Code that breaks a rule on purpose is labeled `# BAD` and carries the matching `# shellcheck disable=SCxxxx` directive.
+
+## Nix: nixfmt and Nixpkgs conventions
+
+Reference: the RFC 166 format as implemented by `nixfmt` (https://github.com/NixOS/nixfmt) and the Nixpkgs contributor guides (https://github.com/NixOS/nixpkgs/blob/master/CONTRIBUTING.md, `pkgs/README.md`). Applies to `.nix` files and to Nix blocks in posts. One-line expressions typed at `nix repl` or passed to `nix eval --expr` are exempt. Fence Nix code as `nix`.
+
+- **Format**: exactly what `nixfmt` 1.4 or newer prints (2-space indent, its line breaking). Never hand-align.
+- **Naming**: attributes, `let` bindings and function arguments `lowerCamelCase`; package attribute names and `pname` lowercase with `-`, as in Nixpkgs; files lowercase with `-`, a package lives in `package.nix`.
+- **Functions**: package functions destructure their dependencies at the top (`{ lib, stdenv, zlib }:`); add `...` only where callers pass extra arguments (modules always take `{ config, lib, pkgs, ... }:`).
+- **Scope**: never `with lib;` or `with pkgs;` around a file or a large expression; `with pkgs;` is allowed only directly in front of a list of packages (`packages = with pkgs; [ jq git ];`). Use `lib.x` or `inherit (lib) x;`. Avoid `rec { }`; use `let … in` or the `finalAttrs` pattern.
+- **Derivations**: `stdenv.mkDerivation (finalAttrs: { … })` with `pname` and `version`; `meta` with `description`, `license`, `mainProgram` (for programs) and `platforms`; local sources selected with `lib.fileset`; hashes in SRI form (`sha256-…`); a committed `lib.fakeHash` is a bug.
+- **Purity**: flake and package code never uses lookup paths (`<nixpkgs>`), `builtins.currentSystem`, `builtins.getEnv` or import-from-derivation.
+- **Strings**: multi-line shell snippets use `''…''`; shell inside them follows the Shell section; escape as `''${`.
+- **Verification**: `nixfmt --check` prints nothing. Outside lab and demo files, `statix check` and `deadnix --fail` print nothing. Code that breaks a rule on purpose is labeled `# BAD`; files that must not parse use the extension `.nix.txt`.
