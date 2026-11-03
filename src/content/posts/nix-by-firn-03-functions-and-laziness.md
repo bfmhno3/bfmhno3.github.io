@@ -1368,4 +1368,4 @@ $ NIX_SHOW_STATS=1 nix eval --expr 'builtins.length (builtins.filter (x: true) (
 
 ## 下一篇
 
-这一篇里有一个我没有展开的东西：我一直在写 `import ./lib`，它每次都会重新读文件、解析、求值吗？还是和 thunk 一样，只算一次？答案和 `import` 的缓存有关，也和更大的一族 `builtins` 有关：读文件、解析 JSON 和 TOML、做正则匹配、拉取源码，以及每个字符串背后看不见的那个“上下文”，它决定了 `"${pkgs.hello}"` 为什么不只是一段文字。下一篇，第 4 篇《builtins 深挖：import、文件、JSON、正则与字符串上下文》，Firn 的 `lib` 会多出 `strings`、`importers`、`sources` 和 `readme`，我们还会用一个故意造出来的“导入时求值”（IFD），去看 Nix 的求值和构建在什么情况下会撞在一起。
+这一篇里有一个我没有展开的东西：我一直在写 `import ./lib`，它每次都会重新读文件、解析、求值吗？还是和 thunk 一样，只算一次？答案和 `import` 的缓存有关，也和更大的一族 `builtins` 有关：读文件、解析 JSON 和 TOML、做正则匹配、拉取源码，以及每个字符串背后看不见的那个“上下文”，它决定了 `"${pkgs.hello}"` 为什么不只是一段文字。下一篇，第 4 篇《[builtins 深挖：import、文件、JSON、正则与字符串上下文](/posts/nix-by-firn-04-builtins/)》，Firn 的 `lib` 会多出 `strings`、`importers`、`sources` 和 `readme`，我们还会用一个故意造出来的“导入时求值”（IFD），去看 Nix 的求值和构建在什么情况下会撞在一起。
