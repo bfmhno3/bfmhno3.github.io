@@ -899,4 +899,4 @@ $ cat out/ch06/ex_two_refs.stdout
 
 ## 下一篇
 
-这一篇我们造的 `raw` 只有一个 busybox 加一行 `sh`，每个包都要自己写 `mkdir -p $out/bin`、自己 `cp`，写第三个的时候你就会烦。下一篇，第 7 篇《从零写 stdenv，再拆开 nixpkgs 的 stdenv》，我们把这种重复抽成一个通用的 builder：`setup.sh` 里的几个阶段、`callPackage` 的参数注入、一个可以被 overlay 改写的小包集，然后再回头看 nixpkgs 真正的 `stdenv`，它的阶段列表在哪个文件的哪几行，以及它是怎么从一个 `hex0` 的种子一路引导出来的。到那时，这一篇里那 692 字节的 `.drv` 会变成我们每天写的“包”，而 `/nix/store` 里路径的哈希，你已经能自己算了。
+这一篇我们造的 `raw` 只有一个 busybox 加一行 `sh`，每个包都要自己写 `mkdir -p $out/bin`、自己 `cp`，写第三个的时候你就会烦。下一篇，第 7 篇《[从零写 stdenv，再拆开 nixpkgs 的 stdenv](/posts/nix-by-firn-07-stdenv-from-scratch/)》，我们把这种重复抽成一个通用的 builder：`setup.sh` 里的几个阶段、`callPackage` 的参数注入、一个可以被 overlay 改写的小包集，然后再回头看 nixpkgs 真正的 `stdenv`，它的阶段列表在哪个文件的哪几行，以及它是怎么从一个 `hex0` 的种子一路引导出来的。到那时，这一篇里那 692 字节的 `.drv` 会变成我们每天写的“包”，而 `/nix/store` 里路径的哈希，你已经能自己算了。
