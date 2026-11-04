@@ -1360,4 +1360,4 @@ $ nix eval --impure --expr 'let f = import ./lib; n = import "${(import ./nix/pi
 
 ## 下一篇
 
-这一篇里 `lib-tests` 和 `readme-table` 都是用 `pkgs.runCommand` 写的，我一直把它当成“一个会跑一段脚本的东西”，没有回答它到底是什么、它的输出为什么在 `/nix/store/hm91ddl7gz228cq1cbg2zgf7c5wak08r-firn-lib-tests` 这种路径里、那串哈希又是怎么算出来的。第 6 篇《derivation 与 /nix/store：.drv、哈希与沙箱》会把这个盒子拆开：我们不用 nixpkgs，只用一个静态链接的 busybox 手写 `derivation`，看 `.drv` 文件里到底写了什么，再在 Firn 的 `lib` 里加一个 `textStorePath`，用 Nix 自己算出和 `builtins.toFile` 一模一样的 store 路径。
+这一篇里 `lib-tests` 和 `readme-table` 都是用 `pkgs.runCommand` 写的，我一直把它当成“一个会跑一段脚本的东西”，没有回答它到底是什么、它的输出为什么在 `/nix/store/hm91ddl7gz228cq1cbg2zgf7c5wak08r-firn-lib-tests` 这种路径里、那串哈希又是怎么算出来的。第 6 篇《[derivation 与 /nix/store：.drv、哈希与沙箱](/posts/nix-by-firn-06-derivations-and-store/)》会把这个盒子拆开：我们不用 nixpkgs，只用一个静态链接的 busybox 手写 `derivation`，看 `.drv` 文件里到底写了什么，再在 Firn 的 `lib` 里加一个 `textStorePath`，用 Nix 自己算出和 `builtins.toFile` 一模一样的 store 路径。
