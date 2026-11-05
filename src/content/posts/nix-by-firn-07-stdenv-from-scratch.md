@@ -1191,4 +1191,4 @@ $ cat out/ch07/ex_mini_figlet.stdout
 
 ## 下一篇
 
-这一篇我们造了一个包集，它的所有东西都在 `legacyPackages.<system>.mini` 下面，而 `flake.nix` 里为它加的几行是我手写的、没有整理过的：`miniFor` 在每个系统上各建一份，`checks` 和 `legacyPackages` 各自 `forAllSystems`。下一篇，第 8 篇，《flake：inputs、outputs、flake.lock 与纯求值》，我们把 `flake.nix` 从头读一遍：`inputs` 和 `outputs` 是什么，`flake.lock` 里记了什么，为什么一个没被 `git add` 的文件在 flake 里会“不存在”，`nix eval` 在纯求值模式下为什么不让你碰 `builtins.currentSystem`，以及这个“实验性”的功能为什么五年来一直是我日常的地基。到那时，你会看到这篇里那一行 `legacyPackages.<system>.mini` 在 `nix flake show` 里是什么样子。
+这一篇我们造了一个包集，它的所有东西都在 `legacyPackages.<system>.mini` 下面，而 `flake.nix` 里为它加的几行是我手写的、没有整理过的：`miniFor` 在每个系统上各建一份，`checks` 和 `legacyPackages` 各自 `forAllSystems`。下一篇，第 8 篇《[flake：inputs、outputs、flake.lock 与纯求值](/posts/nix-by-firn-08-flakes/)》，我们把 `flake.nix` 从头读一遍：`inputs` 和 `outputs` 是什么，`flake.lock` 里记了什么，为什么一个没被 `git add` 的文件在 flake 里会“不存在”，`nix eval` 在纯求值模式下为什么不让你碰 `builtins.currentSystem`，以及这个“实验性”的功能为什么五年来一直是我日常的地基。到那时，你会看到这篇里那一行 `legacyPackages.<system>.mini` 在 `nix flake show` 里是什么样子。
