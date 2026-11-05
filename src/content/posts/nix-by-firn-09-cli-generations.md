@@ -1031,4 +1031,4 @@ $ nix why-depends -f nix/pkgs.nix jq.bin oniguruma.lib
 
 ## 下一篇
 
-这一篇我一直在“用”nixpkgs 的包：`-A hello`、`-p hello`、`jq`，没有问它们是怎么写出来的。下一篇，第 10 篇《nixpkgs：callPackage、override、overlay 与 fetcher》，我写 Firn 的第一个真正的包 `firn-hello`：一个 C 程序，链接 zlib，打成 nixpkgs 风格的 `package.nix`。`callPackage` 怎样从一个函数的参数名里猜出它需要什么，`override` 和 `overrideAttrs` 改的分别是什么，overlay 里的 `final` 和 `prev` 怎么选，以及改了 `zlib` 之后要重建多少东西。到时 `default.nix` 里会多一个属性，旧入口第一次承载一个真正的 nixpkgs 风格的包。
+这一篇我一直在“用”nixpkgs 的包：`-A hello`、`-p hello`、`jq`，没有问它们是怎么写出来的。下一篇，第 10 篇，[nixpkgs：callPackage、override、overlay 与 fetcher](/posts/nix-by-firn-10-callpackage-overrides-overlays/)，我写 Firn 的第一个真正的包 `firn-hello`：一个 C 程序，链接 zlib，打成 nixpkgs 风格的 `package.nix`。`callPackage` 怎样从一个函数的参数名里猜出它需要什么，`override` 和 `overrideAttrs` 改的分别是什么，overlay 里的 `final` 和 `prev` 怎么选，以及改了 `zlib` 之后要重建多少东西。到时 `default.nix` 里会多一个属性，旧入口第一次承载一个真正的 nixpkgs 风格的包。

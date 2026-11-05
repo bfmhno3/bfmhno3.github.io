@@ -88,7 +88,7 @@ nix develop
 | 7 | [从零写 stdenv，再拆开 nixpkgs 的 stdenv](/posts/nix-by-firn-07-stdenv-from-scratch/) | builder、phases、`callPackage`、setup hook、bootstrap |
 | 8 | [flake：inputs、outputs、flake.lock 与纯求值](/posts/nix-by-firn-08-flakes/) | flake 结构、锁文件、`follows`、纯求值、registry |
 | 9 | [两代 CLI：nix-env、nix-build、nix-shell 与 nix profile](/posts/nix-by-firn-09-cli-generations/) | 新旧命令对照、channel、profile、GC |
-| 10 | nixpkgs：callPackage、override、overlay 与 fetcher | `callPackage`、`override`、overlay、fetcher、`lib.fileset` |
+| 10 | [nixpkgs：callPackage、override、overlay 与 fetcher](/posts/nix-by-firn-10-callpackage-overrides-overlays/) | `callPackage`、`override`、overlay、fetcher、`lib.fileset` |
 | 11 | 打包真项目：Cairn、Sift 与 Pebble | `makeWrapper`、`buildPythonApplication`、`buildRustPackage` |
 | 12 | 交叉编译与静态链接：pkgsCross、pkgsStatic 与 splicing | build/host/target、`pkgsCross`、`pkgsStatic` |
 | 13 | 开发环境：devShell、direnv 与 templates | `mkShell`、direnv、flake 模板 |
