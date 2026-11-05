@@ -1423,4 +1423,4 @@ rc=0
 
 ## 下一篇
 
-这一篇的包只有一个，源码在本地，依赖只有一个 zlib。下一篇要打的包没有这么乖：第 11 篇《打包真项目：Cairn、Sift 与 Pebble》，三个我自己写过的项目，分别是 Bash、Python 和 Rust，`src` 要从 GitHub 抓（用的就是这一篇推出来的 `fetchFromGitHub`），Cairn 的脚本要被 `patchShebangs` 改掉解释器路径，还要用 `makeWrapper` 把它依赖的命令包进去。我最想知道的是闭包有多大：`firn-hello` 是 36.1 MiB，其中 glibc 占了 92%，Rust 和 Python 会不会把这个比例翻过来，我还不知道。
+这一篇的包只有一个，源码在本地，依赖只有一个 zlib。下一篇要打的包没有这么乖：[第 11 篇：打包真项目：Cairn、Sift 与 Pebble](/posts/nix-by-firn-11-packaging-real-projects/)，三个我自己写过的项目，分别是 Bash、Python 和 Rust，`src` 要从 GitHub 抓（用的就是这一篇推出来的 `fetchFromGitHub`），Cairn 的脚本要被 `patchShebangs` 改掉解释器路径，还要用 `makeWrapper` 把它依赖的命令包进去。我最想知道的是闭包有多大：`firn-hello` 是 36.1 MiB，其中 glibc 占了 92%，Rust 和 Python 会不会把这个比例翻过来，我还不知道。
