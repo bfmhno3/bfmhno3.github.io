@@ -1720,4 +1720,4 @@ same fetcher and hash
 
 ## 下一篇
 
-这一篇的三个包都在 x86_64-linux 上，用的是同一个 glibc 和同一个 gcc。第 12 篇《交叉编译与静态链接：pkgsCross、pkgsStatic 与 splicing》要问的是：`firn-hello` 能不能在 x86_64 上编出 aarch64 的二进制，能不能静态链接，`pkgsStatic` 里的 `firn-hello` 有多大。我最想知道的是，一个只依赖 glibc 和 zlib 的 36.1 MiB 闭包，换成 musl 静态链接之后，会不会比 Pebble 的 1.8 MiB 二进制还小，我还不知道。
+这一篇的三个包都在 x86_64-linux 上，用的是同一个 glibc 和同一个 gcc。[第 12 篇：交叉编译与静态链接：pkgsCross、pkgsStatic 与 splicing](/posts/nix-by-firn-12-cross-and-static/)要问的是：`firn-hello` 能不能在 x86_64 上编出 aarch64 的二进制，能不能静态链接，`pkgsStatic` 里的 `firn-hello` 有多大。我最想知道的是，一个只依赖 glibc 和 zlib 的 36.1 MiB 闭包，换成 musl 静态链接之后，会不会比 Pebble 的 1.8 MiB 二进制还小，我还不知道。
