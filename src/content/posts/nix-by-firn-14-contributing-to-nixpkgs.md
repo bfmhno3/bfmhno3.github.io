@@ -1285,4 +1285,4 @@ median gap 7.7 h
 
 ## 下一篇
 
-第 15 篇《模块系统：从零写一个，再读懂 lib.evalModules》要把 Cairn 的配置从一个手写的 `configText` 换成真正的模块：`options` 和 `config`，类型，优先级，`mkIf`。我猜写完这一篇的 PR 流程之后，最需要的是一套能说清“这个选项从哪儿来、被谁改过”的工具，模块系统恰好是这个。
+[第 15 篇：模块系统：从零写一个，再读懂 lib.evalModules](/posts/nix-by-firn-15-module-system/)要把 Cairn 的配置从一个手写的 `configText` 换成真正的模块：`options` 和 `config`，类型，优先级，`mkIf`。我猜写完这一篇的 PR 流程之后，最需要的是一套能说清“这个选项从哪儿来、被谁改过”的工具，模块系统恰好是这个。

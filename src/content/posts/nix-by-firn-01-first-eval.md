@@ -93,7 +93,7 @@ nix develop
 | 12 | [交叉编译与静态链接：pkgsCross、pkgsStatic 与 splicing](/posts/nix-by-firn-12-cross-and-static/) | build/host/target、`pkgsCross`、`pkgsStatic` |
 | 13 | [开发环境：devShell、direnv 与 templates](/posts/nix-by-firn-13-devshells-direnv-templates/) | `mkShell`、direnv、flake 模板 |
 | 14 | [给 nixpkgs 提 PR：by-name、nixpkgs-review 与 channel](/posts/nix-by-firn-14-contributing-to-nixpkgs/) | `pkgs/by-name`、review 工具、channel 的生命周期 |
-| 15 | 模块系统：从零写一个，再读懂 lib.evalModules | `options`/`config`、类型、优先级、`mkIf` |
+| 15 | [模块系统：从零写一个，再读懂 lib.evalModules](/posts/nix-by-firn-15-module-system/) | `options`/`config`、类型、优先级、`mkIf` |
 | 16 | NixOS：services.cairn、VM 测试与一次 switch | NixOS 服务模块、systemd、VM 测试 |
 | 17 | secrets：为什么不能进 store，以及 sops-nix | store 的可读性、sops-nix、age |
 | 18 | Home Manager：programs.cairn 与用户级配置 | `programs.*`、activation、DAG |
