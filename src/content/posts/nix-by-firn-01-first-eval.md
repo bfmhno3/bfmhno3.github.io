@@ -91,7 +91,7 @@ nix develop
 | 10 | [nixpkgs：callPackage、override、overlay 与 fetcher](/posts/nix-by-firn-10-callpackage-overrides-overlays/) | `callPackage`、`override`、overlay、fetcher、`lib.fileset` |
 | 11 | [打包真项目：Cairn、Sift 与 Pebble](/posts/nix-by-firn-11-packaging-real-projects/) | `makeWrapper`、`buildPythonApplication`、`buildRustPackage` |
 | 12 | [交叉编译与静态链接：pkgsCross、pkgsStatic 与 splicing](/posts/nix-by-firn-12-cross-and-static/) | build/host/target、`pkgsCross`、`pkgsStatic` |
-| 13 | 开发环境：devShell、direnv 与 templates | `mkShell`、direnv、flake 模板 |
+| 13 | [开发环境：devShell、direnv 与 templates](/posts/nix-by-firn-13-devshells-direnv-templates/) | `mkShell`、direnv、flake 模板 |
 | 14 | 给 nixpkgs 提 PR：by-name、nixpkgs-review 与 channel | `pkgs/by-name`、review 工具、channel 的生命周期 |
 | 15 | 模块系统：从零写一个，再读懂 lib.evalModules | `options`/`config`、类型、优先级、`mkIf` |
 | 16 | NixOS：services.cairn、VM 测试与一次 switch | NixOS 服务模块、systemd、VM 测试 |

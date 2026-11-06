@@ -1716,4 +1716,4 @@ crc32: 8bb8f4d3
 
 ## 下一篇
 
-第 13 篇《开发环境：devShell、direnv 与 templates》要回到我每次 `make ch12` 都得先敲的那句 `nix develop`：这个 shell 里到底有什么，怎么让进入目录就自动进入它。这一篇的 `nix develop --file ... --command` 已经把它当工具用了好几次，包括那个让 `gcc` 漏进来的坑。我猜，等我把它写成模板，同样的坑还会换个名字再来一次。
+[第 13 篇：开发环境：devShell、direnv 与 templates](/posts/nix-by-firn-13-devshells-direnv-templates/)要回到我每次 `make ch12` 都得先敲的那句 `nix develop`：这个 shell 里到底有什么，怎么让进入目录就自动进入它。这一篇的 `nix develop --file ... --command` 已经把它当工具用了好几次，包括那个让 `gcc` 漏进来的坑。我猜，等我把它写成模板，同样的坑还会换个名字再来一次。
