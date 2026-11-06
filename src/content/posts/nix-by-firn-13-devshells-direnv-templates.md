@@ -1672,4 +1672,4 @@ hook-own
 
 ## 下一篇
 
-第 14 篇《给 nixpkgs 提 PR：by-name、nixpkgs-review 与 channel》要把 Cairn 按 nixpkgs 自己的写法重写一遍，放进一份 nixpkgs 工作树，用 `nixpkgs-review`、`nixpkgs-vet` 一类工具检查，再去量合并之后它要等多久才会出现在 channel 里。这一篇里模板写的是 `nixos-unstable`，Firn 钉的却是 2026-08-23 的一个固定 rev；一个 rev 从合并到进 channel 要走多久，我还没有量过。我猜最麻烦的不是写包，是等 channel 前进。
+[第 14 篇：给 nixpkgs 提 PR：by-name、nixpkgs-review 与 channel](/posts/nix-by-firn-14-contributing-to-nixpkgs/)要把 Cairn 按 nixpkgs 自己的写法重写一遍，放进一份 nixpkgs 工作树，用 `nixpkgs-review`、`nixpkgs-vet` 一类工具检查，再去量合并之后它要等多久才会出现在 channel 里。这一篇里模板写的是 `nixos-unstable`，Firn 钉的却是 2026-08-23 的一个固定 rev；一个 rev 从合并到进 channel 要走多久，我还没有量过。我猜最麻烦的不是写包，是等 channel 前进。
