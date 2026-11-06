@@ -1548,4 +1548,4 @@ $ nix eval --impure --expr 'let lib = (import ./nix/pkgs.nix { }).lib; in (lib.e
 
 ## 下一篇
 
-第 16 篇《NixOS：services.cairn、VM 测试与一次 switch》要把这份设置模块放进一个真正的 NixOS 配置：写 `services.cairn`，让 `/etc/cairn/cairn.conf` 从 `configText` 生成，起一个 systemd 单元，再在一台 VM 里跑测试。这一篇我数过最小的 NixOS 有 16555 个选项，我猜到时候最难的不是写 `services.cairn` 自己的几个选项，而是别和那 16555 个里的某一个打起来。
+[第 16 篇：NixOS：services.cairn、VM 测试与一次 switch](/posts/nix-by-firn-16-nixos-module-and-vm-test/)要把这份设置模块放进一个真正的 NixOS 配置：写 `services.cairn`，让 `/etc/cairn/cairn.conf` 从 `configText` 生成，起一个 systemd 单元，再在一台 VM 里跑测试。这一篇我数过最小的 NixOS 有 16555 个选项，我猜到时候最难的不是写 `services.cairn` 自己的几个选项，而是别和那 16555 个里的某一个打起来。
