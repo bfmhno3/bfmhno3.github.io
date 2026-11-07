@@ -1420,4 +1420,4 @@ $ nix eval --pure-eval --expr "builtins.readFile \"/run/secrets/firn/token\"" 2>
 
 ## 下一篇
 
-第 18 篇《Home Manager：programs.cairn 与用户级配置》要把同一套模块系统搬到 `$HOME` 上：`programs.cairn`，从模块里生成配置文件，再在一台虚拟机里看激活怎么发生。我猜密钥这个问题在那边会变得更别扭，我读 sops-nix 的 `linux.go` 时看到过一行注释，“We can't create a ramfs as user”：用户级的激活大概没有 root，也就没法挂载 ramfs，`MountSecretFs` 在用户模式下直接返回。sops-nix 仓库里确实有一个 `modules/home-manager` 目录，我这一篇没有用它，也没有读它。
+[第 18 篇《Home Manager：programs.cairn 与用户级配置》](/posts/nix-by-firn-18-home-manager/)要把同一套模块系统搬到 `$HOME` 上：`programs.cairn`，从模块里生成配置文件，再在一台虚拟机里看激活怎么发生。我猜密钥这个问题在那边会变得更别扭，我读 sops-nix 的 `linux.go` 时看到过一行注释，“We can't create a ramfs as user”：用户级的激活大概没有 root，也就没法挂载 ramfs，`MountSecretFs` 在用户模式下直接返回。sops-nix 仓库里确实有一个 `modules/home-manager` 目录，我这一篇没有用它，也没有读它。
