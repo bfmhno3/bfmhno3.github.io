@@ -1460,4 +1460,4 @@ $ nix eval --impure --json --expr 'let firn = builtins.getFlake (toString ./.); 
 
 ## 下一篇
 
-第 17 篇《secrets：为什么不能进 store，以及 sops-nix》要处理“让我意外的事”里最后那个明文口令：为什么这种东西不能进 store，以及 sops-nix 怎么绕开它。我猜最难的不是 sops 的语法，而是别让解密后的文件，又被某个 `builtins.readFile` 悄悄拉回 store。
+[第 17 篇：secrets：为什么不能进 store，以及 sops-nix](/posts/nix-by-firn-17-secrets/)要处理“让我意外的事”里最后那个明文口令：为什么这种东西不能进 store，以及 sops-nix 怎么绕开它。我猜最难的不是 sops 的语法，而是别让解密后的文件，又被某个 `builtins.readFile` 悄悄拉回 store。
