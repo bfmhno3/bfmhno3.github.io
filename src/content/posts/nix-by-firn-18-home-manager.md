@@ -1525,4 +1525,4 @@ $ nix eval --impure --json --expr 'import /tmp/scratch18/two_state_versions.nix 
 
 ## 下一篇
 
-第 19 篇《Determinate、FlakeHub 与 Nix 的分叉们》退一步，看这 18 篇一直在用却没问过的东西：Nix 本身怎么装、有哪几种发行版、除了上游还有哪些实现。我猜我最先想回答的，是这一篇里那些 `nix flake check`、`--rebuild`、`nix path-info` 的行为，在另一个实现上是不是一模一样；我没有在别的实现上跑过其中任何一条，所以现在只是个问题。
+[第 19 篇《Determinate、FlakeHub 与 Nix 的分叉们》](/posts/nix-by-firn-19-determinate-and-forks/)退一步，看这 18 篇一直在用却没问过的东西：Nix 本身怎么装、有哪几种发行版、除了上游还有哪些实现。我猜我最先想回答的，是这一篇里那些 `nix flake check`、`--rebuild`、`nix path-info` 的行为，在另一个实现上是不是一模一样；我没有在别的实现上跑过其中任何一条，所以现在只是个问题。
