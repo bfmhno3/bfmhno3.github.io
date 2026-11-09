@@ -98,7 +98,7 @@ nix develop
 | 17 | [secrets：为什么不能进 store，以及 sops-nix](/posts/nix-by-firn-17-secrets/) | store 的可读性、sops-nix、age |
 | 18 | [Home Manager：programs.cairn 与用户级配置](/posts/nix-by-firn-18-home-manager/) | `programs.*`、activation、DAG |
 | 19 | [Determinate、FlakeHub 与 Nix 的分叉们](/posts/nix-by-firn-19-determinate-and-forks/) | 安装器、Determinate Nix、FlakeHub、分叉 |
-| 20 | 工程化：CI、Cachix、lint 与可复现性 | CI、二进制缓存、lint、可复现性 |
+| 20 | [工程化：CI、Cachix、lint 与可复现性](/posts/nix-by-firn-20-engineering/) | CI、二进制缓存、lint、可复现性 |
 
 没有哪一章是“选读”。顺序就是依赖顺序：每一章只会用到前面讲过的东西，偶尔需要提前露个脸的概念，我会写明“先当成 X，第 N 篇细讲”。
 

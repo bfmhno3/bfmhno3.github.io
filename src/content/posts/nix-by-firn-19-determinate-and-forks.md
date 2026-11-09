@@ -1179,5 +1179,5 @@ nix (Determinate Nix 3.24.2) 2.35.3
 
 ## 下一篇
 
-第 20 篇《工程化：CI、Cachix、lint 与可复现性》要把这 19 篇攒下来的东西放进持续集成：这一篇的 `flakehub.yml` 只是 Firn 的第一条 workflow，它没有测试，也没有缓存。我猜我最先想回答的是一个这篇没有量的问题：`determinate-nix-action@v3` 和上游的安装方式在一次 CI 里各自花多少时间，Cachix 又能把一次完整的 `make ci` 缩短多少；我这篇只在虚拟机和本机量过 Determinate Nix，CI 上的数字我一个也没有。
+第 20 篇[《工程化：CI、Cachix、lint 与可复现性》](/posts/nix-by-firn-20-engineering/)要把这 19 篇攒下来的东西放进持续集成：这一篇的 `flakehub.yml` 只是 Firn 的第一条 workflow，它没有测试，也没有缓存。我猜我最先想回答的是一个这篇没有量的问题：`determinate-nix-action@v3` 和上游的安装方式在一次 CI 里各自花多少时间，Cachix 又能把一次完整的 `make ci` 缩短多少；我这篇只在虚拟机和本机量过 Determinate Nix，CI 上的数字我一个也没有。
 
